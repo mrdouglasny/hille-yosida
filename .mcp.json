@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "lean-lsp": {
+      "command": "uvx",
+      "args": ["lean-lsp-mcp"]
+    },
+    "cluster": {
+      "command": "uv",
+      "args": ["run", "--with", "mcp", "python", "/Users/mdouglas/Documents/GitHub/research-dev/mcp/cluster/server.py"]
+    },
+    "locks": {
+      "command": "uv",
+      "args": ["run", "--with", "mcp", "python", "/Users/mdouglas/Documents/GitHub/research-dev/mcp/locks/server.py"]
+    },
+    "gemini": {
+      "command": "/opt/homebrew/bin/python3.10",
+      "args": ["/Users/mdouglas/Documents/GitHub/research-dev/mcp/gemini/server.py"]
+    },
+    "sage": {
+      "command": "sage",
+      "args": ["-python", "/Users/mdouglas/Documents/GitHub/research-dev/mcp/sage/server.py"]
+    }
+  }
+}
