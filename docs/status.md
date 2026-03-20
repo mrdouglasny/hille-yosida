@@ -23,27 +23,44 @@
 
 ### Structures & Definitions
 
+[SC]: https://github.com/mrdouglasny/hille-yosida/blob/main/HilleYosida/StronglyContinuousSemigroup.lean
+[SGE]: https://github.com/mrdouglasny/hille-yosida/blob/main/HilleYosida/SemigroupGroupExtension.lean
+
 | Declaration | File | Line | Description |
 |-------------|------|------|-------------|
-| `StronglyContinuousSemigroup` | StronglyContinuousSemigroup.lean | 64 | C₀-semigroup: `S(0) = Id`, `S(s+t) = S(s) ∘ S(t)`, strong continuity at 0 |
-| `ContractingSemigroup` | StronglyContinuousSemigroup.lean | 77 | Extends C₀-semigroup with `‖S(t)‖ ≤ 1` |
-| `generator` | StronglyContinuousSemigroup.lean | 312 | Generator domain predicate: `lim_{t→0⁺} (S(t)x - x)/t` exists |
-| `domain` | StronglyContinuousSemigroup.lean | 324 | Generator domain as `Submodule ℝ X` (closed under +, ·) |
-| `generatorMap` | StronglyContinuousSemigroup.lean | 362 | Generator `A : domain →ₗ[ℝ] X` via `Classical.choose` |
-| `HasGrowthBound` | StronglyContinuousSemigroup.lean | 460 | `1 ≤ M ∧ ∀ t ≥ 0, ‖S(t)‖ ≤ M e^{ωt}` |
-| `IsSemigroupGroupPD` | SemigroupGroupExtension.lean | 46 | PD condition on `[0,∞) × ℝ^d` with involution `(t,a)* = (t,-a)` |
+| `StronglyContinuousSemigroup` | [StronglyContinuousSemigroup.lean][SC] | [64][SC-64] | C₀-semigroup: `S(0) = Id`, `S(s+t) = S(s) ∘ S(t)`, strong continuity at 0 |
+| `ContractingSemigroup` | [StronglyContinuousSemigroup.lean][SC] | [77][SC-77] | Extends C₀-semigroup with `‖S(t)‖ ≤ 1` |
+| `generator` | [StronglyContinuousSemigroup.lean][SC] | [312][SC-312] | Generator domain predicate: `lim_{t→0⁺} (S(t)x - x)/t` exists |
+| `domain` | [StronglyContinuousSemigroup.lean][SC] | [324][SC-324] | Generator domain as `Submodule ℝ X` (closed under +, ·) |
+| `generatorMap` | [StronglyContinuousSemigroup.lean][SC] | [362][SC-362] | Generator `A : domain →ₗ[ℝ] X` via `Classical.choose` |
+| `HasGrowthBound` | [StronglyContinuousSemigroup.lean][SC] | [460][SC-460] | `1 ≤ M ∧ ∀ t ≥ 0, ‖S(t)‖ ≤ M e^{ωt}` |
+| `IsSemigroupGroupPD` | [SemigroupGroupExtension.lean][SGE] | [46][SGE-46] | PD condition on `[0,∞) × ℝ^d` with involution `(t,a)* = (t,-a)` |
+
+[SC-64]: https://github.com/mrdouglasny/hille-yosida/blob/main/HilleYosida/StronglyContinuousSemigroup.lean#L64
+[SC-77]: https://github.com/mrdouglasny/hille-yosida/blob/main/HilleYosida/StronglyContinuousSemigroup.lean#L77
+[SC-312]: https://github.com/mrdouglasny/hille-yosida/blob/main/HilleYosida/StronglyContinuousSemigroup.lean#L312
+[SC-324]: https://github.com/mrdouglasny/hille-yosida/blob/main/HilleYosida/StronglyContinuousSemigroup.lean#L324
+[SC-362]: https://github.com/mrdouglasny/hille-yosida/blob/main/HilleYosida/StronglyContinuousSemigroup.lean#L362
+[SC-460]: https://github.com/mrdouglasny/hille-yosida/blob/main/HilleYosida/StronglyContinuousSemigroup.lean#L460
+[SGE-46]: https://github.com/mrdouglasny/hille-yosida/blob/main/HilleYosida/SemigroupGroupExtension.lean#L46
 
 ### Theorems
 
 | Theorem | File | Line | Statement |
 |---------|------|------|-----------|
-| `operatorZeroApply` | StronglyContinuousSemigroup.lean | 87 | `S(0) x = x` (pointwise) |
-| `normBoundedOnUnitInterval` | StronglyContinuousSemigroup.lean | 97 | `∃ M ≥ 1, ∀ t ∈ [0,1], ‖S(t)‖ ≤ M` — via **Banach-Steinhaus** |
-| `normBoundedOnInterval` | StronglyContinuousSemigroup.lean | 172 | `∀ n : ℕ, ∃ C > 0, ∀ t ∈ [0,n], ‖S(t)‖ ≤ C` — induction on `n` |
-| `strongContAt` | StronglyContinuousSemigroup.lean | 211 | Strong continuity at every `t₀ ≥ 0` (not just 0) |
-| `domain` (submodule) | StronglyContinuousSemigroup.lean | 324 | `add_mem'`, `zero_mem'`, `smul_mem'` — limits algebra |
-| `generatorMap` (linearity) | StronglyContinuousSemigroup.lean | 362 | `map_add'`, `map_smul'` — via `tendsto_nhds_unique` |
-| `existsGrowthBound` | StronglyContinuousSemigroup.lean | 467 | `∃ ω M, ‖S(t)‖ ≤ M e^{ωt}` — floor decomposition + exp/log |
+| `operatorZeroApply` | [StronglyContinuousSemigroup.lean][SC] | [87][SC-87] | `S(0) x = x` (pointwise) |
+| `normBoundedOnUnitInterval` | [StronglyContinuousSemigroup.lean][SC] | [97][SC-97] | `∃ M ≥ 1, ∀ t ∈ [0,1], ‖S(t)‖ ≤ M` — via **Banach-Steinhaus** |
+| `normBoundedOnInterval` | [StronglyContinuousSemigroup.lean][SC] | [172][SC-172] | `∀ n : ℕ, ∃ C > 0, ∀ t ∈ [0,n], ‖S(t)‖ ≤ C` — induction on `n` |
+| `strongContAt` | [StronglyContinuousSemigroup.lean][SC] | [211][SC-211] | Strong continuity at every `t₀ ≥ 0` (not just 0) |
+| `domain` (submodule) | [StronglyContinuousSemigroup.lean][SC] | [324][SC-324] | `add_mem'`, `zero_mem'`, `smul_mem'` — limits algebra |
+| `generatorMap` (linearity) | [StronglyContinuousSemigroup.lean][SC] | [362][SC-362] | `map_add'`, `map_smul'` — via `tendsto_nhds_unique` |
+| `existsGrowthBound` | [StronglyContinuousSemigroup.lean][SC] | [467][SC-467] | `∃ ω M, ‖S(t)‖ ≤ M e^{ωt}` — floor decomposition + exp/log |
+
+[SC-87]: https://github.com/mrdouglasny/hille-yosida/blob/main/HilleYosida/StronglyContinuousSemigroup.lean#L87
+[SC-97]: https://github.com/mrdouglasny/hille-yosida/blob/main/HilleYosida/StronglyContinuousSemigroup.lean#L97
+[SC-172]: https://github.com/mrdouglasny/hille-yosida/blob/main/HilleYosida/StronglyContinuousSemigroup.lean#L172
+[SC-211]: https://github.com/mrdouglasny/hille-yosida/blob/main/HilleYosida/StronglyContinuousSemigroup.lean#L211
+[SC-467]: https://github.com/mrdouglasny/hille-yosida/blob/main/HilleYosida/StronglyContinuousSemigroup.lean#L467
 
 ---
 
@@ -53,17 +70,25 @@
 
 | Declaration | File | Line | Type | Blocker |
 |-------------|------|------|------|---------|
-| `resolvent` | StronglyContinuousSemigroup.lean | 410 | `def` | Needs pointwise Bochner integral `R(λ)x = ∫₀^∞ e^{-λt} S(t)x dt` |
-| `resolventMapsToDomain` | StronglyContinuousSemigroup.lean | 420 | theorem | Depends on `resolvent` |
-| `resolventRightInv` | StronglyContinuousSemigroup.lean | 428 | theorem | `(λI - A) R(λ) x = x`; depends on `resolvent` |
-| `hilleYosidaResolventBound` | StronglyContinuousSemigroup.lean | 449 | theorem | `‖R(λ)‖ ≤ 1/λ` for contractions; depends on `resolvent` |
+| `resolvent` | [StronglyContinuousSemigroup.lean][SC] | [410][SC-410] | `def` | Needs pointwise Bochner integral `R(λ)x = ∫₀^∞ e^{-λt} S(t)x dt` |
+| `resolventMapsToDomain` | [StronglyContinuousSemigroup.lean][SC] | [420][SC-420] | theorem | Depends on `resolvent` |
+| `resolventRightInv` | [StronglyContinuousSemigroup.lean][SC] | [428][SC-428] | theorem | `(λI - A) R(λ) x = x`; depends on `resolvent` |
+| `hilleYosidaResolventBound` | [StronglyContinuousSemigroup.lean][SC] | [449][SC-449] | theorem | `‖R(λ)‖ ≤ 1/λ` for contractions; depends on `resolvent` |
+
+[SC-410]: https://github.com/mrdouglasny/hille-yosida/blob/main/HilleYosida/StronglyContinuousSemigroup.lean#L410
+[SC-420]: https://github.com/mrdouglasny/hille-yosida/blob/main/HilleYosida/StronglyContinuousSemigroup.lean#L420
+[SC-428]: https://github.com/mrdouglasny/hille-yosida/blob/main/HilleYosida/StronglyContinuousSemigroup.lean#L428
+[SC-449]: https://github.com/mrdouglasny/hille-yosida/blob/main/HilleYosida/StronglyContinuousSemigroup.lean#L449
 
 ### BCR Bochner theorem (2) — deep analytic results
 
 | Declaration | File | Line | Type | Blocker |
 |-------------|------|------|------|---------|
-| `semigroupGroupBochner` | SemigroupGroupExtension.lean | 66 | theorem | BCR Thm 4.1.13: Laplace representation of PD functions |
-| `semigroupGroupBochnerExtension` | SemigroupGroupExtension.lean | 111 | theorem | Group extension: Fourier representation for all `t ∈ ℝ` |
+| `semigroupGroupBochner` | [SemigroupGroupExtension.lean][SGE] | [66][SGE-66] | theorem | BCR Thm 4.1.13: Laplace representation of PD functions |
+| `semigroupGroupBochnerExtension` | [SemigroupGroupExtension.lean][SGE] | [111][SGE-111] | theorem | Group extension: Fourier representation for all `t ∈ ℝ` |
+
+[SGE-66]: https://github.com/mrdouglasny/hille-yosida/blob/main/HilleYosida/SemigroupGroupExtension.lean#L66
+[SGE-111]: https://github.com/mrdouglasny/hille-yosida/blob/main/HilleYosida/SemigroupGroupExtension.lean#L111
 
 ---
 

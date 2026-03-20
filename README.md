@@ -8,29 +8,47 @@ Prove the `semigroupGroup_bochner` axiom from [OSreconstruction](https://github.
 
 ## Structure
 
+[SC]: HilleYosida/StronglyContinuousSemigroup.lean
+[SGE]: HilleYosida/SemigroupGroupExtension.lean
+
 | File | Content | Status |
 |------|---------|--------|
-| `StronglyContinuousSemigroup.lean` | C₀-semigroups, generators, resolvent | Defs proved, resolvent/bounds sorry |
-| `SemigroupGroupExtension.lean` | BCR Theorem 4.1.13, group extension | Statements, sorry |
+| [`StronglyContinuousSemigroup.lean`][SC] | C₀-semigroups, generators, resolvent | Defs proved, resolvent/bounds sorry |
+| [`SemigroupGroupExtension.lean`][SGE] | BCR Theorem 4.1.13, group extension | Statements, sorry |
 
 ## What is proved
 
-- `StronglyContinuousSemigroup`: definition with semigroup law + strong continuity
-- `ContractingSemigroup`: contraction semigroups (`‖S(t)‖ ≤ 1`)
-- `operator_zero_apply`: `S(0) x = x`
-- `strong_cont_at`: strong continuity at every `t₀ ≥ 0` (modulo `norm_bounded_on_unit_interval`)
-- `domain`: generator domain as a `Submodule ℝ X` (algebraic closure proved)
-- `generatorMap`: generator as `LinearMap` from domain to X (linearity proved via `tendsto_nhds_unique`)
-- `norm_bounded_on_interval`: norm bound on `[0, n]` by induction (modulo unit interval bound)
+- [`StronglyContinuousSemigroup`][SC-64]: definition with semigroup law + strong continuity
+- [`ContractingSemigroup`][SC-77]: contraction semigroups (`‖S(t)‖ ≤ 1`)
+- [`operatorZeroApply`][SC-87]: `S(0) x = x`
+- [`normBoundedOnUnitInterval`][SC-97]: `‖S(t)‖` bounded on `[0,1]` via Banach-Steinhaus
+- [`strongContAt`][SC-211]: strong continuity at every `t₀ ≥ 0`
+- [`domain`][SC-324]: generator domain as a `Submodule ℝ X` (algebraic closure proved)
+- [`generatorMap`][SC-362]: generator as `LinearMap` from domain to X (linearity proved via `tendsto_nhds_unique`)
+- [`normBoundedOnInterval`][SC-172]: norm bound on `[0, n]` by induction
+- [`existsGrowthBound`][SC-467]: every C₀-semigroup has exponential growth bound `M e^{ωt}`
+
+[SC-64]: HilleYosida/StronglyContinuousSemigroup.lean#L64
+[SC-77]: HilleYosida/StronglyContinuousSemigroup.lean#L77
+[SC-87]: HilleYosida/StronglyContinuousSemigroup.lean#L87
+[SC-97]: HilleYosida/StronglyContinuousSemigroup.lean#L97
+[SC-172]: HilleYosida/StronglyContinuousSemigroup.lean#L172
+[SC-211]: HilleYosida/StronglyContinuousSemigroup.lean#L211
+[SC-324]: HilleYosida/StronglyContinuousSemigroup.lean#L324
+[SC-362]: HilleYosida/StronglyContinuousSemigroup.lean#L362
+[SC-467]: HilleYosida/StronglyContinuousSemigroup.lean#L467
 
 ## What is stated (sorry)
 
-- `norm_bounded_on_unit_interval`: `‖S(t)‖` bounded on `[0,1]` (needs UBP)
-- `resolvent`: Laplace transform `R(λ) = ∫₀^∞ e^{-λt} S(t) dt` (needs Bochner integral)
-- `hille_yosida_resolvent_bound`: `‖R(λ)‖ ≤ 1/λ` (forward direction only)
-- `semigroupGroup_bochner`: BCR Theorem 4.1.13 (the main target)
-- `semigroupGroup_bochner_extension`: group extension with Fourier formula + PD
-- `semigroup_extends_to_group_of_positive_generator`: spectral extension (needs Stone's theorem)
+- [`resolvent`][SC-410]: Laplace transform `R(λ) = ∫₀^∞ e^{-λt} S(t) dt` (needs Bochner integral)
+- [`hilleYosidaResolventBound`][SC-449]: `‖R(λ)‖ ≤ 1/λ` (forward direction only)
+- [`semigroupGroupBochner`][SGE-66]: BCR Theorem 4.1.13 (the main target)
+- [`semigroupGroupBochnerExtension`][SGE-111]: group extension with Fourier formula + PD
+
+[SC-410]: HilleYosida/StronglyContinuousSemigroup.lean#L410
+[SC-449]: HilleYosida/StronglyContinuousSemigroup.lean#L449
+[SGE-66]: HilleYosida/SemigroupGroupExtension.lean#L66
+[SGE-111]: HilleYosida/SemigroupGroupExtension.lean#L111
 
 ## Mathematical content
 
