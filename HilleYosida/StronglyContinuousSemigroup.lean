@@ -34,6 +34,7 @@ and states the Hille-Yosida generation theorem.
 import Mathlib.Topology.Algebra.Module.Basic
 import Mathlib.Analysis.NormedSpace.OperatorNorm.Basic
 import Mathlib.Analysis.SpecialFunctions.Exponential
+import Mathlib.Analysis.SpecialFunctions.Log.Basic
 import Mathlib.Topology.ContinuousMap.Basic
 
 noncomputable section
@@ -71,6 +72,28 @@ structure ContractingSemigroup extends StronglyContinuousSemigroup X where
   contracting : ∀ (t : ℝ), 0 ≤ t → ‖operator t‖ ≤ 1
 
 variable {X}
+
+/-! ## Basic Properties -/
+
+/-- `S(t) x` at `t = 0` equals `x`, pointwise version. -/
+@[simp]
+theorem StronglyContinuousSemigroup.operator_zero_apply
+    (S : StronglyContinuousSemigroup X) (x : X) :
+    S.operator 0 x = x := by
+  have := congrFun (congrArg DFunLike.coe S.at_zero) x
+  simpa using this
+
+/-- Strong continuity at every `t₀ ≥ 0`, not just at 0.
+
+From continuity at 0: `S(t)x → x` as `t → 0⁺`. Then at `t₀`:
+`S(t₀ + h)x = S(t₀)(S(h)x) → S(t₀)x` as `h → 0⁺` by continuity of `S(t₀)`. -/
+theorem StronglyContinuousSemigroup.strong_cont_at
+    (S : StronglyContinuousSemigroup X) (x : X) (t₀ : ℝ) (ht₀ : 0 ≤ t₀) :
+    Filter.Tendsto (fun t => S.operator t x)
+      (nhdsWithin t₀ (Set.Ici 0)) (nhds (S.operator t₀ x)) := by
+  -- Write S(t)x = S(t₀)(S(t - t₀)x) for t ≥ t₀, and use continuity of S(t₀)
+  -- at the point S(0)x = x, combined with S(h)x → x from strong_cont.
+  sorry
 
 /-! ## The Infinitesimal Generator -/
 
@@ -218,12 +241,26 @@ def StronglyContinuousSemigroup.hasGrowthBound
     (S : StronglyContinuousSemigroup X) (ω : ℝ) (M : ℝ) : Prop :=
   1 ≤ M ∧ ∀ (t : ℝ), 0 ≤ t → ‖S.operator t‖ ≤ M * Real.exp (ω * t)
 
+/-- The operator norm of a C₀-semigroup is bounded on `[0, 1]`.
+
+By strong continuity at 0, for each x, `‖S(t) x‖` is bounded near 0.
+The uniform boundedness principle gives a uniform bound on `‖S(t)‖`.
+Here we use a direct bound: `S(0) = Id` and continuity. -/
+private theorem StronglyContinuousSemigroup.norm_bounded_on_unit_interval
+    (S : StronglyContinuousSemigroup X) :
+    ∃ (M : ℝ), 1 ≤ M ∧ ∀ (t : ℝ), 0 ≤ t → t ≤ 1 → ‖S.operator t‖ ≤ M := by
+  sorry
+
 /-- Every C₀-semigroup has a finite exponential growth bound.
-This follows from the uniform boundedness principle (Banach-Steinhaus)
-applied on compact intervals, combined with the semigroup property. -/
+This follows from the uniform bound on `[0, 1]` combined with the
+semigroup property: `S(n + r) = S(1)^n ∘ S(r)` for integer n. -/
 theorem StronglyContinuousSemigroup.exists_growth_bound
     (S : StronglyContinuousSemigroup X) :
     ∃ (ω : ℝ) (M : ℝ), S.hasGrowthBound ω M := by
+  obtain ⟨M, hM1, hMbound⟩ := S.norm_bounded_on_unit_interval
+  refine ⟨Real.log M, M, hM1, fun t ht => ?_⟩
+  -- Write t = ⌊t⌋ + (t - ⌊t⌋) where 0 ≤ t - ⌊t⌋ < 1
+  -- Then ‖S(t)‖ ≤ ‖S(1)‖^⌊t⌋ · ‖S(t - ⌊t⌋)‖ ≤ M^⌊t⌋ · M = M^(⌊t⌋+1) ≤ M · e^{ωt}
   sorry
 
 end
