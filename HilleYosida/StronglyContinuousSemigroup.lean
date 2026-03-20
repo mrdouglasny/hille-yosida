@@ -41,6 +41,7 @@ not yet implemented.
 
 import Mathlib.Topology.Algebra.Module.Basic
 import Mathlib.Analysis.Normed.Operator.ContinuousLinearMap
+import Mathlib.Analysis.Normed.Operator.BanachSteinhaus
 import Mathlib.Analysis.SpecialFunctions.Log.Basic
 import Mathlib.Analysis.SpecialFunctions.ExpDeriv
 
@@ -97,7 +98,72 @@ Here we use a direct bound: `S(0) = Id` and continuity. -/
 private theorem StronglyContinuousSemigroup.normBoundedOnUnitInterval
     (S : StronglyContinuousSemigroup X) :
     ∃ (M : ℝ), 1 ≤ M ∧ ∀ (t : ℝ), 0 ≤ t → t ≤ 1 → ‖S.operator t‖ ≤ M := by
-  sorry
+  -- Step 1: For each x, the orbit {S(t)x : t ∈ [0, 1]} is pointwise bounded.
+  have h_ptwise : ∀ x : X, ∃ C, ∀ (i : Set.Icc (0 : ℝ) 1),
+      ‖(fun j : Set.Icc (0 : ℝ) 1 => S.operator j.val) i x‖ ≤ C := by
+    intro x
+    -- By strong continuity at 0: S(t)x → x, so ‖S(t)x‖ bounded near 0
+    have hsc := S.strong_cont x
+    rw [Metric.tendsto_nhdsWithin_nhds] at hsc
+    obtain ⟨δ, hδ_pos, hδ⟩ := hsc 1 one_pos
+    -- ‖S(t)x‖ ≤ ‖x‖ + 1 for t ∈ [0, δ)
+    have h_near : ∀ t : ℝ, 0 ≤ t → t < δ → ‖S.operator t x‖ ≤ ‖x‖ + 1 := by
+      intro t ht0 htδ
+      have h1 := hδ ht0 (by rwa [dist_zero_right, Real.norm_eq_abs, abs_of_nonneg ht0])
+      rw [dist_eq_norm] at h1
+      linarith [norm_le_insert' (S.operator t x) x]
+    -- Extend to [0, 1] using semigroup property and operator norm of S(δ)
+    set L := max ‖S.operator δ‖ 1
+    set B := ‖x‖ + 1
+    set N := Nat.ceil (1 / δ)
+    -- Claim: ∀ k, t ∈ [0, (k+1)δ) → ‖S(t)x‖ ≤ L^k * B
+    have h_claim : ∀ (k : ℕ), ∀ t : ℝ, 0 ≤ t → t < (↑k + 1) * δ →
+        ‖S.operator t x‖ ≤ L ^ k * B := by
+      intro k; induction k with
+      | zero =>
+        intro t ht0 htδ
+        simp only [Nat.cast_zero, zero_add, one_mul] at htδ
+        simp only [pow_zero, one_mul]
+        exact h_near t ht0 htδ
+      | succ k ih =>
+        intro t ht0 ht_ub
+        by_cases hk : t < (↑k + 1) * δ
+        · -- Earlier interval: use IH + L ≥ 1
+          calc ‖S.operator t x‖ ≤ L ^ k * B := ih t ht0 hk
+            _ ≤ L ^ (k + 1) * B := by
+                apply mul_le_mul_of_nonneg_right _ (by positivity)
+                exact pow_le_pow_right₀ (le_max_right _ _) (Nat.le_succ k)
+        · -- New interval: S(t)x = S(δ)(S(t-δ)x)
+          push_neg at hk
+          have htd_nn : 0 ≤ t - δ := by
+            have : δ ≤ (↑k + 1) * δ :=
+              le_mul_of_one_le_left (le_of_lt hδ_pos)
+                (by have := (Nat.cast_nonneg k : (0 : ℝ) ≤ ↑k); linarith)
+            linarith
+          have htd_lt : t - δ < (↑k + 1) * δ := by
+            push_cast [Nat.succ_eq_add_one] at ht_ub; linarith
+          have h_sg := S.semigroup δ (t - δ) (le_of_lt hδ_pos) htd_nn
+          rw [show δ + (t - δ) = t from by ring] at h_sg
+          calc ‖S.operator t x‖
+              = ‖S.operator δ (S.operator (t - δ) x)‖ := by
+                simp only [h_sg, ContinuousLinearMap.comp_apply]
+            _ ≤ ‖S.operator δ‖ * ‖S.operator (t - δ) x‖ :=
+                ContinuousLinearMap.le_opNorm _ _
+            _ ≤ L * (L ^ k * B) := by
+                apply mul_le_mul (le_max_left _ _) (ih _ htd_nn htd_lt)
+                  (by positivity) (by positivity)
+            _ = L ^ (k + 1) * B := by ring
+    -- For t ∈ [0, 1]: use claim with k = N, since 1 < (N+1)δ
+    have hNδ : 1 < (↑N + 1) * δ := by
+      have hN : (1 : ℝ) / δ ≤ ↑N := Nat.le_ceil _
+      have : 1 ≤ ↑N * δ := by rwa [div_le_iff₀ hδ_pos] at hN
+      linarith
+    exact ⟨L ^ N * B, fun ⟨t, ht0, ht1⟩ => by
+      simp only; exact h_claim N t ht0 (by linarith)⟩
+  -- Step 2: Apply Banach-Steinhaus for uniform bound
+  obtain ⟨C, hC⟩ := banach_steinhaus h_ptwise
+  exact ⟨max C 1, le_max_right _ _, fun t ht0 ht1 =>
+    (hC ⟨t, ht0, ht1⟩).trans (le_max_left _ _)⟩
 
 /-- The operator norm of a C₀-semigroup is bounded on `[0, n]` for any `n : ℕ`.
 
@@ -402,9 +468,47 @@ theorem StronglyContinuousSemigroup.existsGrowthBound
     (S : StronglyContinuousSemigroup X) :
     ∃ (ω : ℝ) (M : ℝ), S.HasGrowthBound ω M := by
   obtain ⟨M, hM1, hMbound⟩ := S.normBoundedOnUnitInterval
+  have hM_pos : 0 < M := by linarith
   refine ⟨Real.log M, M, hM1, fun t ht => ?_⟩
-  -- Write t = ⌊t⌋ + (t - ⌊t⌋) where 0 ≤ t - ⌊t⌋ < 1
-  -- Then ‖S(t)‖ ≤ ‖S(1)‖^⌊t⌋ · ‖S(t - ⌊t⌋)‖ ≤ M^⌊t⌋ · M = M^(⌊t⌋+1) ≤ M · e^{ωt}
-  sorry
+  -- Integer-time operator norm bound by induction: ‖S(k)‖ ≤ M^k
+  have h_int_bound : ∀ (k : ℕ), ‖S.operator (↑k : ℝ)‖ ≤ M ^ k := by
+    intro k; induction k with
+    | zero =>
+      simp only [Nat.cast_zero, S.at_zero]
+      exact ContinuousLinearMap.norm_id_le
+    | succ k ih =>
+      have : (↑(k + 1) : ℝ) = 1 + ↑k := by push_cast; ring
+      rw [this, S.semigroup 1 ↑k (by linarith) (Nat.cast_nonneg k)]
+      calc ‖(S.operator 1).comp (S.operator ↑k)‖
+          ≤ ‖S.operator 1‖ * ‖S.operator ↑k‖ := ContinuousLinearMap.opNorm_comp_le _ _
+        _ ≤ M * M ^ k :=
+            mul_le_mul (hMbound 1 (by linarith) le_rfl) ih (norm_nonneg _) (by linarith)
+        _ = M ^ (k + 1) := by ring
+  -- Decompose t = (t - ⌊t⌋₊) + ⌊t⌋₊ where 0 ≤ t - ⌊t⌋₊ ≤ 1
+  set n := ⌊t⌋₊ with hn_def
+  have hn_le : (↑n : ℝ) ≤ t := Nat.floor_le ht
+  have hfrac_nn : 0 ≤ t - ↑n := sub_nonneg.mpr hn_le
+  have hfrac_le1 : t - ↑n ≤ 1 := by
+    have := Nat.lt_floor_add_one t; push_cast at this ⊢; linarith
+  -- Use semigroup property: S(t) = S(t - n) ∘ S(n)
+  have h_eq : (t - ↑n) + ↑n = t := by ring
+  have h_sg := S.semigroup (t - ↑n) ↑n hfrac_nn (Nat.cast_nonneg n)
+  rw [h_eq] at h_sg
+  rw [h_sg]
+  -- ‖S(t-n) ∘ S(n)‖ ≤ ‖S(t-n)‖ · ‖S(n)‖ ≤ M · M^n ≤ M · exp(log M · t)
+  calc ‖(S.operator (t - ↑n)).comp (S.operator ↑n)‖
+      ≤ ‖S.operator (t - ↑n)‖ * ‖S.operator ↑n‖ := ContinuousLinearMap.opNorm_comp_le _ _
+    _ ≤ M * M ^ n :=
+        mul_le_mul (hMbound _ hfrac_nn hfrac_le1) (h_int_bound n) (norm_nonneg _) (by linarith)
+    _ ≤ M * Real.exp (Real.log M * t) := by
+        apply mul_le_mul_of_nonneg_left _ (by linarith)
+        calc (M : ℝ) ^ n
+            = Real.exp (↑n * Real.log M) := by
+              rw [Real.exp_nat_mul, Real.exp_log hM_pos]
+          _ ≤ Real.exp (Real.log M * t) := by
+              apply Real.exp_le_exp.mpr
+              calc ↑n * Real.log M ≤ t * Real.log M :=
+                    mul_le_mul_of_nonneg_right hn_le (Real.log_nonneg hM1)
+                _ = Real.log M * t := by ring
 
 end
