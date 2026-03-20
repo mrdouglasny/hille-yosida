@@ -84,10 +84,82 @@ def StronglyContinuousSemigroup.generator (S : StronglyContinuousSemigroup X)
     (nhdsWithin 0 (Set.Ioi 0))
     (nhds Ax)
 
-/-- The domain of the generator: elements where the derivative limit exists. -/
-def StronglyContinuousSemigroup.generatorDomain (S : StronglyContinuousSemigroup X) :
-    Set X :=
-  { x | S.generator x }
+/-- The domain of the generator as a ℝ-submodule of X.
+
+This is algebraically closed under addition and scalar multiplication because
+limits of sums/scalar-multiples are sums/scalar-multiples of limits
+(in the Hausdorff topology of a Banach space). -/
+def StronglyContinuousSemigroup.domain (S : StronglyContinuousSemigroup X) :
+    Submodule ℝ X where
+  carrier := { x | S.generator x }
+  add_mem' := by
+    intro x y hx hy
+    obtain ⟨Ax, hAx⟩ := hx
+    obtain ⟨Ay, hAy⟩ := hy
+    refine ⟨Ax + Ay, ?_⟩
+    have : Filter.Tendsto
+        (fun t => (1/t) • (S.operator t (x + y) - (x + y)))
+        (nhdsWithin 0 (Set.Ioi 0)) (nhds (Ax + Ay)) := by
+      have heq : ∀ᶠ t in nhdsWithin 0 (Set.Ioi 0),
+          (1/t) • (S.operator t (x + y) - (x + y)) =
+            (1/t) • (S.operator t x - x) + (1/t) • (S.operator t y - y) := by
+        filter_upwards with t
+        rw [map_add, add_sub_add_comm, smul_add]
+      exact (hAx.add hAy).congr' (heq.mono (fun _ h => h.symm))
+    exact this
+  zero_mem' := by
+    refine ⟨0, ?_⟩
+    have : (fun t => (1/t) • (S.operator t (0 : X) - 0)) = fun _ => 0 := by
+      ext t; simp [map_zero]
+    rw [this]; exact tendsto_const_nhds
+  smul_mem' := by
+    intro c x hx
+    obtain ⟨Ax, hAx⟩ := hx
+    refine ⟨c • Ax, ?_⟩
+    have heq : ∀ᶠ t in nhdsWithin 0 (Set.Ioi 0),
+        (1/t) • (S.operator t (c • x) - c • x) =
+          c • ((1/t) • (S.operator t x - x)) := by
+      filter_upwards with t
+      simp only [map_smul, smul_sub, smul_comm c (1/t)]
+    exact (hAx.const_smul c).congr' (heq.mono (fun _ h => h.symm))
+
+/-- The infinitesimal generator `A`, as a linear map from its domain submodule to `X`.
+
+Uses `Classical.choose` to extract the limit value. Linearity follows from
+uniqueness of limits in a Hausdorff space (`tendsto_nhds_unique`). -/
+noncomputable def StronglyContinuousSemigroup.generatorMap
+    (S : StronglyContinuousSemigroup X) : S.domain →ₗ[ℝ] X where
+  toFun := fun x => Classical.choose x.property
+  map_add' := by
+    intro ⟨x, hx⟩ ⟨y, hy⟩
+    have hAx := Classical.choose_spec hx
+    have hAy := Classical.choose_spec hy
+    have hxy := Classical.choose_spec (S.domain.add_mem hx hy)
+    have hsum : Filter.Tendsto
+        (fun t => (1/t) • (S.operator t (x + y) - (x + y)))
+        (nhdsWithin 0 (Set.Ioi 0))
+        (nhds (Classical.choose hx + Classical.choose hy)) := by
+      have heq : ∀ᶠ t in nhdsWithin 0 (Set.Ioi 0),
+          (1/t) • (S.operator t (x + y) - (x + y)) =
+            (1/t) • (S.operator t x - x) + (1/t) • (S.operator t y - y) := by
+        filter_upwards with t; rw [map_add, add_sub_add_comm, smul_add]
+      exact (hAx.add hAy).congr' (heq.mono (fun _ h => h.symm))
+    exact tendsto_nhds_unique hxy hsum
+  map_smul' := by
+    intro c ⟨x, hx⟩
+    have hAx := Classical.choose_spec hx
+    have hcx := Classical.choose_spec (S.domain.smul_mem c hx)
+    have hscaled : Filter.Tendsto
+        (fun t => (1/t) • (S.operator t (c • x) - c • x))
+        (nhdsWithin 0 (Set.Ioi 0))
+        (nhds (c • Classical.choose hx)) := by
+      have heq : ∀ᶠ t in nhdsWithin 0 (Set.Ioi 0),
+          (1/t) • (S.operator t (c • x) - c • x) =
+            c • ((1/t) • (S.operator t x - x)) := by
+        filter_upwards with t
+        simp only [map_smul, smul_sub, smul_comm c (1/t)]
+      exact (hAx.const_smul c).congr' (heq.mono (fun _ h => h.symm))
+    exact tendsto_nhds_unique hcx hscaled
 
 /-! ## The Resolvent -/
 
@@ -99,6 +171,25 @@ defines a bounded operator with `‖R(λ)‖ ≤ 1/λ`. -/
 def StronglyContinuousSemigroup.resolvent (S : StronglyContinuousSemigroup X)
     (lambda : ℝ) (hlam : 0 < lambda) : X →L[ℝ] X :=
   sorry -- ∫₀^∞ e^{-lambda t} S.operator t dt (Bochner integral)
+
+/-! ## Resolvent-Generator Interface -/
+
+/-- The resolvent maps all of `X` into the domain of the generator. -/
+theorem StronglyContinuousSemigroup.resolvent_maps_to_domain
+    (S : StronglyContinuousSemigroup X)
+    (lambda : ℝ) (hlam : 0 < lambda) (x : X) :
+    (S.resolvent lambda hlam x) ∈ S.domain := by
+  sorry
+
+/-- The fundamental resolvent identity: `(λI - A) R(λ) x = x`.
+This is the operational meaning of "the resolvent is the inverse of `(λI - A)`". -/
+theorem StronglyContinuousSemigroup.resolvent_right_inv
+    (S : StronglyContinuousSemigroup X)
+    (lambda : ℝ) (hlam : 0 < lambda) (x : X) :
+    let Rlx := S.resolvent lambda hlam x
+    let Rlx_dom : S.domain := ⟨Rlx, S.resolvent_maps_to_domain lambda hlam x⟩
+    lambda • Rlx - S.generatorMap Rlx_dom = x := by
+  sorry
 
 /-! ## Hille-Yosida Theorem -/
 
