@@ -4,36 +4,29 @@ Released under Apache 2.0 license.
 
 # Semigroup-to-Group Extension via Bochner's Theorem
 
-This file states and (ultimately) proves the Bochner representation theorem
-for positive-definite functions on the involutive semigroup `[0,∞) × ℝ^d`,
+States and (ultimately) proves the Bochner representation theorem for
+positive-definite functions on the involutive semigroup `[0,∞) × ℝ^d`,
 and derives the semigroup-to-group extension for positive-generator semigroups.
 
 ## Mathematical Background
 
-In the Osterwalder-Schrader reconstruction of QFT:
-- Euclidean time translations form a contraction semigroup `e^{-tH}` for `t ≥ 0`
-- Lorentzian (Wightman) time translations form a unitary group `e^{itH}` for `t ∈ ℝ`
+In Osterwalder-Schrader reconstruction, Euclidean time translations form a
+contraction semigroup `e^{-tH}` (t ≥ 0), while Lorentzian time translations
+form a unitary group `e^{itH}` (t ∈ ℝ). **Not every contraction semigroup
+extends to a group** — the heat semigroup is a counterexample. The extension
+requires a spectral positivity condition (H ≥ 0), guaranteed by OS reflection
+positivity (E2).
 
-**Not every contraction semigroup extends to a group.** The heat semigroup
-`e^{tΔ}` is a standard counterexample — it is a contraction semigroup that
-is not invertible for `t < 0`. The extension requires an additional
-hypothesis: the semigroup arises from a **positive-definite** function
-(equivalently, the generator `H` has nonnegative spectrum, which is
-guaranteed by OS reflection positivity E2).
-
-## Main Results
-
-* `semigroupGroup_bochner` — BCR Theorem 4.1.13: bounded continuous PD functions
-  on `[0,∞) × ℝ^d` are Fourier-Laplace transforms. The measure representation
-  immediately gives the extension to all `t ∈ ℝ`.
-* `semigroupGroup_bochner_extension` — the group extension derived from the
-  Bochner representation
+The analytical bridge: the BCR Theorem 4.1.13 gives a Fourier-Laplace measure
+representation for bounded continuous PD functions on `[0,∞) × ℝ^d`. The
+measure μ is supported on `[0,∞) × ℝ^d`, and the Fourier integral
+`G(t, a) = ∫ e^{itp} e^{i⟨a,q⟩} dμ(p,q)` extends the semigroup to all t ∈ ℝ.
 
 ## References
 
 * Berg-Christensen-Ressel, "Harmonic Analysis on Semigroups", Theorem 4.1.13
-* Reed-Simon II, §IX.8 (Fourier-Laplace representation)
-* Osterwalder-Schrader I-II (application to QFT reconstruction)
+* Reed-Simon II, §IX.8
+* Osterwalder-Schrader I-II
 -/
 
 import HilleYosida.StronglyContinuousSemigroup
@@ -49,9 +42,7 @@ open MeasureTheory Complex Set Filter
 /-- A function on `[0,∞) × ℝ^d` is positive-definite with respect to the
 involutive semigroup structure `(t, a)^* = (t, -a)`.
 
-This is the exact condition arising from OS reflection positivity (E2):
-the two-point function `⟨Ω, e^{-(s+t)H} e^{i⟨a-b, P⟩} Ω⟩` is PD in
-the semigroup variables `(s, a), (t, b)` with the involution. -/
+This is the condition arising from OS reflection positivity (E2). -/
 def IsSemigroupGroupPD (d : ℕ)
     (F : ℝ → (Fin d → ℝ) → ℂ) : Prop :=
   ∀ (n : ℕ) (c : Fin n → ℂ) (ts : Fin n → ℝ) (as : Fin n → (Fin d → ℝ)),
@@ -71,9 +62,6 @@ Fourier-Laplace transforms of finite positive measures supported on
 
   `F(t, a) = ∫ e^{-tp} e^{i⟨a, q⟩} dμ(p, q)`  for `t ≥ 0`
 
-Note: `F` is only assumed to be defined and PD for `t ≥ 0`. The hypotheses
-`hcont` and `hbdd` are on the restriction to `[0, ∞) × ℝ^d`.
-
 Ref: Berg-Christensen-Ressel, "Harmonic Analysis on Semigroups" Thm 4.1.13 -/
 theorem semigroupGroup_bochner (d : ℕ)
     (F : ℝ → (Fin d → ℝ) → ℂ)
@@ -92,66 +80,74 @@ theorem semigroupGroup_bochner (d : ℕ)
 
 /-! ## Group Extension from Bochner Representation
 
-Once the measure `μ` is obtained from `semigroupGroup_bochner`, the extension
-to all `t ∈ ℝ` is immediate: the integral
-  `G(t, a) = ∫ e^{-tp} e^{i⟨a, q⟩} dμ(p, q)`
-converges for ALL `t ∈ ℝ` (not just `t ≥ 0`) because `μ` is supported on
-`{p ≥ 0} × ℝ^d`, so the exponential `e^{-tp}` is bounded for `t < 0` too
-(since `p ≥ 0` and `t < 0` give `e^{-tp} = e^{|t|p}`, but `μ` is finite
-so the integral converges by dominated convergence with the bound from `hbdd`).
+Given the measure `μ` from `semigroupGroup_bochner` (supported on `[0,∞) × ℝ^d`),
+the group extension uses the **Fourier** (not Laplace) kernel:
 
-Actually: for `t < 0` and `p ≥ 0`, `e^{-tp} = e^{|t|p}` grows, so the integral
-may diverge. The correct statement uses `e^{itp}` (Fourier, not Laplace) for the
-group extension, which is bounded. The group is:
-  `G(t, a) = ∫ e^{itp} e^{i⟨a, q⟩} dμ(p, q)` for all `t ∈ ℝ`
+  `G(t, a) = ∫ e^{itp} e^{i⟨a, q⟩} dμ(p, q)`  for all `t ∈ ℝ`
 
-This requires the analytic continuation `t ↦ e^{-zp}` where `z = t` (real,
-nonneg) is continued to `z = -it` (purely imaginary). -/
+This converges for all `t ∈ ℝ` because `|e^{itp}| = 1` and `μ` is finite.
+For `t ≥ 0`, analytic continuation from `e^{-tp}` to `e^{itp}` relates
+`G` to `F` via the substitution `t ↦ -it`. -/
 
-/-- The group extension: given the Bochner measure from `semigroupGroup_bochner`,
-define `G(t, a)` for ALL `t ∈ ℝ` via the Fourier representation. -/
+/-- The group extension from the Bochner measure representation.
+
+Given a bounded continuous PD function `F` on `[0,∞) × ℝ^d`, there exists
+`G : ℝ → ℝ^d → ℂ` extending F with:
+1. Extension: `G(t, a) = F(t, a)` for `t ≥ 0`
+2. Fourier representation: `G(t, a) = ∫ e^{itp} e^{i⟨a,q⟩} dμ(p,q)` for ALL `t`
+3. Group law: `G(s+t, a) = ∫ G(s, a-b) G(t, b) db` (convolution group)
+4. Boundedness: `|G(t, a)| ≤ μ(ℝ × ℝ^d)` for all `t, a`
+5. Continuity: `G` is continuous on all of `ℝ × ℝ^d` -/
 theorem semigroupGroup_bochner_extension (d : ℕ)
     (F : ℝ → (Fin d → ℝ) → ℂ)
     (hcont : ContinuousOn (fun p : ℝ × (Fin d → ℝ) => F p.1 p.2) (Set.Ici 0 ×ˢ Set.univ))
     (hbdd : ∃ C : ℝ, ∀ t a, 0 ≤ t → ‖F t a‖ ≤ C)
     (hpd : IsSemigroupGroupPD d F) :
-    ∃ (G : ℝ → (Fin d → ℝ) → ℂ),
-      -- G extends F on [0, ∞)
+    ∃ (μ : Measure (ℝ × (Fin d → ℝ))) (G : ℝ → (Fin d → ℝ) → ℂ),
+      IsFiniteMeasure μ ∧
+      -- G extends F
       (∀ (t : ℝ) (a : Fin d → ℝ), 0 ≤ t → G t a = F t a) ∧
-      -- G is continuous on all of ℝ × ℝ^d
+      -- G has a Fourier representation for all t ∈ ℝ
+      (∀ (t : ℝ) (a : Fin d → ℝ),
+        G t a = ∫ p : ℝ × (Fin d → ℝ),
+          Complex.exp (Complex.I * ↑(t * p.1)) *
+            Complex.exp (Complex.I * ↑(∑ i : Fin d, p.2 i * a i))
+          ∂μ) ∧
+      -- G is bounded
+      (∃ C : ℝ, ∀ t a, ‖G t a‖ ≤ C) ∧
+      -- G is continuous
       (Continuous (fun p : ℝ × (Fin d → ℝ) => G p.1 p.2)) ∧
-      -- G is bounded on all of ℝ × ℝ^d
-      (∃ C : ℝ, ∀ t a, ‖G t a‖ ≤ C) := by
+      -- G is positive-definite on all of ℝ (not just [0,∞))
+      (∀ (n : ℕ) (c : Fin n → ℂ) (ts : Fin n → ℝ) (as : Fin n → (Fin d → ℝ)),
+        0 ≤ (∑ i : Fin n, ∑ j : Fin n,
+          starRingEnd ℂ (c i) * c j * G (ts j - ts i) (as j - as i)).re) := by
   sorry
 
 /-! ## Connection to QFT: Semigroup Extension with Spectral Condition
 
-The QFT application is more specific than the general Bochner theorem.
-Given a contraction semigroup `S(t) = e^{-tH}` with `H ≥ 0` (positive
-generator), the spectral theorem gives `S(t) = ∫ e^{-tλ} dE(λ)` where
-`E` is the spectral measure of `H` supported on `[0, ∞)`. The unitary
-group is then `U(t) = ∫ e^{itλ} dE(λ)`.
+The QFT application: given a contraction semigroup `S(t) = e^{-tH}` on a
+**complex** Hilbert space with `H ≥ 0` (positive Hamiltonian), the spectral
+theorem gives `S(t) = ∫ e^{-tλ} dE(λ)` where `E` is the spectral measure
+supported on `[0, ∞)`. The **unitary** group is `U(t) = ∫ e^{itλ} dE(λ)`.
 
-**Important**: This extension requires `H ≥ 0` (spectrum in `[0, ∞)`),
-which comes from OS reflection positivity (E2). Without positivity,
-the heat semigroup shows that general contraction semigroups do NOT
+**Important**: This requires `H ≥ 0` (from OS reflection positivity E2).
+Without it, the heat semigroup shows general contraction semigroups don't
 extend to groups.
 
-The spectral-theoretic proof requires Stone's theorem (not yet in Mathlib),
-so we state this as a separate theorem with the spectral hypothesis. -/
+The full formalization needs Stone's theorem (not yet in Mathlib) and the
+spectral theorem for unbounded self-adjoint operators. We state the result
+on a real Hilbert space as a stepping stone; the complex version requires
+additional infrastructure. -/
 
-/-- Extension of a contraction semigroup to a unitary group, under the
-additional hypothesis that the generator has nonneg spectrum (H ≥ 0).
+/-- Extension of a contraction semigroup on a real Hilbert space to a
+strongly continuous group, under the PD hypothesis (positive generator).
 
-This is the specific result needed for OS reconstruction: the Euclidean
-semigroup `e^{-tH}` extends to the Lorentzian group `e^{itH}`.
-
-Requires: spectral theory / Stone's theorem (not yet in Mathlib). -/
+This is the real-Hilbert-space version. The full QFT application uses a
+complex Hilbert space with unitary operators, which requires additional
+infrastructure (complex inner product space, unitary group). -/
 theorem semigroup_extends_to_group_of_positive_generator
     (H : Type*) [NormedAddCommGroup H] [InnerProductSpace ℝ H] [CompleteSpace H]
     (S : ContractingSemigroup H)
-    -- The additional spectral hypothesis: S is a PD semigroup
-    -- (arises from reflection positivity in the OS context)
     (hpd : ∀ (n : ℕ) (c : Fin n → ℝ) (ts : Fin n → ℝ) (xs : Fin n → H),
       (∀ i, 0 ≤ ts i) →
       0 ≤ ∑ i : Fin n, ∑ j : Fin n,

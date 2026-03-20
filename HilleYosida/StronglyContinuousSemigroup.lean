@@ -32,10 +32,9 @@ and states the Hille-Yosida generation theorem.
 -/
 
 import Mathlib.Topology.Algebra.Module.Basic
-import Mathlib.Analysis.NormedSpace.OperatorNorm.Basic
-import Mathlib.Analysis.SpecialFunctions.Exponential
+import Mathlib.Analysis.Normed.Operator.ContinuousLinearMap
 import Mathlib.Analysis.SpecialFunctions.Log.Basic
-import Mathlib.Topology.ContinuousMap.Basic
+import Mathlib.Analysis.SpecialFunctions.ExpDeriv
 
 noncomputable section
 
