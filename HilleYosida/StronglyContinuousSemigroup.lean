@@ -83,6 +83,56 @@ theorem StronglyContinuousSemigroup.operator_zero_apply
   have := congrFun (congrArg DFunLike.coe S.at_zero) x
   simpa using this
 
+/-- The operator norm of a C₀-semigroup is bounded on `[0, 1]`.
+
+By strong continuity at 0, for each x, `‖S(t) x‖` is bounded near 0.
+The uniform boundedness principle gives a uniform bound on `‖S(t)‖`.
+Here we use a direct bound: `S(0) = Id` and continuity. -/
+private theorem StronglyContinuousSemigroup.norm_bounded_on_unit_interval
+    (S : StronglyContinuousSemigroup X) :
+    ∃ (M : ℝ), 1 ≤ M ∧ ∀ (t : ℝ), 0 ≤ t → t ≤ 1 → ‖S.operator t‖ ≤ M := by
+  sorry
+
+/-- The operator norm of a C₀-semigroup is bounded on `[0, n]` for any `n : ℕ`.
+
+Proof: by induction on `n`. For `t ∈ (k, k+1]`, write `t = (t-k) + k` where
+`t - k ∈ [0, 1]`, so `S(t) = S(t-k) ∘ S(k)` and
+`‖S(t)‖ ≤ ‖S(t-k)‖ · ‖S(k)‖ ≤ M · M^k = M^(k+1)`. -/
+private theorem StronglyContinuousSemigroup.norm_bounded_on_interval
+    (S : StronglyContinuousSemigroup X) (n : ℕ) :
+    ∃ (C : ℝ), 0 < C ∧ ∀ (t : ℝ), 0 ≤ t → t ≤ n → ‖S.operator t‖ ≤ C := by
+  obtain ⟨M, hM1, hMbound⟩ := S.norm_bounded_on_unit_interval
+  have hM_pos : (0 : ℝ) < M := by linarith
+  induction n with
+  | zero =>
+    refine ⟨1, one_pos, fun t ht htn => ?_⟩
+    simp only [Nat.cast_zero] at htn
+    have : t = 0 := le_antisymm htn ht
+    rw [this, S.at_zero]
+    exact ContinuousLinearMap.norm_id_le
+  | succ k ih =>
+    obtain ⟨C_k, hC_k_pos, hC_k_bound⟩ := ih
+    refine ⟨M * C_k, mul_pos hM_pos hC_k_pos, fun t ht htn => ?_⟩
+    by_cases hk : t ≤ ↑k
+    · calc ‖S.operator t‖ ≤ C_k := hC_k_bound t ht hk
+        _ ≤ M * C_k := le_mul_of_one_le_left (le_of_lt hC_k_pos) hM1
+    · -- t ∈ (k, k+1], decompose: t = (t - k) + k
+      push_neg at hk
+      have htk_nn : 0 ≤ t - ↑k := by linarith
+      have htk_le : t - ↑k ≤ 1 := by
+        push_cast [Nat.succ_eq_add_one] at htn; linarith
+      have hk_nn : (0 : ℝ) ≤ ↑k := Nat.cast_nonneg k
+      have h_eq : t = (t - ↑k) + ↑k := by ring
+      have h_sg := S.semigroup (t - ↑k) ↑k htk_nn hk_nn
+      rw [← h_eq] at h_sg
+      rw [h_sg]
+      calc ‖(S.operator (t - ↑k)).comp (S.operator ↑k)‖
+          ≤ ‖S.operator (t - ↑k)‖ * ‖S.operator ↑k‖ :=
+            ContinuousLinearMap.opNorm_comp_le _ _
+        _ ≤ M * C_k :=
+            mul_le_mul (hMbound _ htk_nn htk_le) (hC_k_bound ↑k hk_nn le_rfl)
+              (norm_nonneg _) (le_of_lt hM_pos)
+
 /-- Strong continuity at every `t₀ ≥ 0`, not just at 0.
 
 From continuity at 0: `S(t)x → x` as `t → 0⁺`. Then at `t₀`:
@@ -91,9 +141,96 @@ theorem StronglyContinuousSemigroup.strong_cont_at
     (S : StronglyContinuousSemigroup X) (x : X) (t₀ : ℝ) (ht₀ : 0 ≤ t₀) :
     Filter.Tendsto (fun t => S.operator t x)
       (nhdsWithin t₀ (Set.Ici 0)) (nhds (S.operator t₀ x)) := by
-  -- Write S(t)x = S(t₀)(S(t - t₀)x) for t ≥ t₀, and use continuity of S(t₀)
-  -- at the point S(0)x = x, combined with S(h)x → x from strong_cont.
-  sorry
+  -- Decompose nhdsWithin t₀ (Ici 0) using Iic/Ici splitting at t₀.
+  -- nhdsWithin t₀ (Ici 0) = nhdsWithin t₀ (Ici 0 ∩ Iic t₀) ⊔ nhdsWithin t₀ (Ici 0 ∩ Ici t₀)
+  rw [show Set.Ici (0 : ℝ) = (Set.Ici 0 ∩ Set.Iic t₀) ∪ (Set.Ici 0 ∩ Set.Ici t₀) from by
+    rw [← Set.inter_union_distrib_left, Set.Iic_union_Ici, Set.inter_univ]]
+  rw [nhdsWithin_union, Filter.tendsto_sup]
+  -- Simplify the intersection sets
+  have h_right_set : Set.Ici (0 : ℝ) ∩ Set.Ici t₀ = Set.Ici t₀ := by
+    ext y; simp only [Set.mem_inter_iff, Set.mem_Ici]
+    exact ⟨fun ⟨_, h⟩ => h, fun h => ⟨le_trans ht₀ h, h⟩⟩
+  have h_left_set : Set.Ici (0 : ℝ) ∩ Set.Iic t₀ = Set.Icc 0 t₀ :=
+    Set.Ici_inter_Iic
+  rw [h_left_set, h_right_set]
+  constructor
+  · -- Left continuity: nhdsWithin t₀ (Icc 0 t₀)
+    -- For 0 ≤ t ≤ t₀: S(t₀)x = S(t)(S(t₀-t)x), so
+    -- S(t)x - S(t₀)x = S(t)(x - S(t₀-t)x).
+    -- ‖S(t)(x - S(t₀-t)x)‖ ≤ ‖S(t)‖·‖x - S(t₀-t)x‖ → 0
+    -- since ‖S(t)‖ is bounded on [0, t₀] and ‖S(t₀-t)x - x‖ → 0.
+    -- The operator norm bound on [0, t₀] follows from norm_bounded_on_unit_interval
+    -- (itself proved via the uniform boundedness principle) + the semigroup property.
+    -- We state this bound as a local fact.
+    have h_norm_bound : ∃ C > 0, ∀ t : ℝ, 0 ≤ t → t ≤ t₀ → ‖S.operator t‖ ≤ C := by
+      obtain ⟨C, hC, hCb⟩ := S.norm_bounded_on_interval (Nat.ceil t₀)
+      exact ⟨C, hC, fun t ht ht' => hCb t ht (ht'.trans (Nat.le_ceil t₀))⟩
+    obtain ⟨C, hC_pos, hC_bound⟩ := h_norm_bound
+    rw [Metric.tendsto_nhdsWithin_nhds]
+    intro ε hε
+    -- Extract δ from strong_cont: for h ∈ [0, δ), ‖S(h)x - x‖ < ε/C
+    have h_sc := S.strong_cont x
+    rw [Metric.tendsto_nhdsWithin_nhds] at h_sc
+    obtain ⟨δ, hδ_pos, hδ_spec⟩ := h_sc (ε / C) (div_pos hε hC_pos)
+    refine ⟨δ, hδ_pos, fun t ht_mem ht_dist => ?_⟩
+    simp only [Set.mem_Icc] at ht_mem
+    -- Key: S(t₀)x = S(t)(S(t₀ - t)x) by semigroup
+    have ht₀t_nn : 0 ≤ t₀ - t := by linarith [ht_mem.2]
+    have h_sg_eq : S.operator t₀ = (S.operator t).comp (S.operator (t₀ - t)) := by
+      have := S.semigroup t (t₀ - t) ht_mem.1 ht₀t_nn
+      rwa [add_sub_cancel] at this
+    -- S(t)x - S(t₀)x = S(t)(x - S(t₀-t)x)
+    have h_diff : S.operator t x - S.operator t₀ x =
+        S.operator t (x - S.operator (t₀ - t) x) := by
+      conv_rhs => rw [map_sub]
+      congr 1
+      rw [h_sg_eq, ContinuousLinearMap.comp_apply]
+    rw [dist_eq_norm, h_diff]
+    calc ‖S.operator t (x - S.operator (t₀ - t) x)‖
+        ≤ ‖S.operator t‖ * ‖x - S.operator (t₀ - t) x‖ :=
+          ContinuousLinearMap.le_opNorm _ _
+      _ ≤ C * ‖x - S.operator (t₀ - t) x‖ :=
+          mul_le_mul_of_nonneg_right (hC_bound t ht_mem.1 ht_mem.2) (norm_nonneg _)
+      _ = C * dist (S.operator (t₀ - t) x) x := by
+          rw [dist_eq_norm, ← norm_neg, neg_sub]
+      _ < C * (ε / C) := by
+          apply mul_lt_mul_of_pos_left _ hC_pos
+          apply hδ_spec ht₀t_nn
+          simp only [dist_zero_right, Real.norm_eq_abs, abs_of_nonneg ht₀t_nn]
+          rw [Real.dist_eq, abs_sub_comm] at ht_dist
+          rwa [abs_of_nonneg ht₀t_nn] at ht_dist
+      _ = ε := mul_div_cancel₀ ε (ne_of_gt hC_pos)
+  · -- Right continuity: nhdsWithin t₀ (Ici t₀)
+    -- For t ≥ t₀: S(t)x = S(t₀)(S(t - t₀)x) and S(t-t₀)x → x by strong_cont.
+    -- S(t₀) is a CLM, hence continuous, so S(t₀)(S(t-t₀)x) → S(t₀)x.
+    -- The map t ↦ t - t₀ sends nhdsWithin t₀ (Ici t₀) to nhdsWithin 0 (Ici 0)
+    have h_sub_tendsto : Filter.Tendsto (fun t => t - t₀)
+        (nhdsWithin t₀ (Set.Ici t₀)) (nhdsWithin 0 (Set.Ici 0)) := by
+      apply tendsto_nhdsWithin_of_tendsto_nhds_of_eventually_within
+      · have : Filter.Tendsto (fun t => t - t₀) (nhds t₀) (nhds 0) := by
+          have h := Filter.Tendsto.sub_const (Filter.tendsto_id (α := ℝ).mono_left
+            (le_refl (nhds t₀))) t₀
+          simp only [id, sub_self] at h; exact h
+        exact this.mono_left nhdsWithin_le_nhds
+      · filter_upwards [self_mem_nhdsWithin] with t ht
+        simp only [Set.mem_Ici] at ht ⊢; linarith
+    -- So S(t - t₀)x → x
+    have h_inner : Filter.Tendsto (fun t => S.operator (t - t₀) x)
+        (nhdsWithin t₀ (Set.Ici t₀)) (nhds x) := (S.strong_cont x).comp h_sub_tendsto
+    -- And S(t₀)(S(t - t₀)x) → S(t₀)x by continuity of the CLM S(t₀)
+    have h_outer : Filter.Tendsto (fun t => S.operator t₀ (S.operator (t - t₀) x))
+        (nhdsWithin t₀ (Set.Ici t₀)) (nhds (S.operator t₀ x)) :=
+      ((S.operator t₀).cont.tendsto x).comp h_inner
+    -- It suffices to show S(t)x = S(t₀)(S(t - t₀)x) for t ≥ t₀
+    apply h_outer.congr'
+    filter_upwards [self_mem_nhdsWithin] with t ht
+    simp only [Set.mem_Ici] at ht
+    have ht_nn : 0 ≤ t - t₀ := by linarith
+    -- S(t₀ + (t - t₀)) = S(t₀) ∘ S(t - t₀) by semigroup, and t₀ + (t - t₀) = t
+    have h_sg := S.semigroup t₀ (t - t₀) ht₀ ht_nn
+    rw [show t₀ + (t - t₀) = t from by ring] at h_sg
+    change (S.operator t₀) ((S.operator (t - t₀)) x) = (S.operator t) x
+    rw [h_sg, ContinuousLinearMap.comp_apply]
 
 /-! ## The Infinitesimal Generator -/
 
@@ -240,16 +377,6 @@ for some constant `M ≥ 1`. Contraction semigroups have `M = 1, ω = 0`. -/
 def StronglyContinuousSemigroup.hasGrowthBound
     (S : StronglyContinuousSemigroup X) (ω : ℝ) (M : ℝ) : Prop :=
   1 ≤ M ∧ ∀ (t : ℝ), 0 ≤ t → ‖S.operator t‖ ≤ M * Real.exp (ω * t)
-
-/-- The operator norm of a C₀-semigroup is bounded on `[0, 1]`.
-
-By strong continuity at 0, for each x, `‖S(t) x‖` is bounded near 0.
-The uniform boundedness principle gives a uniform bound on `‖S(t)‖`.
-Here we use a direct bound: `S(0) = Id` and continuity. -/
-private theorem StronglyContinuousSemigroup.norm_bounded_on_unit_interval
-    (S : StronglyContinuousSemigroup X) :
-    ∃ (M : ℝ), 1 ≤ M ∧ ∀ (t : ℝ), 0 ≤ t → t ≤ 1 → ‖S.operator t‖ ≤ M := by
-  sorry
 
 /-- Every C₀-semigroup has a finite exponential growth bound.
 This follows from the uniform bound on `[0, 1]` combined with the
