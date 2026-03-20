@@ -353,17 +353,18 @@ theorem StronglyContinuousSemigroup.resolvent_right_inv
 
 /-! ## Hille-Yosida Theorem -/
 
-/-- **Hille-Yosida Theorem** (Generation of contraction semigroups).
+/-- **Hille-Yosida resolvent bound** (forward direction).
 
-A closed, densely defined linear operator `A` on a Banach space `X` generates
-a contraction semigroup if and only if:
-1. `(0, ∞) ⊆ ρ(A)` (the resolvent set of A)
-2. `‖(λI - A)⁻¹‖ ≤ 1/λ` for all `λ > 0`
+For a contraction semigroup, the resolvent `R(λ) = ∫₀^∞ e^{-λt} S(t) dt`
+satisfies `‖R(λ)‖ ≤ 1/λ` for all `λ > 0`.
 
-This is the foundational theorem connecting abstract operators to time evolution.
+This is the forward direction of the Hille-Yosida theorem. The full theorem
+(an operator A generates a contraction semigroup iff it is closed, densely
+defined, with `‖(λI - A)⁻¹‖ ≤ 1/λ`) requires the converse: constructing
+the semigroup from the operator, which needs the Yosida approximation.
 
 Ref: Hille (1948), Yosida (1948); Reed-Simon I §VIII.3; Engel-Nagel Ch. II -/
-theorem hille_yosida
+theorem hille_yosida_resolvent_bound
     (S : ContractingSemigroup X) :
     -- For all λ > 0, the resolvent exists and satisfies the bound
     ∀ (lambda : ℝ) (hlam : 0 < lambda),
