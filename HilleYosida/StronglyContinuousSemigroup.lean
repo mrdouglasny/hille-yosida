@@ -333,11 +333,21 @@ noncomputable def StronglyContinuousSemigroup.generatorMap
 /-- The resolvent operator `R(λ, A) = (λI - A)⁻¹` expressed via the Laplace
 transform of the semigroup: `R(λ)x = ∫₀^∞ e^{-λt} S(t)x dt` for `λ > 0`.
 
-For a contraction semigroup, this integral converges for all `λ > 0` and
+**Implementation note**: The integral is defined pointwise for each `x ∈ X`,
+not as an operator-valued integral. This is necessary because `t ↦ S(t)` is
+only strongly continuous (continuous in the strong operator topology), not
+uniformly continuous, so `t ↦ S(t)` is not strongly measurable as a function
+into `X →L[ℝ] X`. The pointwise integral `x ↦ ∫ e^{-λt} S(t)x dt` is
+well-defined because `t ↦ S(t)x` IS strongly measurable for each `x`.
+
+For a contraction semigroup, the integral converges for all `λ > 0` and
 defines a bounded operator with `‖R(λ)‖ ≤ 1/λ`. -/
-def StronglyContinuousSemigroup.resolvent (S : StronglyContinuousSemigroup X)
+noncomputable def StronglyContinuousSemigroup.resolvent
+    (S : StronglyContinuousSemigroup X)
     (lambda : ℝ) (hlam : 0 < lambda) : X →L[ℝ] X :=
-  sorry -- ∫₀^∞ e^{-lambda t} S.operator t dt (Bochner integral)
+  -- Defined pointwise: R(λ) x = ∫₀^∞ e^{-λt} S(t) x dt
+  -- The integral is over each x ∈ X separately (strong, not uniform, measurability).
+  sorry
 
 /-! ## Resolvent-Generator Interface -/
 

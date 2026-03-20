@@ -48,7 +48,7 @@ def IsSemigroupGroupPD (d : ℕ)
   ∀ (n : ℕ) (c : Fin n → ℂ) (ts : Fin n → ℝ) (as : Fin n → (Fin d → ℝ)),
     (∀ i, 0 ≤ ts i) →
     let q := ∑ i : Fin n, ∑ j : Fin n,
-      starRingEnd ℂ (c i) * c j *
+      star (c i) * c j *
         F (ts i + ts j) (as j - as i)
     q.im = 0 ∧ 0 ≤ q.re
 
@@ -136,43 +136,45 @@ theorem semigroupGroup_bochner_extension (d : ℕ)
       -- the quadratic form is real and nonnegative, matching IsSemigroupGroupPD)
       (∀ (n : ℕ) (c : Fin n → ℂ) (ts : Fin n → ℝ) (as : Fin n → (Fin d → ℝ)),
         let q := ∑ i : Fin n, ∑ j : Fin n,
-          starRingEnd ℂ (c i) * c j * G (ts j - ts i) (as j - as i)
+          star (c i) * c j * G (ts j - ts i) (as j - as i)
         q.im = 0 ∧ 0 ≤ q.re) := by
   sorry
 
-/-! ## Connection to QFT: Semigroup Extension with Spectral Condition
+/-! ## Connection to QFT: Analytic Continuation to Unitary Group
 
 The QFT application: given a contraction semigroup `S(t) = e^{-tH}` on a
 **complex** Hilbert space with `H ≥ 0` (positive Hamiltonian), the spectral
 theorem gives `S(t) = ∫ e^{-tλ} dE(λ)` where `E` is the spectral measure
 supported on `[0, ∞)`. The **unitary** group is `U(t) = ∫ e^{itλ} dE(λ)`.
 
-**Important**: This requires `H ≥ 0` (from OS reflection positivity E2).
-Without it, the heat semigroup shows general contraction semigroups don't
-extend to groups.
+**Critical**: `S(t)` and `U(t)` are NOT the same operators. `S(t) = e^{-tH}`
+is a contraction (dampens high frequencies), while `U(t) = e^{itH}` is unitary
+(preserves norms). They are related by **analytic continuation** `t ↦ -it`,
+NOT by equality. For unbounded `H` (any nontrivial QFT Hamiltonian), `S(t)`
+is not invertible, so no bounded group `U` can satisfy `U(t) = S(t)` for
+`t ≥ 0` with `U` also defined for `t < 0`.
 
-The full formalization needs Stone's theorem (not yet in Mathlib) and the
-spectral theorem for unbounded self-adjoint operators. We state the result
-on a real Hilbert space as a stepping stone; the complex version requires
-additional infrastructure. -/
+The extension must happen on a **complex** Hilbert space, where the Wick
+rotation `t ↦ -it` maps the real contraction semigroup to a unitary group.
+This requires Stone's theorem (not yet in Mathlib) and the spectral theorem
+for unbounded self-adjoint operators.
 
-/-- Extension of a contraction semigroup on a real Hilbert space to a
-strongly continuous group, under the PD hypothesis (positive generator).
+**Important**: The extension requires `H ≥ 0` (spectrum in `[0, ∞)`),
+guaranteed by OS reflection positivity (E2). Without it, the heat semigroup
+shows general contraction semigroups don't admit any such extension. -/
 
-This is the real-Hilbert-space version. The full QFT application uses a
-complex Hilbert space with unitary operators, which requires additional
-infrastructure (complex inner product space, unitary group). -/
-theorem semigroup_extends_to_group_of_positive_generator
-    (H : Type*) [NormedAddCommGroup H] [InnerProductSpace ℝ H] [CompleteSpace H]
-    (S : ContractingSemigroup H)
-    (hpd : ∀ (n : ℕ) (c : Fin n → ℝ) (ts : Fin n → ℝ) (xs : Fin n → H),
-      (∀ i, 0 ≤ ts i) →
-      0 ≤ ∑ i : Fin n, ∑ j : Fin n,
-        c i * c j * @inner ℝ H _ (xs i) (S.operator (ts i + ts j) (xs j))) :
-    ∃ (U : ℝ → H →L[ℝ] H),
-      (∀ (t : ℝ), 0 ≤ t → U t = S.operator t) ∧
-      (∀ (s t : ℝ), U (s + t) = (U s).comp (U t)) ∧
-      (∀ (x : H), Continuous (fun t => U t x)) := by
-  sorry
+-- NOTE: The full complex-Hilbert-space version of this theorem requires:
+-- 1. InnerProductSpace ℂ H (complex inner product)
+-- 2. Unitary group U(t) : H →L[ℂ] H (complex-linear)
+-- 3. Spectral theorem / Stone's theorem (not in Mathlib)
+-- 4. The connection S(t) ↔ U(t) via analytic continuation, not pointwise equality
+--
+-- The contraction semigroup S(t) = e^{-tH} maps to the unitary group U(t) = e^{itH}
+-- via the spectral measure: ⟨x, S(t)x⟩ = ∫ e^{-tλ} d⟨x, E(λ)x⟩ and
+-- ⟨x, U(s)x⟩ = ∫ e^{isλ} d⟨x, E(λ)x⟩. These are NOT equal for real t = s;
+-- they are related by analytic continuation t ↦ -it.
+--
+-- This is deferred until Stone's theorem and the spectral theorem for unbounded
+-- self-adjoint operators are available in Mathlib.
 
 end
