@@ -89,21 +89,25 @@ This converges for all `t ∈ ℝ` because `|e^{itp}| = 1` and `μ` is finite.
 For `t ≥ 0`, analytic continuation from `e^{-tp}` to `e^{itp}` relates
 `G` to `F` via the substitution `t ↦ -it`. -/
 
-/-- The group extension from the Bochner measure representation.
+/-- The Fourier group function from the Bochner measure.
 
-Given a bounded continuous PD function `F` on `[0,∞) × ℝ^d` with Laplace
-representation `F(t, a) = ∫ e^{-tp} e^{i⟨a,q⟩} dμ`, define the Fourier
-group function `G(t, a) = ∫ e^{itp} e^{i⟨a,q⟩} dμ` for ALL `t ∈ ℝ`.
+Given the measure `μ` from `semigroupGroup_bochner` (supported on `[0,∞) × ℝ^d`),
+define `G(t, a) = ∫ e^{itp} e^{i⟨a,q⟩} dμ(p,q)` for ALL `t ∈ ℝ`.
 
-**`G` is NOT a pointwise extension of `F`**: `F(t, a) = ∫ e^{-tp} dμ` while
-`G(t, a) = ∫ e^{itp} dμ`. They are related by analytic continuation (Wick
-rotation) `t ↦ -it`, not by equality on `[0,∞)`. The connection is:
-`F(t, a) = G(-it, a)` (as an analytic continuation in the time parameter).
+**`G` is NOT a pointwise extension of `F`**. They use different kernels:
+- `F(t, a) = ∫ e^{-tp} e^{i⟨a,q⟩} dμ` (Laplace, defined for `t ≥ 0`)
+- `G(t, a) = ∫ e^{itp} e^{i⟨a,q⟩} dμ` (Fourier, defined for all `t ∈ ℝ`)
 
-Properties of `G`:
-1. Fourier representation for all `t ∈ ℝ` (bounded since `|e^{itp}| = 1`)
-2. Group law: `G(s+t, ·) = G(s, ·) * G(t, ·)` (pointwise, from exponential)
-3. Continuity, boundedness, positive-definiteness on all of ℝ -/
+They are related by analytic continuation in the time parameter, not by
+equality. The "semigroup-to-group" extension means: the PD condition on
+`[0,∞)` (semigroup) yields a measure whose Fourier transform `G` is
+automatically PD on all of `ℝ` (group). This is the group-level Bochner
+theorem: continuous PD functions on the group `(ℝ, +)` are exactly the
+Fourier transforms of finite positive measures.
+
+Note: `G(s+t, a) ≠ G(s, a) · G(t, a)` in general (product of integrals
+≠ integral of product). The "group" structure is encoded in the PD condition
+`Σ c̄ᵢ cⱼ G(tⱼ - tᵢ, aⱼ - aᵢ) ≥ 0` holding for all `t ∈ ℝ`. -/
 theorem semigroupGroup_bochner_extension (d : ℕ)
     (F : ℝ → (Fin d → ℝ) → ℂ)
     (hcont : ContinuousOn (fun p : ℝ × (Fin d → ℝ) => F p.1 p.2) (Set.Ici 0 ×ˢ Set.univ))
@@ -124,14 +128,11 @@ theorem semigroupGroup_bochner_extension (d : ℕ)
           Complex.exp (Complex.I * ↑(t * p.1)) *
             Complex.exp (Complex.I * ↑(∑ i : Fin d, p.2 i * a i))
           ∂μ) ∧
-      -- Group law (pointwise multiplicativity from exponential kernel)
-      (∀ (s t : ℝ) (a : Fin d → ℝ),
-        G (s + t) a = G s a * G t a) ∧
-      -- G is bounded
+      -- G is bounded (|e^{itp}| = 1 and μ is finite)
       (∃ C : ℝ, ∀ t a, ‖G t a‖ ≤ C) ∧
-      -- G is continuous
+      -- G is continuous on all of ℝ × ℝ^d
       (Continuous (fun p : ℝ × (Fin d → ℝ) => G p.1 p.2)) ∧
-      -- G is positive-definite on all of ℝ
+      -- G is positive-definite on all of ℝ (the group-level PD condition)
       (∀ (n : ℕ) (c : Fin n → ℂ) (ts : Fin n → ℝ) (as : Fin n → (Fin d → ℝ)),
         0 ≤ (∑ i : Fin n, ∑ j : Fin n,
           starRingEnd ℂ (c i) * c j * G (ts j - ts i) (as j - as i)).re) := by
