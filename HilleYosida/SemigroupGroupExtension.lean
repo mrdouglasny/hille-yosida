@@ -132,10 +132,12 @@ theorem semigroupGroup_bochner_extension (d : ℕ)
       (∃ C : ℝ, ∀ t a, ‖G t a‖ ≤ C) ∧
       -- G is continuous on all of ℝ × ℝ^d
       (Continuous (fun p : ℝ × (Fin d → ℝ) => G p.1 p.2)) ∧
-      -- G is positive-definite on all of ℝ (the group-level PD condition)
+      -- G is positive-definite on all of ℝ (the group-level PD condition:
+      -- the quadratic form is real and nonnegative, matching IsSemigroupGroupPD)
       (∀ (n : ℕ) (c : Fin n → ℂ) (ts : Fin n → ℝ) (as : Fin n → (Fin d → ℝ)),
-        0 ≤ (∑ i : Fin n, ∑ j : Fin n,
-          starRingEnd ℂ (c i) * c j * G (ts j - ts i) (as j - as i)).re) := by
+        let q := ∑ i : Fin n, ∑ j : Fin n,
+          starRingEnd ℂ (c i) * c j * G (ts j - ts i) (as j - as i)
+        q.im = 0 ∧ 0 ≤ q.re) := by
   sorry
 
 /-! ## Connection to QFT: Semigroup Extension with Spectral Condition
