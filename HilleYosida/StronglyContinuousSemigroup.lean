@@ -22,8 +22,8 @@ their infinitesimal generators, and the resolvent bound from the Hille-Yosida th
 
 ## Main Results
 
-* `strong_cont_at` — strong continuity at every `t₀ ≥ 0` (not just at 0)
-* `hille_yosida_resolvent_bound` — forward direction of Hille-Yosida:
+* `strongContAt` — strong continuity at every `t₀ ≥ 0` (not just at 0)
+* `hilleYosidaResolventBound` — forward direction of Hille-Yosida:
   `‖R(λ)‖ ≤ 1/λ` for contraction semigroups (sorry, resolvent not yet defined)
 
 Note: The full Hille-Yosida theorem (characterizing generators of contraction
@@ -84,18 +84,17 @@ variable {X}
 
 /-- `S(t) x` at `t = 0` equals `x`, pointwise version. -/
 @[simp]
-theorem StronglyContinuousSemigroup.operator_zero_apply
+theorem StronglyContinuousSemigroup.operatorZeroApply
     (S : StronglyContinuousSemigroup X) (x : X) :
     S.operator 0 x = x := by
-  have := congrFun (congrArg DFunLike.coe S.at_zero) x
-  simpa using this
+  rw [S.at_zero, ContinuousLinearMap.id_apply]
 
 /-- The operator norm of a C₀-semigroup is bounded on `[0, 1]`.
 
 By strong continuity at 0, for each x, `‖S(t) x‖` is bounded near 0.
 The uniform boundedness principle gives a uniform bound on `‖S(t)‖`.
 Here we use a direct bound: `S(0) = Id` and continuity. -/
-private theorem StronglyContinuousSemigroup.norm_bounded_on_unit_interval
+private theorem StronglyContinuousSemigroup.normBoundedOnUnitInterval
     (S : StronglyContinuousSemigroup X) :
     ∃ (M : ℝ), 1 ≤ M ∧ ∀ (t : ℝ), 0 ≤ t → t ≤ 1 → ‖S.operator t‖ ≤ M := by
   sorry
@@ -105,10 +104,10 @@ private theorem StronglyContinuousSemigroup.norm_bounded_on_unit_interval
 Proof: by induction on `n`. For `t ∈ (k, k+1]`, write `t = (t-k) + k` where
 `t - k ∈ [0, 1]`, so `S(t) = S(t-k) ∘ S(k)` and
 `‖S(t)‖ ≤ ‖S(t-k)‖ · ‖S(k)‖ ≤ M · M^k = M^(k+1)`. -/
-private theorem StronglyContinuousSemigroup.norm_bounded_on_interval
+private theorem StronglyContinuousSemigroup.normBoundedOnInterval
     (S : StronglyContinuousSemigroup X) (n : ℕ) :
     ∃ (C : ℝ), 0 < C ∧ ∀ (t : ℝ), 0 ≤ t → t ≤ n → ‖S.operator t‖ ≤ C := by
-  obtain ⟨M, hM1, hMbound⟩ := S.norm_bounded_on_unit_interval
+  obtain ⟨M, hM1, hMbound⟩ := S.normBoundedOnUnitInterval
   have hM_pos : (0 : ℝ) < M := by linarith
   induction n with
   | zero =>
@@ -144,7 +143,7 @@ private theorem StronglyContinuousSemigroup.norm_bounded_on_interval
 
 From continuity at 0: `S(t)x → x` as `t → 0⁺`. Then at `t₀`:
 `S(t₀ + h)x = S(t₀)(S(h)x) → S(t₀)x` as `h → 0⁺` by continuity of `S(t₀)`. -/
-theorem StronglyContinuousSemigroup.strong_cont_at
+theorem StronglyContinuousSemigroup.strongContAt
     (S : StronglyContinuousSemigroup X) (x : X) (t₀ : ℝ) (ht₀ : 0 ≤ t₀) :
     Filter.Tendsto (fun t => S.operator t x)
       (nhdsWithin t₀ (Set.Ici 0)) (nhds (S.operator t₀ x)) := by
@@ -166,11 +165,11 @@ theorem StronglyContinuousSemigroup.strong_cont_at
     -- S(t)x - S(t₀)x = S(t)(x - S(t₀-t)x).
     -- ‖S(t)(x - S(t₀-t)x)‖ ≤ ‖S(t)‖·‖x - S(t₀-t)x‖ → 0
     -- since ‖S(t)‖ is bounded on [0, t₀] and ‖S(t₀-t)x - x‖ → 0.
-    -- The operator norm bound on [0, t₀] follows from norm_bounded_on_unit_interval
+    -- The operator norm bound on [0, t₀] follows from normBoundedOnUnitInterval
     -- (itself proved via the uniform boundedness principle) + the semigroup property.
     -- We state this bound as a local fact.
     have h_norm_bound : ∃ C > 0, ∀ t : ℝ, 0 ≤ t → t ≤ t₀ → ‖S.operator t‖ ≤ C := by
-      obtain ⟨C, hC, hCb⟩ := S.norm_bounded_on_interval (Nat.ceil t₀)
+      obtain ⟨C, hC, hCb⟩ := S.normBoundedOnInterval (Nat.ceil t₀)
       exact ⟨C, hC, fun t ht ht' => hCb t ht (ht'.trans (Nat.le_ceil t₀))⟩
     obtain ⟨C, hC_pos, hC_bound⟩ := h_norm_bound
     rw [Metric.tendsto_nhdsWithin_nhds]
@@ -352,7 +351,7 @@ noncomputable def StronglyContinuousSemigroup.resolvent
 /-! ## Resolvent-Generator Interface -/
 
 /-- The resolvent maps all of `X` into the domain of the generator. -/
-theorem StronglyContinuousSemigroup.resolvent_maps_to_domain
+theorem StronglyContinuousSemigroup.resolventMapsToDomain
     (S : StronglyContinuousSemigroup X)
     (lambda : ℝ) (hlam : 0 < lambda) (x : X) :
     (S.resolvent lambda hlam x) ∈ S.domain := by
@@ -360,11 +359,11 @@ theorem StronglyContinuousSemigroup.resolvent_maps_to_domain
 
 /-- The fundamental resolvent identity: `(λI - A) R(λ) x = x`.
 This is the operational meaning of "the resolvent is the inverse of `(λI - A)`". -/
-theorem StronglyContinuousSemigroup.resolvent_right_inv
+theorem StronglyContinuousSemigroup.resolventRightInv
     (S : StronglyContinuousSemigroup X)
     (lambda : ℝ) (hlam : 0 < lambda) (x : X) :
     let Rlx := S.resolvent lambda hlam x
-    let Rlx_dom : S.domain := ⟨Rlx, S.resolvent_maps_to_domain lambda hlam x⟩
+    let Rlx_dom : S.domain := ⟨Rlx, S.resolventMapsToDomain lambda hlam x⟩
     lambda • Rlx - S.generatorMap Rlx_dom = x := by
   sorry
 
@@ -381,7 +380,7 @@ defined, with `‖(λI - A)⁻¹‖ ≤ 1/λ`) requires the converse: constructi
 the semigroup from the operator, which needs the Yosida approximation.
 
 Ref: Hille (1948), Yosida (1948); Reed-Simon I §VIII.3; Engel-Nagel Ch. II -/
-theorem hille_yosida_resolvent_bound
+theorem hilleYosidaResolventBound
     (S : ContractingSemigroup X) :
     -- For all λ > 0, the resolvent exists and satisfies the bound
     ∀ (lambda : ℝ) (hlam : 0 < lambda),
@@ -392,17 +391,17 @@ theorem hille_yosida_resolvent_bound
 
 /-- A C₀-semigroup has exponential growth bound `ω` if `‖S(t)‖ ≤ M e^{ωt}`
 for some constant `M ≥ 1`. Contraction semigroups have `M = 1, ω = 0`. -/
-def StronglyContinuousSemigroup.hasGrowthBound
+def StronglyContinuousSemigroup.HasGrowthBound
     (S : StronglyContinuousSemigroup X) (ω : ℝ) (M : ℝ) : Prop :=
   1 ≤ M ∧ ∀ (t : ℝ), 0 ≤ t → ‖S.operator t‖ ≤ M * Real.exp (ω * t)
 
 /-- Every C₀-semigroup has a finite exponential growth bound.
 This follows from the uniform bound on `[0, 1]` combined with the
 semigroup property: `S(n + r) = S(1)^n ∘ S(r)` for integer n. -/
-theorem StronglyContinuousSemigroup.exists_growth_bound
+theorem StronglyContinuousSemigroup.existsGrowthBound
     (S : StronglyContinuousSemigroup X) :
-    ∃ (ω : ℝ) (M : ℝ), S.hasGrowthBound ω M := by
-  obtain ⟨M, hM1, hMbound⟩ := S.norm_bounded_on_unit_interval
+    ∃ (ω : ℝ) (M : ℝ), S.HasGrowthBound ω M := by
+  obtain ⟨M, hM1, hMbound⟩ := S.normBoundedOnUnitInterval
   refine ⟨Real.log M, M, hM1, fun t ht => ?_⟩
   -- Write t = ⌊t⌋ + (t - ⌊t⌋) where 0 ≤ t - ⌊t⌋ < 1
   -- Then ‖S(t)‖ ≤ ‖S(1)‖^⌊t⌋ · ‖S(t - ⌊t⌋)‖ ≤ M^⌊t⌋ · M = M^(⌊t⌋+1) ≤ M · e^{ωt}

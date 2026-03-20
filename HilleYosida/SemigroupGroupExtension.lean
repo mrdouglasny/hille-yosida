@@ -63,7 +63,7 @@ Fourier-Laplace transforms of finite positive measures supported on
   `F(t, a) = ∫ e^{-tp} e^{i⟨a, q⟩} dμ(p, q)`  for `t ≥ 0`
 
 Ref: Berg-Christensen-Ressel, "Harmonic Analysis on Semigroups" Thm 4.1.13 -/
-theorem semigroupGroup_bochner (d : ℕ)
+theorem semigroupGroupBochner (d : ℕ)
     (F : ℝ → (Fin d → ℝ) → ℂ)
     (hcont : ContinuousOn (fun p : ℝ × (Fin d → ℝ) => F p.1 p.2) (Set.Ici 0 ×ˢ Set.univ))
     (hbdd : ∃ C : ℝ, ∀ t a, 0 ≤ t → ‖F t a‖ ≤ C)
@@ -80,7 +80,7 @@ theorem semigroupGroup_bochner (d : ℕ)
 
 /-! ## Group Extension from Bochner Representation
 
-Given the measure `μ` from `semigroupGroup_bochner` (supported on `[0,∞) × ℝ^d`),
+Given the measure `μ` from `semigroupGroupBochner` (supported on `[0,∞) × ℝ^d`),
 the group extension uses the **Fourier** (not Laplace) kernel:
 
   `G(t, a) = ∫ e^{itp} e^{i⟨a, q⟩} dμ(p, q)`  for all `t ∈ ℝ`
@@ -91,7 +91,7 @@ For `t ≥ 0`, analytic continuation from `e^{-tp}` to `e^{itp}` relates
 
 /-- The Fourier group function from the Bochner measure.
 
-Given the measure `μ` from `semigroupGroup_bochner` (supported on `[0,∞) × ℝ^d`),
+Given the measure `μ` from `semigroupGroupBochner` (supported on `[0,∞) × ℝ^d`),
 define `G(t, a) = ∫ e^{itp} e^{i⟨a,q⟩} dμ(p,q)` for ALL `t ∈ ℝ`.
 
 **`G` is NOT a pointwise extension of `F`**. They use different kernels:
@@ -108,7 +108,7 @@ Fourier transforms of finite positive measures.
 Note: `G(s+t, a) ≠ G(s, a) · G(t, a)` in general (product of integrals
 ≠ integral of product). The "group" structure is encoded in the PD condition
 `Σ c̄ᵢ cⱼ G(tⱼ - tᵢ, aⱼ - aᵢ) ≥ 0` holding for all `t ∈ ℝ`. -/
-theorem semigroupGroup_bochner_extension (d : ℕ)
+theorem semigroupGroupBochnerExtension (d : ℕ)
     (F : ℝ → (Fin d → ℝ) → ℂ)
     (hcont : ContinuousOn (fun p : ℝ × (Fin d → ℝ) => F p.1 p.2) (Set.Ici 0 ×ˢ Set.univ))
     (hbdd : ∃ C : ℝ, ∀ t a, 0 ≤ t → ‖F t a‖ ≤ C)
