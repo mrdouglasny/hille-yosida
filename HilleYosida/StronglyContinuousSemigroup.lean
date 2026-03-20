@@ -2,10 +2,10 @@
 Copyright (c) 2026 Michael R. Douglas. All rights reserved.
 Released under Apache 2.0 license.
 
-# Strongly Continuous Semigroups and the Hille-Yosida Theorem
+# Strongly Continuous Semigroups
 
-This file defines strongly continuous one-parameter semigroups on Banach spaces
-and states the Hille-Yosida generation theorem.
+This file defines strongly continuous one-parameter semigroups on Banach spaces,
+their infinitesimal generators, and the resolvent bound from the Hille-Yosida theorem.
 
 ## Main Definitions
 
@@ -13,14 +13,22 @@ and states the Hille-Yosida generation theorem.
   for `t ≥ 0` satisfying `S(0) = 1`, `S(s+t) = S(s) ∘ S(t)`, and strong
   continuity at `t = 0`.
 
-* `IsContractingSemigroup` — a strongly continuous semigroup of contractions:
+* `ContractingSemigroup` — a strongly continuous semigroup of contractions:
   `‖S(t)‖ ≤ 1` for all `t ≥ 0`.
 
-## Main Theorems
+* `domain` — the generator domain as a `Submodule ℝ X`.
 
-* `hille_yosida` — An operator `A` generates a contraction semigroup iff it is
-  closed, densely defined, and its resolvent satisfies `‖(λ - A)⁻¹‖ ≤ 1/λ`
-  for all `λ > 0`.
+* `generatorMap` — the infinitesimal generator `A` as a `LinearMap` from the domain.
+
+## Main Results
+
+* `strong_cont_at` — strong continuity at every `t₀ ≥ 0` (not just at 0)
+* `hille_yosida_resolvent_bound` — forward direction of Hille-Yosida:
+  `‖R(λ)‖ ≤ 1/λ` for contraction semigroups (sorry, resolvent not yet defined)
+
+Note: The full Hille-Yosida theorem (characterizing generators of contraction
+semigroups) requires the converse direction via Yosida approximation, which is
+not yet implemented.
 
 ## References
 

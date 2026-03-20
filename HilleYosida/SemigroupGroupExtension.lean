@@ -91,13 +91,19 @@ For `t ≥ 0`, analytic continuation from `e^{-tp}` to `e^{itp}` relates
 
 /-- The group extension from the Bochner measure representation.
 
-Given a bounded continuous PD function `F` on `[0,∞) × ℝ^d`, there exists
-`G : ℝ → ℝ^d → ℂ` extending F with:
-1. Extension: `G(t, a) = F(t, a)` for `t ≥ 0`
-2. Fourier representation: `G(t, a) = ∫ e^{itp} e^{i⟨a,q⟩} dμ(p,q)` for ALL `t`
-3. Group law: `G(s+t, a) = ∫ G(s, a-b) G(t, b) db` (convolution group)
-4. Boundedness: `|G(t, a)| ≤ μ(ℝ × ℝ^d)` for all `t, a`
-5. Continuity: `G` is continuous on all of `ℝ × ℝ^d` -/
+Given a bounded continuous PD function `F` on `[0,∞) × ℝ^d` with Laplace
+representation `F(t, a) = ∫ e^{-tp} e^{i⟨a,q⟩} dμ`, define the Fourier
+group function `G(t, a) = ∫ e^{itp} e^{i⟨a,q⟩} dμ` for ALL `t ∈ ℝ`.
+
+**`G` is NOT a pointwise extension of `F`**: `F(t, a) = ∫ e^{-tp} dμ` while
+`G(t, a) = ∫ e^{itp} dμ`. They are related by analytic continuation (Wick
+rotation) `t ↦ -it`, not by equality on `[0,∞)`. The connection is:
+`F(t, a) = G(-it, a)` (as an analytic continuation in the time parameter).
+
+Properties of `G`:
+1. Fourier representation for all `t ∈ ℝ` (bounded since `|e^{itp}| = 1`)
+2. Group law: `G(s+t, ·) = G(s, ·) * G(t, ·)` (pointwise, from exponential)
+3. Continuity, boundedness, positive-definiteness on all of ℝ -/
 theorem semigroupGroup_bochner_extension (d : ℕ)
     (F : ℝ → (Fin d → ℝ) → ℂ)
     (hcont : ContinuousOn (fun p : ℝ × (Fin d → ℝ) => F p.1 p.2) (Set.Ici 0 ×ˢ Set.univ))
@@ -105,19 +111,27 @@ theorem semigroupGroup_bochner_extension (d : ℕ)
     (hpd : IsSemigroupGroupPD d F) :
     ∃ (μ : Measure (ℝ × (Fin d → ℝ))) (G : ℝ → (Fin d → ℝ) → ℂ),
       IsFiniteMeasure μ ∧
-      -- G extends F
-      (∀ (t : ℝ) (a : Fin d → ℝ), 0 ≤ t → G t a = F t a) ∧
-      -- G has a Fourier representation for all t ∈ ℝ
+      μ (Set.prod (Set.Iio 0) Set.univ) = 0 ∧
+      -- F has Laplace representation (for t ≥ 0)
+      (∀ (t : ℝ) (a : Fin d → ℝ), 0 ≤ t →
+        F t a = ∫ p : ℝ × (Fin d → ℝ),
+          Complex.exp (-(↑(t * p.1) : ℂ)) *
+            Complex.exp (Complex.I * ↑(∑ i : Fin d, p.2 i * a i))
+          ∂μ) ∧
+      -- G has Fourier representation (for ALL t ∈ ℝ)
       (∀ (t : ℝ) (a : Fin d → ℝ),
         G t a = ∫ p : ℝ × (Fin d → ℝ),
           Complex.exp (Complex.I * ↑(t * p.1)) *
             Complex.exp (Complex.I * ↑(∑ i : Fin d, p.2 i * a i))
           ∂μ) ∧
+      -- Group law (pointwise multiplicativity from exponential kernel)
+      (∀ (s t : ℝ) (a : Fin d → ℝ),
+        G (s + t) a = G s a * G t a) ∧
       -- G is bounded
       (∃ C : ℝ, ∀ t a, ‖G t a‖ ≤ C) ∧
       -- G is continuous
       (Continuous (fun p : ℝ × (Fin d → ℝ) => G p.1 p.2)) ∧
-      -- G is positive-definite on all of ℝ (not just [0,∞))
+      -- G is positive-definite on all of ℝ
       (∀ (n : ℕ) (c : Fin n → ℂ) (ts : Fin n → ℝ) (as : Fin n → (Fin d → ℝ)),
         0 ≤ (∑ i : Fin n, ∑ j : Fin n,
           starRingEnd ℂ (c i) * c j * G (ts j - ts i) (as j - as i)).re) := by
