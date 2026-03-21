@@ -45,6 +45,7 @@ import Mathlib.Analysis.Normed.Operator.BanachSteinhaus
 import Mathlib.Analysis.SpecialFunctions.Log.Basic
 import Mathlib.Analysis.SpecialFunctions.ExpDeriv
 import Mathlib.MeasureTheory.Integral.Bochner.Basic
+import Mathlib.MeasureTheory.Integral.ExpDecay
 import Mathlib.MeasureTheory.Measure.Lebesgue.Basic
 import Mathlib.Analysis.SpecialFunctions.Integrals.Basic
 
@@ -419,7 +420,25 @@ lemma ContractingSemigroup.integrable_resolvent_integrand
     (S : ContractingSemigroup X) (lambda : ℝ) (hlam : 0 < lambda) (x : X) :
     IntegrableOn (fun t => Real.exp (-(lambda * t)) • S.operator t x)
       (Set.Ioi 0) := by
-  sorry
+  unfold MeasureTheory.IntegrableOn
+  -- Bound by ‖x‖ * exp(-λt), which is integrable for λ > 0
+  apply MeasureTheory.Integrable.mono'
+    ((exp_neg_integrableOn_Ioi 0 hlam).smul (‖x‖))
+  · -- AEStronglyMeasurable: t ↦ exp(-λt) • S(t)x is measurable
+    -- Follows from continuity of S(t)x (strongContAt) and exp
+    sorry
+  · -- Norm bound: ‖exp(-λt) • S(t)x‖ ≤ ‖x‖ * exp(-λt) a.e. on Ioi 0
+    apply (ae_restrict_mem measurableSet_Ioi).mono
+    intro t (ht : 0 < t)
+    rw [norm_smul, Real.norm_eq_abs, abs_of_pos (Real.exp_pos _),
+        Pi.smul_apply, smul_eq_mul]
+    calc Real.exp (-(lambda * t)) * ‖(S.operator t) x‖
+        ≤ Real.exp (-(lambda * t)) * (‖S.operator t‖ * ‖x‖) := by
+          gcongr; exact ContinuousLinearMap.le_opNorm _ _
+      _ ≤ Real.exp (-(lambda * t)) * (1 * ‖x‖) := by
+          gcongr; exact S.contracting t (le_of_lt ht)
+      _ = ‖x‖ * Real.exp (-(lambda * t)) := by ring
+      _ = ‖x‖ * Real.exp (-lambda * t) := by rw [neg_mul]
 
 /-- The resolvent operator `R(λ) x = ∫₀^∞ e^{-λt} S(t)x dt` for `λ > 0`.
 
