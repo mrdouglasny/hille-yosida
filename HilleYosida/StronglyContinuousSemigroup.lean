@@ -424,9 +424,16 @@ lemma ContractingSemigroup.integrable_resolvent_integrand
   -- Bound by ‖x‖ * exp(-λt), which is integrable for λ > 0
   apply MeasureTheory.Integrable.mono'
     ((exp_neg_integrableOn_Ioi 0 hlam).smul (‖x‖))
-  · -- AEStronglyMeasurable: t ↦ exp(-λt) • S(t)x is measurable
-    -- Follows from continuity of S(t)x (strongContAt) and exp
-    sorry
+  · -- AEStronglyMeasurable: follows from ContinuousOn → measurable
+    apply ContinuousOn.aestronglyMeasurable _ measurableSet_Ioi
+    apply ContinuousOn.smul
+    · -- exp(-λt) is continuous everywhere, hence on Ioi 0
+      exact (Real.continuous_exp.comp
+        ((continuous_const.mul continuous_id).neg)).continuousOn
+    · -- S(t)x is continuous on [0, ∞) by strongContAt, hence on (0, ∞)
+      have h_cont : ContinuousOn (fun t => S.operator t x) (Set.Ici 0) :=
+        fun t₀ ht₀ => S.toStronglyContinuousSemigroup.strongContAt x t₀ ht₀
+      exact h_cont.mono Set.Ioi_subset_Ici_self
   · -- Norm bound: ‖exp(-λt) • S(t)x‖ ≤ ‖x‖ * exp(-λt) a.e. on Ioi 0
     apply (ae_restrict_mem measurableSet_Ioi).mono
     intro t (ht : 0 < t)
