@@ -480,11 +480,29 @@ noncomputable def ContractingSemigroup.resolvent
           (fun t => Real.exp (-(lambda * t)) • (S.operator t) x) }
     (1 / lambda)
     (by
-      -- ‖R(λ)x‖ ≤ (1/λ) * ‖x‖
-      -- 1. norm_integral_le_integral_norm
-      -- 2. Bound ‖e^{-λt} S(t)x‖ ≤ e^{-λt} ‖x‖ using S.contracting
-      -- 3. Evaluate ∫ e^{-λt} dt = 1/λ
-      sorry)
+      intro x; simp only [LinearMap.coe_mk, AddHom.coe_mk]
+      -- ‖∫ exp(-λt) • S(t)x‖ ≤ (1/λ) * ‖x‖
+      -- Step 1: bound the norm of the integral
+      calc ‖∫ t in Set.Ioi 0, Real.exp (-(lambda * t)) • (S.operator t) x‖
+          ≤ ∫ t in Set.Ioi 0, Real.exp (-(lambda * t)) * ‖x‖ := by
+            apply MeasureTheory.norm_integral_le_of_norm_le
+            · -- Integrability of exp(-λt) * ‖x‖ on Ioi 0
+              have h := (exp_neg_integrableOn_Ioi 0 hlam).integrable.mul_const ‖x‖
+              simp only [neg_mul] at h; exact h
+            · apply (ae_restrict_mem measurableSet_Ioi).mono
+              intro t (ht : 0 < t)
+              rw [norm_smul, Real.norm_eq_abs, abs_of_pos (Real.exp_pos _)]
+              gcongr
+              calc ‖(S.operator t) x‖
+                  ≤ ‖S.operator t‖ * ‖x‖ := ContinuousLinearMap.le_opNorm _ _
+                _ ≤ 1 * ‖x‖ := by gcongr; exact S.contracting t (le_of_lt ht)
+                _ = ‖x‖ := one_mul _
+        -- Step 2: evaluate ∫ exp(-λt) * ‖x‖ = (1/λ) * ‖x‖
+        _ = 1 / lambda * ‖x‖ := by
+            -- Pull out constant ‖x‖
+            -- Pull ‖x‖ out of integral and evaluate ∫ exp(-λt) = 1/λ
+            sorry -- TODO: integral_comp_mul_left_Ioi + integral_exp_neg_Ioi_zero
+            )
 
 /-! ## Resolvent-Generator Interface -/
 
@@ -534,8 +552,8 @@ Ref: Hille (1948), Yosida (1948); Reed-Simon I §VIII.3; Engel-Nagel Ch. II -/
 theorem hilleYosidaResolventBound
     (S : ContractingSemigroup X)
     (lambda : ℝ) (hlam : 0 < lambda) :
-    ‖S.resolvent lambda hlam‖ ≤ 1 / lambda := by
-  sorry
+    ‖S.resolvent lambda hlam‖ ≤ 1 / lambda :=
+  LinearMap.mkContinuous_norm_le _ (by positivity) _
 
 /-! ## Growth Bounds and Exponential Type -/
 
