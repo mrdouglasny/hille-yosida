@@ -48,6 +48,7 @@ import Mathlib.MeasureTheory.Integral.Bochner.Basic
 import Mathlib.MeasureTheory.Integral.ExpDecay
 import Mathlib.MeasureTheory.Measure.Lebesgue.Basic
 import Mathlib.Analysis.SpecialFunctions.Integrals.Basic
+import Mathlib.Analysis.SpecialFunctions.ImproperIntegrals
 
 noncomputable section
 
@@ -500,8 +501,17 @@ noncomputable def ContractingSemigroup.resolvent
         -- Step 2: evaluate ∫ exp(-λt) * ‖x‖ = (1/λ) * ‖x‖
         _ = 1 / lambda * ‖x‖ := by
             -- Pull out constant ‖x‖
-            -- Pull ‖x‖ out of integral and evaluate ∫ exp(-λt) = 1/λ
-            sorry -- TODO: integral_comp_mul_left_Ioi + integral_exp_neg_Ioi_zero
+            -- Evaluate ∫ exp(-λt) = 1/λ via substitution
+            have h_eval : ∫ t in Set.Ioi 0, Real.exp (-(lambda * t)) = lambda⁻¹ := by
+              have h := integral_comp_mul_left_Ioi (fun t => Real.exp (-t)) 0 hlam
+              simp only [mul_zero] at h
+              rw [h, integral_exp_neg_Ioi_zero, smul_eq_mul, mul_one]
+            -- Pull constant ‖x‖ out and apply evaluation
+            rw [show (fun t => Real.exp (-(lambda * t)) * ‖x‖) =
+                (fun t => ‖x‖ • Real.exp (-(lambda * t))) from by ext; simp [mul_comm]]
+            rw [integral_smul (μ := volume.restrict (Set.Ioi (0 : ℝ)))]
+            simp only [smul_eq_mul, h_eval, one_div]
+            ring
             )
 
 /-! ## Resolvent-Generator Interface -/
