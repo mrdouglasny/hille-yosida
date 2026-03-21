@@ -49,15 +49,16 @@ Laplace transform, and the forward direction of the Hille-Yosida theorem.
 
 ## References
 
-* [Linares] F. Linares, "The Hille-Yosida Theorem", IMPA lecture notes (2021),
-  https://w3.impa.br/~linares/teoria-espectral-2021/lectures-2021/Lecture-Hille-Yosida.pdf
-* [Baudoin] F. Baudoin, "Semigroups in Banach spaces: The Hille-Yosida theorem",
-  lecture notes (2019), https://fabricebaudoin.blog/2019/01/14/lecture-1-semigroups-in-banach-spaces/
-* E. Hille, "Functional Analysis and Semi-Groups" (1948)
-* K. Yosida, "On the differentiability and the representation of one-parameter
-  semi-group of linear operators" (1948)
-* Reed-Simon, "Methods of Modern Mathematical Physics I", §VIII
-* Engel-Nagel, "One-Parameter Semigroups for Linear Evolution Equations" (2000)
+* [EN] Engel-Nagel, "One-Parameter Semigroups for Linear Evolution Equations",
+  Graduate Texts in Mathematics 194, Springer (2000). Primary reference.
+  Ch. I §5: C₀-semigroups. Ch. II §1: Generators and resolvents.
+  Ch. II §3: Hille-Yosida generation theorems.
+* [Linares] F. Linares, "The Hille-Yosida Theorem", IMPA lecture notes (2021).
+* [Baudoin] F. Baudoin, "Semigroups in Banach spaces", lecture notes (2019).
+* Hille, "Functional Analysis and Semi-Groups" (1948).
+* Yosida, "On the differentiability and the representation of one-parameter
+  semi-group of linear operators" (1948).
+* Reed-Simon, "Methods of Modern Mathematical Physics I", §VIII.
 -/
 
 import Mathlib.Topology.Algebra.Module.Basic
@@ -83,7 +84,8 @@ variable (X : Type*) [NormedAddCommGroup X] [NormedSpace ℝ X] [CompleteSpace X
 -- at `maxSynthPendingDepth = 3`.
 instance : SMulCommClass ℝ ℝ X := smulCommClass_self ℝ X
 
-/-- A strongly continuous one-parameter semigroup (C₀-semigroup) on a Banach space.
+/-- A strongly continuous one-parameter semigroup (C₀-semigroup) on a Banach space
+([EN] Def. I.5.1, [Linares] Def. 1).
 
 `S(t)` is a bounded linear operator for each `t ≥ 0`, satisfying:
 1. `S(0) = Id`
@@ -104,7 +106,8 @@ structure StronglyContinuousSemigroup where
   strong_cont : ∀ (x : X), Filter.Tendsto
     (fun t => operator t x) (nhdsWithin 0 (Set.Ici 0)) (nhds x)
 
-/-- A contraction semigroup: `‖S(t)‖ ≤ 1` for all `t ≥ 0`. -/
+/-- A contraction semigroup: `‖S(t)‖ ≤ 1` for all `t ≥ 0`
+([EN] Def. I.5.6, [Linares] Def. 3). Corresponds to growth bound `ω₀ = 0`. -/
 structure ContractingSemigroup extends StronglyContinuousSemigroup X where
   /-- `‖S(t)‖ ≤ 1` for all `t ≥ 0`. -/
   contracting : ∀ (t : ℝ), 0 ≤ t → ‖operator t‖ ≤ 1
@@ -122,9 +125,11 @@ theorem StronglyContinuousSemigroup.operatorZeroApply
 
 /-- The operator norm of a C₀-semigroup is bounded on `[0, 1]`.
 
-By strong continuity at 0, for each x, `‖S(t) x‖` is bounded near 0.
-The uniform boundedness principle gives a uniform bound on `‖S(t)‖`.
-Here we use a direct bound: `S(0) = Id` and continuity. -/
+This is one direction of [EN] Prop. I.5.3: strong continuity implies uniform
+boundedness on compact intervals. The proof applies the Banach-Steinhaus
+theorem (uniform boundedness principle) to the family `{S(t) : t ∈ [0,1]}`,
+using strong continuity at 0 and the semigroup property to establish the
+required pointwise bounds. -/
 private theorem StronglyContinuousSemigroup.normBoundedOnUnitInterval
     (S : StronglyContinuousSemigroup X) :
     ∃ (M : ℝ), 1 ≤ M ∧ ∀ (t : ℝ), 0 ≤ t → t ≤ 1 → ‖S.operator t‖ ≤ M := by
@@ -235,10 +240,12 @@ private theorem StronglyContinuousSemigroup.normBoundedOnInterval
             mul_le_mul (hMbound _ htk_nn htk_le) (hC_k_bound ↑k hk_nn le_rfl)
               (norm_nonneg _) (le_of_lt hM_pos)
 
-/-- Strong continuity at every `t₀ ≥ 0`, not just at 0.
+/-- Strong continuity at every `t₀ ≥ 0`, not just at 0
+([EN] Prop. I.5.3, [Linares] Cor. 1).
 
 From continuity at 0: `S(t)x → x` as `t → 0⁺`. Then at `t₀`:
-`S(t₀ + h)x = S(t₀)(S(h)x) → S(t₀)x` as `h → 0⁺` by continuity of `S(t₀)`. -/
+`S(t₀ + h)x = S(t₀)(S(h)x) → S(t₀)x` as `h → 0⁺` by continuity of `S(t₀)`.
+Left continuity uses the operator norm bound from `normBoundedOnInterval`. -/
 theorem StronglyContinuousSemigroup.strongContAt
     (S : StronglyContinuousSemigroup X) (x : X) (t₀ : ℝ) (ht₀ : 0 ≤ t₀) :
     Filter.Tendsto (fun t => S.operator t x)
@@ -336,9 +343,11 @@ theorem StronglyContinuousSemigroup.strongContAt
 
 /-! ## The Infinitesimal Generator -/
 
-/-- The infinitesimal generator of a C₀-semigroup. The domain consists of
-elements `x` for which the limit `lim_{t→0⁺} (S(t)x - x)/t` exists.
-The generator `A` is the value of this limit. -/
+/-- The infinitesimal generator of a C₀-semigroup ([EN] Def. II.1.2,
+[Linares] Def. 2). The domain consists of elements `x` for which the
+limit `lim_{t→0⁺} (S(t)x - x)/t` exists. The generator `A` is the
+value of this limit. By [EN] Thm. II.1.4, `A` is closed, densely defined,
+and determines the semigroup uniquely. -/
 def StronglyContinuousSemigroup.generator (S : StronglyContinuousSemigroup X)
     (x : X) : Prop :=
   ∃ (Ax : X), Filter.Tendsto
@@ -603,14 +612,17 @@ theorem hilleYosidaResolventBound
 /-! ## Growth Bounds and Exponential Type -/
 
 /-- A C₀-semigroup has exponential growth bound `ω` if `‖S(t)‖ ≤ M e^{ωt}`
-for some constant `M ≥ 1`. Contraction semigroups have `M = 1, ω = 0`. -/
+for some constant `M ≥ 1` ([EN] eq. I.(5.1)). Contraction semigroups have
+`M = 1, ω = 0`. The infimum of all such `ω` is the growth bound `ω₀`
+([EN] Def. I.5.6). -/
 def StronglyContinuousSemigroup.HasGrowthBound
     (S : StronglyContinuousSemigroup X) (ω : ℝ) (M : ℝ) : Prop :=
   1 ≤ M ∧ ∀ (t : ℝ), 0 ≤ t → ‖S.operator t‖ ≤ M * Real.exp (ω * t)
 
-/-- Every C₀-semigroup has a finite exponential growth bound.
-This follows from the uniform bound on `[0, 1]` combined with the
-semigroup property: `S(n + r) = S(1)^n ∘ S(r)` for integer n. -/
+/-- Every C₀-semigroup has a finite exponential growth bound
+([EN] Prop. I.5.5, [Linares] Thm. 1). The proof uses the uniform
+bound `M` on `[0, 1]` and sets `ω = log M`, then decomposes
+`t = ⌊t⌋ + frac(t)` to get `‖S(t)‖ ≤ M^{⌊t⌋+1} ≤ M · e^{ωt}`. -/
 theorem StronglyContinuousSemigroup.existsGrowthBound
     (S : StronglyContinuousSemigroup X) :
     ∃ (ω : ℝ) (M : ℝ), S.HasGrowthBound ω M := by
