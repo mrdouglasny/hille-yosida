@@ -563,6 +563,20 @@ theorem ContractingSemigroup.resolventMapsToDomain
     (lambda : ℝ) (hlam : 0 < lambda) (x : X) :
     (S.resolvent lambda hlam x) ∈
       S.toStronglyContinuousSemigroup.domain := by
+  -- Need to show: ∃ Ax, (1/h)(S(h)(R_λ x) - R_λ x) → Ax as h → 0⁺.
+  -- The limit value is λ R_λ x - x.
+  --
+  -- Proof sketch ([EN] Thm. II.1.10(i), [Linares] eq. 0.15):
+  -- 1. ContinuousLinearMap.integral_comp_comm: push S(h) inside integral
+  --    S(h)(R_λ x) = ∫₀^∞ e^{-λt} S(t+h)x dt
+  -- 2. integral_comp_add_right: substitute u = t + h
+  --    = e^{λh} ∫_h^∞ e^{-λu} S(u)x du
+  -- 3. Split integral: ∫_h^∞ = R_λ x - ∫₀^h e^{-λt} S(t)x dt
+  -- 4. Combine and divide by h:
+  --    (S(h) R_λ x - R_λ x)/h = (e^{λh}-1)/h · R_λ x - e^{λh}/h · ∫₀^h ...
+  -- 5. Take h → 0⁺:
+  --    hasDerivAt_exp_zero (composed with chain rule) gives (e^{λh}-1)/h → λ
+  --    intervalIntegral.integral_hasDerivAt_of_tendsto_ae_right gives 1/h ∫₀^h → x
   sorry
 
 /-- The fundamental resolvent identity: `(λI - A) R(λ) x = x`.
@@ -584,6 +598,10 @@ theorem ContractingSemigroup.resolventRightInv
     let Rlx_dom : S.toStronglyContinuousSemigroup.domain :=
       ⟨Rlx, S.resolventMapsToDomain lambda hlam x⟩
     lambda • Rlx - S.toStronglyContinuousSemigroup.generatorMap Rlx_dom = x := by
+  -- Follows from the same computation as resolventMapsToDomain:
+  -- The limit (1/h)(S(h)(R_λ x) - R_λ x) → λ R_λ x - x shows that
+  -- A(R_λ x) = λ R_λ x - x (by tendsto_nhds_unique), hence
+  -- λ R_λ x - A(R_λ x) = x.
   sorry
 
 /-! ## Hille-Yosida Theorem -/
