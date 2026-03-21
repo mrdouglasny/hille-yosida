@@ -13,52 +13,65 @@ Prove the `semigroupGroup_bochner` axiom from [OSreconstruction](https://github.
 
 | File | Content | Status |
 |------|---------|--------|
-| [`StronglyContinuousSemigroup.lean`][SC] | C₀-semigroups, generators, resolvent | Defs proved, resolvent/bounds sorry |
-| [`SemigroupGroupExtension.lean`][SGE] | BCR Theorem 4.1.13, group extension | Statements, sorry |
+| [`StronglyContinuousSemigroup.lean`][SC] | C₀-semigroups, generators, resolvent, Hille-Yosida | Resolvent proved, 2 sorries |
+| [`SemigroupGroupExtension.lean`][SGE] | BCR Theorem 4.1.13, group extension | Statements only, 2 sorries |
 
 ## What is proved
 
-- [`StronglyContinuousSemigroup`][SC-64]: definition with semigroup law + strong continuity
-- [`ContractingSemigroup`][SC-77]: contraction semigroups (`‖S(t)‖ ≤ 1`)
-- [`operatorZeroApply`][SC-87]: `S(0) x = x`
-- [`normBoundedOnUnitInterval`][SC-97]: `‖S(t)‖` bounded on `[0,1]` via Banach-Steinhaus
-- [`strongContAt`][SC-211]: strong continuity at every `t₀ ≥ 0`
-- [`domain`][SC-324]: generator domain as a `Submodule ℝ X` (algebraic closure proved)
-- [`generatorMap`][SC-362]: generator as `LinearMap` from domain to X (linearity proved via `tendsto_nhds_unique`)
-- [`normBoundedOnInterval`][SC-172]: norm bound on `[0, n]` by induction
-- [`existsGrowthBound`][SC-467]: every C₀-semigroup has exponential growth bound `M e^{ωt}`
+### C₀-semigroup foundations ([Linares] Defs. 1-2, Thms. 1-2)
+- [`StronglyContinuousSemigroup`][SC-69]: definition with semigroup law + strong continuity
+- [`ContractingSemigroup`][SC-82]: contraction semigroups (`‖S(t)‖ ≤ 1`)
+- [`operatorZeroApply`][SC-97]: `S(0) x = x`
+- [`normBoundedOnUnitInterval`][SC-103]: `‖S(t)‖` bounded on `[0,1]` via Banach-Steinhaus
+- [`strongContAt`][SC-220]: strong continuity at every `t₀ ≥ 0` ([Linares] Cor. 1)
+- [`existsGrowthBound`][SC-487]: `‖S(t)‖ ≤ M e^{ωt}` ([Linares] Thm. 1, eq. 0.3)
 
-[SC-64]: HilleYosida/StronglyContinuousSemigroup.lean#L64
-[SC-77]: HilleYosida/StronglyContinuousSemigroup.lean#L77
-[SC-87]: HilleYosida/StronglyContinuousSemigroup.lean#L87
+### Generator theory ([Linares] Def. 2, Cor. 2)
+- [`domain`][SC-334]: generator domain as `Submodule ℝ X` (algebraic closure proved)
+- [`generatorMap`][SC-372]: generator `A` as `LinearMap` (linearity via `tendsto_nhds_unique`)
+
+### Resolvent and Hille-Yosida ([Linares] eq. 0.13-0.14, Thm. 6)
+- [`ContractingSemigroup.resolvent`][SC-462]: `R(λ)x = ∫₀^∞ e^{-λt} S(t)x dt` — sorry-free!
+  - Integrability via contraction bound + exponential decay
+  - Linearity (`map_add'`, `map_smul'`) via `integral_add`, `integral_smul`
+  - Operator norm `‖R(λ)‖ ≤ 1/λ` via `norm_integral_le_of_norm_le` + substitution
+- [`hilleYosidaResolventBound`][SC-567]: `‖R(λ)‖ ≤ 1/λ` via `LinearMap.mkContinuous_norm_le`
+
+[SC-69]: HilleYosida/StronglyContinuousSemigroup.lean#L69
+[SC-82]: HilleYosida/StronglyContinuousSemigroup.lean#L82
 [SC-97]: HilleYosida/StronglyContinuousSemigroup.lean#L97
-[SC-172]: HilleYosida/StronglyContinuousSemigroup.lean#L172
-[SC-211]: HilleYosida/StronglyContinuousSemigroup.lean#L211
-[SC-324]: HilleYosida/StronglyContinuousSemigroup.lean#L324
-[SC-362]: HilleYosida/StronglyContinuousSemigroup.lean#L362
-[SC-467]: HilleYosida/StronglyContinuousSemigroup.lean#L467
+[SC-103]: HilleYosida/StronglyContinuousSemigroup.lean#L103
+[SC-220]: HilleYosida/StronglyContinuousSemigroup.lean#L220
+[SC-334]: HilleYosida/StronglyContinuousSemigroup.lean#L334
+[SC-372]: HilleYosida/StronglyContinuousSemigroup.lean#L372
+[SC-462]: HilleYosida/StronglyContinuousSemigroup.lean#L462
+[SC-487]: HilleYosida/StronglyContinuousSemigroup.lean#L487
+[SC-567]: HilleYosida/StronglyContinuousSemigroup.lean#L567
 
-## What is stated (sorry)
+## What is stated (4 sorries)
 
-- [`resolvent`][SC-410]: Laplace transform `R(λ) = ∫₀^∞ e^{-λt} S(t) dt` (needs Bochner integral)
-- [`hilleYosidaResolventBound`][SC-449]: `‖R(λ)‖ ≤ 1/λ` (forward direction only)
+- [`resolventMapsToDomain`][SC-550]: `R(λ)x ∈ D(A)` ([Linares] eq. 0.15)
+- [`resolventRightInv`][SC-564]: `(λI - A)R(λ) = I` ([Linares] eq. 0.16)
 - [`semigroupGroupBochner`][SGE-66]: BCR Theorem 4.1.13 (the main target)
 - [`semigroupGroupBochnerExtension`][SGE-111]: group extension with Fourier formula + PD
 
-[SC-410]: HilleYosida/StronglyContinuousSemigroup.lean#L410
-[SC-449]: HilleYosida/StronglyContinuousSemigroup.lean#L449
+[SC-550]: HilleYosida/StronglyContinuousSemigroup.lean#L550
+[SC-564]: HilleYosida/StronglyContinuousSemigroup.lean#L564
 [SGE-66]: HilleYosida/SemigroupGroupExtension.lean#L66
 [SGE-111]: HilleYosida/SemigroupGroupExtension.lean#L111
 
 ## Mathematical content
 
 1. **C₀-semigroups**: `S(t)` for `t ≥ 0` with `S(0) = Id`, `S(s+t) = S(s)S(t)`, strong continuity
-2. **Hille-Yosida resolvent bound**: contraction semigroup → `‖R(λ)‖ ≤ 1/λ` (forward direction)
-3. **BCR Theorem 4.1.13**: bounded continuous PD functions on `[0,∞) × ℝ^d` have Fourier-Laplace measure representations, enabling semigroup-to-group extension
-4. **Spectral extension** (QFT): contraction semigroup with H ≥ 0 → unitary group (needs Stone's theorem)
+2. **Infinitesimal generator**: `Ax = lim_{t→0⁺} (S(t)x - x)/t` on dense domain `D(A)`
+3. **Resolvent**: `R(λ)x = ∫₀^∞ e^{-λt} S(t)x dt` — bounded operator with `‖R(λ)‖ ≤ 1/λ`
+4. **Hille-Yosida** (forward): contraction semigroup → `(0,∞) ⊂ ρ(A)` and `‖R(λ)‖ ≤ 1/λ`
+5. **BCR Theorem 4.1.13**: bounded continuous PD functions on `[0,∞) × ℝ^d` have Fourier-Laplace measure representations, enabling semigroup-to-group extension
 
 ## References
 
+- [Linares] F. Linares, "The Hille-Yosida Theorem", IMPA lecture notes (2021)
+- [Baudoin] F. Baudoin, "Semigroups in Banach spaces", lecture notes (2019)
 - Hille, "Functional Analysis and Semi-Groups" (1948)
 - Yosida, "On the differentiability..." (1948)
 - Berg-Christensen-Ressel, "Harmonic Analysis on Semigroups" (1984), Theorem 4.1.13

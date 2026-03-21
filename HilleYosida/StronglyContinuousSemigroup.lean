@@ -2,38 +2,59 @@
 Copyright (c) 2026 Michael R. Douglas. All rights reserved.
 Released under Apache 2.0 license.
 
-# Strongly Continuous Semigroups
+# Strongly Continuous Semigroups and the Hille-Yosida Theorem
 
-This file defines strongly continuous one-parameter semigroups on Banach spaces,
-their infinitesimal generators, and the resolvent bound from the Hille-Yosida theorem.
+This file defines strongly continuous one-parameter semigroups (C₀-semigroups) on
+Banach spaces, their infinitesimal generators, the resolvent operator via the
+Laplace transform, and the forward direction of the Hille-Yosida theorem.
 
 ## Main Definitions
 
 * `StronglyContinuousSemigroup` — a family `S(t)` of bounded linear operators
-  for `t ≥ 0` satisfying `S(0) = 1`, `S(s+t) = S(s) ∘ S(t)`, and strong
-  continuity at `t = 0`.
+  for `t ≥ 0` satisfying `S(0) = Id`, `S(s+t) = S(s) ∘ S(t)`, and strong
+  continuity at `t = 0` (Def. 1 in [Linares]).
 
-* `ContractingSemigroup` — a strongly continuous semigroup of contractions:
-  `‖S(t)‖ ≤ 1` for all `t ≥ 0`.
+* `ContractingSemigroup` — a C₀-semigroup of contractions: `‖S(t)‖ ≤ 1`
+  for all `t ≥ 0` (Def. 3 in [Linares]). Corresponds to `M = 1, ω = 0`
+  in the growth bound.
 
-* `domain` — the generator domain as a `Submodule ℝ X`.
+* `domain` — the generator domain `D(A) = {x : lim_{t→0⁺} (S(t)x - x)/t exists}`
+  as a `Submodule ℝ X` (Def. 2 in [Linares]).
 
-* `generatorMap` — the infinitesimal generator `A` as a `LinearMap` from the domain.
+* `generatorMap` — the infinitesimal generator `A` as a `LinearMap` from the
+  domain, `Ax = lim_{t→0⁺} (S(t)x - x)/t`.
+
+* `ContractingSemigroup.resolvent` — the resolvent `R(λ)x = ∫₀^∞ e^{-λt} S(t)x dt`
+  for contraction semigroups (eq. 0.13 in [Linares]), defined via
+  `LinearMap.mkContinuous` with built-in bound `‖R(λ)‖ ≤ 1/λ`.
 
 ## Main Results
 
-* `strongContAt` — strong continuity at every `t₀ ≥ 0` (not just at 0)
-* `hilleYosidaResolventBound` — forward direction of Hille-Yosida:
-  `‖R(λ)‖ ≤ 1/λ` for contraction semigroups (sorry, resolvent not yet defined)
+* `normBoundedOnUnitInterval` — `∃ M ≥ 1, ∀ t ∈ [0,1], ‖S(t)‖ ≤ M`, via
+  the Banach-Steinhaus theorem (uniform boundedness principle).
+* `existsGrowthBound` — every C₀-semigroup has exponential growth:
+  `‖S(t)‖ ≤ M e^{ωt}` (Thm. 1 in [Linares], eq. 0.3).
+* `strongContAt` — strong continuity at every `t₀ ≥ 0`, not just at 0
+  (Cor. 1 in [Linares]).
+* `hilleYosidaResolventBound` — `‖R(λ)‖ ≤ 1/λ` for contraction semigroups
+  (eq. 0.14 in [Linares]; Thm. 6(ii), forward direction of Hille-Yosida).
 
-Note: The full Hille-Yosida theorem (characterizing generators of contraction
-semigroups) requires the converse direction via Yosida approximation, which is
-not yet implemented.
+## What is NOT yet proved
+
+* `resolventMapsToDomain` — `R(λ)x ∈ D(A)`, proved via the integral shift
+  trick (eq. 0.15 in [Linares]).
+* `resolventRightInv` — `(λI - A)R(λ) = I` (eq. 0.16 in [Linares]).
+* The converse (sufficiency) direction of Hille-Yosida, which requires the
+  Yosida approximation `A_λ = λ A R_λ(A) = λ² R_λ(A) - λI` (eq. 0.19).
 
 ## References
 
-* Hille-Yosida: E. Hille, "Functional Analysis and Semi-Groups" (1948);
-  K. Yosida, "On the differentiability and the representation of one-parameter
+* [Linares] F. Linares, "The Hille-Yosida Theorem", IMPA lecture notes (2021),
+  https://w3.impa.br/~linares/teoria-espectral-2021/lectures-2021/Lecture-Hille-Yosida.pdf
+* [Baudoin] F. Baudoin, "Semigroups in Banach spaces: The Hille-Yosida theorem",
+  lecture notes (2019), https://fabricebaudoin.blog/2019/01/14/lecture-1-semigroups-in-banach-spaces/
+* E. Hille, "Functional Analysis and Semi-Groups" (1948)
+* K. Yosida, "On the differentiability and the representation of one-parameter
   semi-group of linear operators" (1948)
 * Reed-Simon, "Methods of Modern Mathematical Physics I", §VIII
 * Engel-Nagel, "One-Parameter Semigroups for Linear Evolution Equations" (2000)
@@ -516,7 +537,18 @@ noncomputable def ContractingSemigroup.resolvent
 
 /-! ## Resolvent-Generator Interface -/
 
-/-- The resolvent maps all of `X` into the domain of the generator. -/
+/-- The resolvent maps all of `X` into the domain of the generator.
+
+This is part of the proof that `R(λ)` is the two-sided inverse of `λI - A`
+(eq. 0.15–0.16 in [Linares]). The key computation shows the generator
+difference quotient `(S(h) - I)/h · R(λ)x` converges as `h → 0⁺` to
+`λ R(λ)x - x`, simultaneously proving domain membership and the value
+of `A R(λ)x`.
+
+Proof outline (eq. 0.15 in [Linares]):
+  `(T(h) - I)/h · R_λ x = (e^{λh} - 1)/h · ∫₀^∞ e^{-λt} T(t)x dt
+                          - e^{λh}/h · ∫₀ʰ e^{-λt} T(t)x dt`
+  As `h → 0⁺`: first term → `λ R_λ x`, second term → `x`. -/
 theorem ContractingSemigroup.resolventMapsToDomain
     (S : ContractingSemigroup X)
     (lambda : ℝ) (hlam : 0 < lambda) (x : X) :
@@ -525,14 +557,17 @@ theorem ContractingSemigroup.resolventMapsToDomain
   sorry
 
 /-- The fundamental resolvent identity: `(λI - A) R(λ) x = x`.
-This is the operational meaning of "the resolvent is the inverse of `(λI - A)`".
 
-Proof strategy (integral shift trick):
-1. Commute `S(h)` inside the Bochner integral via `ContinuousLinearMap.integral_comp_comm`
-2. Change of variables `u = t + h` via measure translation
-3. Take `h → 0⁺` using FTC for Bochner integrals
-4. The limit equals `λ R(λ) x - x`, which simultaneously proves
-   `R(λ)x ∈ Domain(A)` and `A R(λ)x = λ R(λ)x - x`. -/
+This is eq. 0.16 in [Linares]: the resolvent `R_λ = (λI - A)⁻¹` is the
+right inverse of `λI - A`. Combined with `resolventMapsToDomain`, this
+shows `R_λ` is the bounded inverse of `λI - A` on all of `X`, establishing
+that `(0, ∞) ⊂ ρ(A)` (the resolvent set).
+
+The proof follows from the same integral shift computation as
+`resolventMapsToDomain` (eq. 0.15 in [Linares]): the limit
+`lim_{h→0⁺} (S(h) - I)/h · R(λ)x = λ R(λ)x - x` gives both the domain
+membership and the identity `A R(λ)x = λ R(λ)x - x`, which rearranges to
+`(λI - A) R(λ) x = x`. -/
 theorem ContractingSemigroup.resolventRightInv
     (S : ContractingSemigroup X)
     (lambda : ℝ) (hlam : 0 < lambda) (x : X) :
