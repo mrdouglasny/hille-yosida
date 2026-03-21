@@ -44,6 +44,9 @@ import Mathlib.Analysis.Normed.Operator.ContinuousLinearMap
 import Mathlib.Analysis.Normed.Operator.BanachSteinhaus
 import Mathlib.Analysis.SpecialFunctions.Log.Basic
 import Mathlib.Analysis.SpecialFunctions.ExpDeriv
+import Mathlib.MeasureTheory.Integral.Bochner.Basic
+import Mathlib.MeasureTheory.Measure.Lebesgue.Basic
+import Mathlib.Analysis.SpecialFunctions.Integrals.Basic
 
 noncomputable section
 
@@ -52,6 +55,10 @@ open scoped Topology NNReal
 /-! ## Strongly Continuous Semigroups -/
 
 variable (X : Type*) [NormedAddCommGroup X] [NormedSpace ℝ X] [CompleteSpace X]
+
+-- Needed for `integral_smul` in the resolvent definition; not auto-synthesized
+-- at `maxSynthPendingDepth = 3`.
+instance : SMulCommClass ℝ ℝ X := smulCommClass_self ℝ X
 
 /-- A strongly continuous one-parameter semigroup (C₀-semigroup) on a Banach space.
 
@@ -393,44 +400,92 @@ noncomputable def StronglyContinuousSemigroup.generatorMap
       exact (hAx.const_smul c).congr' (heq.mono (fun _ h => h.symm))
     exact tendsto_nhds_unique hcx hscaled
 
-/-! ## The Resolvent -/
+/-! ## The Resolvent (for Contraction Semigroups) -/
 
-/-- The resolvent operator `R(λ, A) = (λI - A)⁻¹` expressed via the Laplace
-transform of the semigroup: `R(λ)x = ∫₀^∞ e^{-λt} S(t)x dt` for `λ > 0`.
+open MeasureTheory
+
+/-- The pointwise integrand of the Laplace transform is integrable on `(0, ∞)`.
+
+For a **contraction** semigroup (`‖S(t)‖ ≤ 1`), the integrand satisfies
+`‖e^{-λt} S(t) x‖ ≤ e^{-λt} ‖x‖`, which is integrable for `λ > 0`.
+
+**Why contraction?** A general C₀-semigroup can have exponential growth
+`‖S(t)‖ ≤ M e^{ωt}`. If `λ ≤ ω`, the integrand diverges and the Bochner
+integral returns junk (zero). This breaks `integral_add` (which requires
+both summands to be `Integrable`), making it impossible to prove linearity
+of the resolvent. Restricting to contractions (`ω = 0`) ensures `λ > 0`
+suffices for convergence. -/
+lemma ContractingSemigroup.integrable_resolvent_integrand
+    (S : ContractingSemigroup X) (lambda : ℝ) (hlam : 0 < lambda) (x : X) :
+    IntegrableOn (fun t => Real.exp (-(lambda * t)) • S.operator t x)
+      (Set.Ioi 0) := by
+  sorry
+
+/-- The resolvent operator `R(λ) x = ∫₀^∞ e^{-λt} S(t)x dt` for `λ > 0`.
+
+Defined on **contraction semigroups** to guarantee integrability (see
+`integrable_resolvent_integrand`). Constructed via `LinearMap.mkContinuous`
+which simultaneously provides the linear map and the operator norm bound
+`‖R(λ)‖ ≤ 1/λ`.
 
 **Implementation note**: The integral is defined pointwise for each `x ∈ X`,
 not as an operator-valued integral. This is necessary because `t ↦ S(t)` is
-only strongly continuous (continuous in the strong operator topology), not
-uniformly continuous, so `t ↦ S(t)` is not strongly measurable as a function
-into `X →L[ℝ] X`. The pointwise integral `x ↦ ∫ e^{-λt} S(t)x dt` is
-well-defined because `t ↦ S(t)x` IS strongly measurable for each `x`.
-
-For a contraction semigroup, the integral converges for all `λ > 0` and
-defines a bounded operator with `‖R(λ)‖ ≤ 1/λ`. -/
-noncomputable def StronglyContinuousSemigroup.resolvent
-    (S : StronglyContinuousSemigroup X)
+only strongly continuous, so `t ↦ S(t)` is not strongly measurable as a
+function into `X →L[ℝ] X`. The pointwise integral `x ↦ ∫ e^{-λt} S(t)x dt`
+is well-defined because `t ↦ S(t)x` IS strongly measurable for each `x`. -/
+noncomputable def ContractingSemigroup.resolvent
+    (S : ContractingSemigroup X)
     (lambda : ℝ) (hlam : 0 < lambda) : X →L[ℝ] X :=
-  -- Defined pointwise: R(λ) x = ∫₀^∞ e^{-λt} S(t) x dt
-  -- The integral is over each x ∈ X separately (strong, not uniform, measurability).
-  sorry
+  LinearMap.mkContinuous
+    { toFun := fun x =>
+        ∫ t in Set.Ioi (0 : ℝ), Real.exp (-(lambda * t)) • S.operator t x
+      map_add' := fun x y => by
+        simp only [map_add, smul_add]
+        exact integral_add
+          (S.integrable_resolvent_integrand lambda hlam x)
+          (S.integrable_resolvent_integrand lambda hlam y)
+      map_smul' := fun c x => by
+        simp only [RingHom.id_apply, map_smul]
+        have h : ∀ t : ℝ, Real.exp (-(lambda * t)) • c • (S.operator t) x =
+            c • (Real.exp (-(lambda * t)) • (S.operator t) x) :=
+          fun t => smul_comm _ c _
+        simp_rw [h]
+        exact integral_smul (μ := volume.restrict (Set.Ioi (0 : ℝ))) c
+          (fun t => Real.exp (-(lambda * t)) • (S.operator t) x) }
+    (1 / lambda)
+    (by
+      -- ‖R(λ)x‖ ≤ (1/λ) * ‖x‖
+      -- 1. norm_integral_le_integral_norm
+      -- 2. Bound ‖e^{-λt} S(t)x‖ ≤ e^{-λt} ‖x‖ using S.contracting
+      -- 3. Evaluate ∫ e^{-λt} dt = 1/λ
+      sorry)
 
 /-! ## Resolvent-Generator Interface -/
 
 /-- The resolvent maps all of `X` into the domain of the generator. -/
-theorem StronglyContinuousSemigroup.resolventMapsToDomain
-    (S : StronglyContinuousSemigroup X)
+theorem ContractingSemigroup.resolventMapsToDomain
+    (S : ContractingSemigroup X)
     (lambda : ℝ) (hlam : 0 < lambda) (x : X) :
-    (S.resolvent lambda hlam x) ∈ S.domain := by
+    (S.resolvent lambda hlam x) ∈
+      S.toStronglyContinuousSemigroup.domain := by
   sorry
 
 /-- The fundamental resolvent identity: `(λI - A) R(λ) x = x`.
-This is the operational meaning of "the resolvent is the inverse of `(λI - A)`". -/
-theorem StronglyContinuousSemigroup.resolventRightInv
-    (S : StronglyContinuousSemigroup X)
+This is the operational meaning of "the resolvent is the inverse of `(λI - A)`".
+
+Proof strategy (integral shift trick):
+1. Commute `S(h)` inside the Bochner integral via `ContinuousLinearMap.integral_comp_comm`
+2. Change of variables `u = t + h` via measure translation
+3. Take `h → 0⁺` using FTC for Bochner integrals
+4. The limit equals `λ R(λ) x - x`, which simultaneously proves
+   `R(λ)x ∈ Domain(A)` and `A R(λ)x = λ R(λ)x - x`. -/
+theorem ContractingSemigroup.resolventRightInv
+    (S : ContractingSemigroup X)
     (lambda : ℝ) (hlam : 0 < lambda) (x : X) :
     let Rlx := S.resolvent lambda hlam x
-    let Rlx_dom : S.domain := ⟨Rlx, S.resolventMapsToDomain lambda hlam x⟩
-    lambda • Rlx - S.generatorMap Rlx_dom = x := by
+    let Rlx_dom : S.toStronglyContinuousSemigroup.domain :=
+      ⟨Rlx, S.resolventMapsToDomain lambda hlam x⟩
+    lambda • Rlx - S.toStronglyContinuousSemigroup.generatorMap Rlx_dom = x := by
   sorry
 
 /-! ## Hille-Yosida Theorem -/
@@ -440,6 +495,10 @@ theorem StronglyContinuousSemigroup.resolventRightInv
 For a contraction semigroup, the resolvent `R(λ) = ∫₀^∞ e^{-λt} S(t) dt`
 satisfies `‖R(λ)‖ ≤ 1/λ` for all `λ > 0`.
 
+This is essentially free from the construction: `resolvent` was built via
+`LinearMap.mkContinuous` with bound `1/λ`, so the norm bound follows from
+`LinearMap.mkContinuous_norm_le`.
+
 This is the forward direction of the Hille-Yosida theorem. The full theorem
 (an operator A generates a contraction semigroup iff it is closed, densely
 defined, with `‖(λI - A)⁻¹‖ ≤ 1/λ`) requires the converse: constructing
@@ -447,10 +506,9 @@ the semigroup from the operator, which needs the Yosida approximation.
 
 Ref: Hille (1948), Yosida (1948); Reed-Simon I §VIII.3; Engel-Nagel Ch. II -/
 theorem hilleYosidaResolventBound
-    (S : ContractingSemigroup X) :
-    -- For all λ > 0, the resolvent exists and satisfies the bound
-    ∀ (lambda : ℝ) (hlam : 0 < lambda),
-      ‖S.toStronglyContinuousSemigroup.resolvent lambda hlam‖ ≤ 1 / lambda := by
+    (S : ContractingSemigroup X)
+    (lambda : ℝ) (hlam : 0 < lambda) :
+    ‖S.resolvent lambda hlam‖ ≤ 1 / lambda := by
   sorry
 
 /-! ## Growth Bounds and Exponential Type -/
