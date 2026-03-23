@@ -113,9 +113,29 @@ lemma spatial_slice_pd {d : ℕ} {F : ℝ → (Fin d → ℝ) → ℂ}
     (hpd : IsSemigroupGroupPD d F) (t : ℝ) (ht : 0 ≤ t) :
     IsPositiveDefinite (fun a => F t a) where
   hermitian := by
-    -- F(t, -a) = conj(F(t, a)): standard PD conjugate symmetry.
-    -- Requires instantiating PD with n=2 and extracting symmetry.
-    exact sorry
+    intro a
+    -- Step 1: F(t, 0) is real (PD with n=1)
+    have h0 := (hpd 1 ![1] ![t] ![0] (by intro i; fin_cases i; simpa)).1
+    simp [Fin.sum_univ_one] at h0
+    -- h0 : (F (t + t) 0).im = 0 — so F(2t, 0) is real
+    -- Step 2: Im(F(t,a) + F(t,-a)) = 0 (PD with n=2, c=[1,1])
+    have h1 := (hpd 2 ![1, 1] ![t / 2, t / 2] ![0, a]
+      (by intro i; fin_cases i <;> simp <;> linarith)).1
+    simp only [Fin.sum_univ_two, Matrix.cons_val_zero, Matrix.cons_val_one,
+      Matrix.head_cons, star_one, one_mul, show t / 2 + t / 2 = t from by ring] at h1
+    -- Step 3: Re(F(t,a) - F(t,-a)) = 0 (PD with n=2, c=[1,I])
+    have h2 := (hpd 2 ![1, Complex.I] ![t / 2, t / 2] ![0, a]
+      (by intro i; fin_cases i <;> simp <;> linarith)).1
+    simp only [Fin.sum_univ_two, Matrix.cons_val_zero, Matrix.cons_val_one,
+      Matrix.head_cons, star_one, one_mul, map_mul, starRingEnd_self_apply,
+      show t / 2 + t / 2 = t from by ring] at h2
+    -- Step 4: Combine to get F(t, -a) = conj(F(t, a))
+    -- From h1: Im(F(t,a)) = -Im(F(t,-a)), from h2: Re(F(t,a)) = Re(F(t,-a))
+    apply Complex.ext
+    · -- Re part: Re(F(t,-a)) = Re(conj(F(t,a))) = Re(F(t,a))
+      sorry
+    · -- Im part: Im(F(t,-a)) = Im(conj(F(t,a))) = -Im(F(t,a))
+      sorry
   nonneg := by
     intro m pts c
     -- Key trick: negate the spatial arguments! (-pts j) - (-pts i) = pts i - pts j
