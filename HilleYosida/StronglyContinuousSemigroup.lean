@@ -544,7 +544,30 @@ noncomputable def ContractingSemigroup.resolvent
             ring
             )
 
-/-! ## Resolvent-Generator Interface -/
+/-! ## Resolvent-Generator Interface
+
+The proofs of `resolventMapsToDomain` and `resolventRightInv` use the integral
+shift trick from [EN] Thm. II.1.10(i) / [Linares] eq. 0.15. We first establish
+helper lemmas for the key computation. -/
+
+/-- Translation of set integral: `∫_{Ioi 0} f(t + h) = ∫_{Ioi h} f(u)`.
+Follows from translation invariance of Lebesgue measure. -/
+private lemma integral_comp_add_right_Ioi (f : ℝ → X) (h : ℝ) :
+    ∫ t in Set.Ioi 0, f (t + h) = ∫ u in Set.Ioi h, f u := by
+  -- Uses: MeasurableEmbedding of (· + h), Measure.map_add_right_eq_self,
+  -- and (· + h) '' Ioi 0 = Ioi h.
+  sorry
+
+/-- Splitting `∫_{Ioi 0} = ∫_{Ioc 0 h} + ∫_{Ioi h}` for `h > 0`. -/
+private lemma integral_Ioi_eq_Ioc_add_Ioi (f : ℝ → X) {h : ℝ} (hh : 0 < h)
+    (hf : IntegrableOn f (Set.Ioi 0) volume) :
+    ∫ t in Set.Ioi 0, f t = (∫ t in Set.Ioc 0 h, f t) + ∫ t in Set.Ioi h, f t := by
+  rw [← Set.Ioc_union_Ioi_eq_Ioi (le_of_lt hh)]
+  have hd : Disjoint (Set.Ioc 0 h) (Set.Ioi h) :=
+    Set.disjoint_left.mpr (fun _ ht1 ht2 => not_le.mpr ht2 ht1.2)
+  exact MeasureTheory.setIntegral_union hd measurableSet_Ioi
+    (hf.mono_set Set.Ioc_subset_Ioi_self)
+    (hf.mono_set (Set.Ioi_subset_Ioi (le_of_lt hh)))
 
 /-- The resolvent maps all of `X` into the domain of the generator.
 
@@ -563,20 +586,14 @@ theorem ContractingSemigroup.resolventMapsToDomain
     (lambda : ℝ) (hlam : 0 < lambda) (x : X) :
     (S.resolvent lambda hlam x) ∈
       S.toStronglyContinuousSemigroup.domain := by
-  -- Need to show: ∃ Ax, (1/h)(S(h)(R_λ x) - R_λ x) → Ax as h → 0⁺.
-  -- The limit value is λ R_λ x - x.
-  --
-  -- Proof sketch ([EN] Thm. II.1.10(i), [Linares] eq. 0.15):
-  -- 1. ContinuousLinearMap.integral_comp_comm: push S(h) inside integral
-  --    S(h)(R_λ x) = ∫₀^∞ e^{-λt} S(t+h)x dt
-  -- 2. integral_comp_add_right: substitute u = t + h
-  --    = e^{λh} ∫_h^∞ e^{-λu} S(u)x du
-  -- 3. Split integral: ∫_h^∞ = R_λ x - ∫₀^h e^{-λt} S(t)x dt
-  -- 4. Combine and divide by h:
-  --    (S(h) R_λ x - R_λ x)/h = (e^{λh}-1)/h · R_λ x - e^{λh}/h · ∫₀^h ...
-  -- 5. Take h → 0⁺:
-  --    hasDerivAt_exp_zero (composed with chain rule) gives (e^{λh}-1)/h → λ
-  --    intervalIntegral.integral_hasDerivAt_of_tendsto_ae_right gives 1/h ∫₀^h → x
+  -- Provide the limit value: A(R_λ x) = λ R_λ x - x
+  set Rlx := S.resolvent lambda hlam x
+  refine ⟨lambda • Rlx - x, ?_⟩
+  -- Need: (1/h) • (S(h)(Rlx) - Rlx) → λ Rlx - x as h → 0⁺
+  -- Key identity for h > 0 ([EN] Thm. II.1.10(i), [Linares] eq. 0.15):
+  --   S(h)(Rlx) - Rlx = (e^{λh} - 1) • Rlx - e^{λh} • ∫₀ʰ e^{-λt} S(t)x dt
+  -- Dividing by h and taking h → 0⁺:
+  --   (e^{λh}-1)/h → λ and (1/h)∫₀ʰ e^{-λt} S(t)x dt → x
   sorry
 
 /-- The fundamental resolvent identity: `(λI - A) R(λ) x = x`.
