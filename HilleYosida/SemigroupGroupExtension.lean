@@ -76,11 +76,19 @@ theorem semigroupGroupBochner (d : ℕ)
           Complex.exp (-(↑(t * p.1) : ℂ)) *
             Complex.exp (Complex.I * ↑(∑ i : Fin d, p.2 i * a i))
           ∂μ := by
-  -- BCR Theorem 4.1.13 (Berg-Christensen-Ressel, "Harmonic Analysis on Semigroups", 1984).
-  -- The proof uses Choquet's theorem on integral representations, the theory of
-  -- completely monotone functions on abelian semigroups, and the Riesz representation
-  -- theorem. This machinery is not available in Mathlib.
-  -- Verified correct by Gemini Deep Think (2026-03-23).
+  -- BCR Theorem 4.1.13: decomposes as Bochner on ℝ^d + Bernstein on [0,∞).
+  --
+  -- The Bochner step is proved: spatial_slice_pd + bochner_theorem (imported from
+  -- mrdouglasny/bochner) give, for each t ≥ 0, a measure ν_t on ℝ^d with
+  -- F(t,a) = ∫ exp(i⟨a,q⟩) dν_t(q).
+  --
+  -- The Bernstein step (axiom in Future/BernsteinTheorem.lean): the complete
+  -- monotonicity of t ↦ ν_t(B) gives a Laplace measure on [0,∞).
+  --
+  -- The combination into a product measure on [0,∞) × ℝ^d requires ~100 lines
+  -- of measure-theoretic construction (not yet written).
+  --
+  -- Mathematical correctness verified by Gemini Deep Think (2026-03-23).
   exact sorry
 
 /-! ## Group Extension from Bochner Representation
@@ -181,15 +189,11 @@ theorem semigroupGroupBochnerExtension (d : ℕ)
     -- Then ∫ (nonneg real) dμ is nonneg real.
     intro n c ts as
     haveI := hfin
-    -- Key algebraic identity: ∑ᵢⱼ star(zᵢ) zⱼ = ‖∑ zⱼ‖² (nonneg real)
-    -- where zⱼ(p) = cⱼ exp(I tⱼ p.1) exp(I ⟨aⱼ, p.2⟩).
-    -- After swapping ∑ and ∫, the integrand is ‖∑ zⱼ‖² ≥ 0.
-    -- The integral of a nonneg function has im = 0 and re ≥ 0.
-    constructor
-    · -- im = 0: the sum is real (it's an integral of ‖z‖² which is real)
-      sorry
-    · -- re ≥ 0: the sum is nonneg (integral of nonneg function)
-      sorry
+    -- The double sum ∑ᵢⱼ star(cᵢ) cⱼ G(tⱼ-tᵢ, aⱼ-aᵢ) factors as
+    -- ∫ |∑ⱼ cⱼ exp(I tⱼ p.1) exp(I ⟨aⱼ, p.2⟩)|² dμ, which is real and nonneg.
+    -- Proof requires: swap ∑ and ∫, then ∑ᵢⱼ star(zᵢ)zⱼ = star(∑ z)(∑ z) = ‖∑ z‖².
+    -- The integral of a nonneg real function has im = 0 and re ≥ 0.
+    exact sorry
 
 /-! ## Connection to QFT: Analytic Continuation to Unitary Group
 
