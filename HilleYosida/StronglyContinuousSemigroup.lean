@@ -595,12 +595,42 @@ theorem ContractingSemigroup.resolventMapsToDomain
       S.toStronglyContinuousSemigroup.domain := by
   -- Provide the limit value: A(R_λ x) = λ R_λ x - x
   set Rlx := S.resolvent lambda hlam x
+  set f := fun t => Real.exp (-(lambda * t)) • S.operator t x
   refine ⟨lambda • Rlx - x, ?_⟩
-  -- Need: (1/h) • (S(h)(Rlx) - Rlx) → λ Rlx - x as h → 0⁺
-  -- Key identity for h > 0 ([EN] Thm. II.1.10(i), [Linares] eq. 0.15):
-  --   S(h)(Rlx) - Rlx = (e^{λh} - 1) • Rlx - e^{λh} • ∫₀ʰ e^{-λt} S(t)x dt
-  -- Dividing by h and taking h → 0⁺:
-  --   (e^{λh}-1)/h → λ and (1/h)∫₀ʰ e^{-λt} S(t)x dt → x
+  -- The proof establishes the key identity for h > 0 and takes the limit.
+  -- Key identity ([EN] Thm. II.1.10(i), [Linares] eq. 0.15):
+  --   S(h)(Rlx) - Rlx = (e^{λh} - 1) • Rlx - e^{λh} • ∫_{Ioc 0 h} f(t) dt
+  -- Then (1/h)(S(h)(Rlx) - Rlx) → λ Rlx - x as h → 0⁺.
+  --
+  -- Each step below is proved or sorry'd individually.
+  -- Step 1: Push S(h) inside integral and use semigroup property
+  have h_push : ∀ (h : ℝ), 0 < h →
+      S.operator h Rlx = Real.exp (lambda * h) •
+        ∫ u in Set.Ioi h, f u := by
+    sorry
+  -- Step 2: Split ∫_{Ioi h} = Rlx - ∫_{Ioc 0 h} f
+  have h_split : ∀ (h : ℝ), 0 < h →
+      ∫ u in Set.Ioi h, f u = Rlx - ∫ u in Set.Ioc 0 h, f u := by
+    intro h hh
+    have hsplit := integral_Ioi_eq_Ioc_add_Ioi f hh
+      (S.integrable_resolvent_integrand lambda hlam x)
+    -- Rlx = ∫ t in Ioi 0, f t by definition of resolvent
+    have hRlx : Rlx = ∫ t in Set.Ioi 0, f t := by
+      simp only [Rlx, f, ContractingSemigroup.resolvent,
+        LinearMap.mkContinuous_apply, LinearMap.coe_mk, AddHom.coe_mk]
+    rw [hRlx, hsplit]; abel
+  -- Step 3: Combine into the key identity
+  have h_identity : ∀ (h : ℝ), 0 < h →
+      S.operator h Rlx - Rlx =
+        (Real.exp (lambda * h) - 1) • Rlx -
+        Real.exp (lambda * h) • ∫ u in Set.Ioc 0 h, f u := by
+    intro h hh
+    rw [h_push h hh, h_split h hh]
+    simp only [smul_sub, sub_smul, one_smul]
+    abel
+  -- Step 4: Take the limit as h → 0⁺
+  -- (1/h)(S(h)(Rlx) - Rlx) = ((e^{λh}-1)/h) • Rlx - (e^{λh}/h) • ∫_{Ioc 0 h} f
+  -- → λ • Rlx - 1 • x = λ Rlx - x
   sorry
 
 /-- The fundamental resolvent identity: `(λI - A) R(λ) x = x`.
