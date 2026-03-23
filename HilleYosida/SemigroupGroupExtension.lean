@@ -151,10 +151,18 @@ theorem semigroupGroupBochnerExtension (d : ℕ)
       Complex.exp (Complex.I * ↑(t * p.1)) *
         Complex.exp (Complex.I * ↑(∑ i : Fin d, p.2 i * a i)) ∂μ
   refine ⟨μ, G, hfin, hsupp, hF, fun t a => rfl, ?_, ?_, ?_⟩
-  · -- G is bounded: ‖G(t,a)‖ ≤ ∫ ‖exp(itp) exp(i⟨a,q⟩)‖ dμ ≤ ∫ 1 dμ = μ(univ)
-    -- Uses: norm_integral_le_integral_norm, ‖exp(ix)‖ = 1 (norm_exp_ofReal_mul_I),
-    -- integral_const for finite measure.
-    exact sorry
+  · -- G is bounded: ‖G(t,a)‖ ≤ μ(univ)
+    haveI := hfin
+    have norm_exp_I : ∀ r : ℝ, ‖exp (Complex.I * ↑r)‖ = 1 := fun r => by
+      rw [mul_comm]; exact Complex.norm_exp_ofReal_mul_I r
+    refine ⟨(μ Set.univ).toReal, fun t a => ?_⟩
+    apply le_trans (norm_integral_le_integral_norm _)
+    apply le_trans (integral_mono_of_nonneg
+      (Filter.Eventually.of_forall (fun _ => norm_nonneg _))
+      (integrable_const (1 : ℝ))
+      (Filter.Eventually.of_forall (fun p => by
+        dsimp; rw [norm_mul, norm_exp_I, norm_exp_I, mul_one])))
+    simp [integral_const, Measure.real]
   · -- G is continuous: dominated convergence (integrand bounded by 1, μ finite)
     sorry
   · -- G is PD on ℝ: ∑ c̄ᵢcⱼ G(tⱼ-tᵢ, aⱼ-aᵢ) = ∫ |∑ cⱼ e^{itⱼp+i⟨aⱼ,q⟩}|² dμ ≥ 0
