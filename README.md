@@ -4,17 +4,17 @@ A Lean 4 formalization of strongly continuous semigroups, the Hille-Yosida resol
 
 ## The Theorem
 
-Let {S(t)} be a **contraction semigroup** on a Banach space X: a family of bounded linear operators satisfying S(0) = I, S(s+t) = S(s)S(t) for s, t >= 0, S(t)x -> x as t -> 0+ for each x, and ||S(t)|| <= 1.
+Let $\{S(t)\}_{t \geq 0}$ be a **contraction semigroup** on a Banach space $X$: bounded linear operators satisfying $S(0) = I$, $S(s+t) = S(s)S(t)$, $S(t)x \to x$ as $t \to 0^+$, and $\lVert S(t) \rVert \leq 1$.
 
-**Hille-Yosida (forward direction).** For every lambda > 0, the resolvent
+**Hille-Yosida (forward direction).** For every $\lambda > 0$, the resolvent
 
-R(lambda)x = integral from 0 to infinity of e^{-lambda t} S(t)x dt
+$$R(\lambda)x = \int_0^\infty e^{-\lambda t}\, S(t)x \, dt$$
 
 is a bounded linear operator satisfying:
 
-1. R(lambda) maps X into the domain D(A) of the infinitesimal generator
-2. (lambda I - A) R(lambda) = I (the resolvent is the inverse of lambda I - A)
-3. ||R(lambda)|| <= 1/lambda
+1. $R(\lambda)$ maps $X$ into the domain $D(A)$ of the infinitesimal generator
+2. $(\lambda I - A)\, R(\lambda) = I$ (the resolvent is the inverse of $\lambda I - A$)
+3. $\lVert R(\lambda) \rVert \leq 1/\lambda$
 
 See the [proof outline](docs/proof-outline.md) for an informal summary of the proof.
 

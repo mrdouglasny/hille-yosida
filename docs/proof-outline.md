@@ -4,61 +4,87 @@ This document gives an informal summary of the proof of the forward direction of
 
 ## The Theorem
 
-**Hille-Yosida (forward direction).** Let {S(t)} be a contraction semigroup on a Banach space X (i.e., S(0) = I, S(s+t) = S(s)S(t), S(t)x -> x as t -> 0+, and ||S(t)|| <= 1). Then for every lambda > 0:
+**Hille-Yosida (forward direction).** Let $\{S(t)\}_{t \geq 0}$ be a contraction semigroup on a Banach space $X$:
+- $S(0) = I$
+- $S(s+t) = S(s) \circ S(t)$ for all $s, t \geq 0$
+- $S(t)x \to x$ as $t \to 0^+$ for each $x \in X$
+- $\lVert S(t) \rVert \leq 1$ for all $t \geq 0$
 
-1. The **resolvent** R(lambda)x = integral from 0 to infinity of e^{-lambda t} S(t)x dt defines a bounded linear operator on X.
-2. R(lambda) maps X into the domain D(A) of the infinitesimal generator A.
-3. (lambda I - A) R(lambda) = I (the resolvent identity).
-4. ||R(lambda)|| <= 1/lambda (the resolvent bound).
+Then for every $\lambda > 0$:
+
+1. The **resolvent** $R(\lambda)x = \int_0^\infty e^{-\lambda t} S(t)x \, dt$ defines a bounded linear operator on $X$.
+2. $R(\lambda)$ maps $X$ into the domain $D(A)$ of the infinitesimal generator $A$.
+3. $(\lambda I - A) R(\lambda) = I$ (the resolvent identity).
+4. $\lVert R(\lambda) \rVert \leq 1/\lambda$ (the resolvent bound).
 
 ## Proof Structure
 
-The proof proceeds in four stages, following Engel-Nagel [EN] Ch. I-II and Linares [Linares].
+The proof proceeds in four stages, following [EN] Ch. I–II and [Linares].
 
 ### Stage 1: Semigroup foundations
 
-**Uniform boundedness on [0,1]** ([EN] Prop. I.5.3). For each x in X, the orbit {S(t)x : t in [0,1]} is bounded: strong continuity at 0 gives a bound near 0, and the semigroup property extends it via iteration. The **Banach-Steinhaus theorem** (uniform boundedness principle) then gives a uniform operator norm bound M >= 1 with ||S(t)|| <= M for t in [0,1].
+**Uniform boundedness on $[0,1]$** ([EN] Prop. I.5.3). For each $x \in X$, the orbit $\{S(t)x : t \in [0,1]\}$ is bounded: strong continuity at $0$ gives a bound near $0$, and the semigroup property extends it via iteration. The **Banach-Steinhaus theorem** then gives a uniform operator norm bound $M \geq 1$ with $\lVert S(t) \rVert \leq M$ for $t \in [0,1]$.
 
-**Strong continuity everywhere** ([EN] Prop. I.5.3). Right continuity at t_0 follows from S(t_0 + h)x = S(t_0)(S(h)x) -> S(t_0)x. Left continuity uses the operator norm bound: ||S(t)x - S(t_0)x|| = ||S(t)(x - S(t_0-t)x)|| <= ||S(t)|| * ||x - S(t_0-t)x|| -> 0.
+**Strong continuity everywhere** ([EN] Prop. I.5.3). Right continuity at $t_0$ follows from $S(t_0 + h)x = S(t_0)(S(h)x) \to S(t_0)x$. Left continuity uses the norm bound:
 
-**Exponential growth bound** ([EN] Prop. I.5.5). Write t = floor(t) + frac(t), then ||S(t)|| <= M^{floor(t)+1} <= M * e^{(log M) * t}. This gives ||S(t)|| <= M * e^{omega * t} with omega = log M.
+$$\lVert S(t)x - S(t_0)x \rVert = \lVert S(t)(x - S(t_0 - t)x) \rVert \leq \lVert S(t) \rVert \cdot \lVert x - S(t_0 - t)x \rVert \to 0.$$
+
+**Exponential growth bound** ([EN] Prop. I.5.5). Write $t = \lfloor t \rfloor + \mathrm{frac}(t)$, then
+
+$$\lVert S(t) \rVert \leq M^{\lfloor t \rfloor + 1} \leq M \cdot e^{(\log M) \cdot t}.$$
 
 ### Stage 2: The resolvent as a Bochner integral
 
-**Integrability.** For a contraction semigroup, ||e^{-lambda t} S(t)x|| <= e^{-lambda t} ||x||, which is integrable on (0, infinity) for lambda > 0. The integrand is also strongly measurable (the map t -> S(t)x is continuous by Stage 1, hence measurable).
+**Integrability.** For a contraction semigroup, $\lVert e^{-\lambda t} S(t)x \rVert \leq e^{-\lambda t} \lVert x \rVert$, which is integrable on $(0, \infty)$ for $\lambda > 0$. Measurability follows from continuity of $t \mapsto S(t)x$ (Stage 1).
 
-**Linearity.** R(lambda) is linear because the Bochner integral commutes with addition (by `integral_add`, using integrability) and scalar multiplication (by `integral_smul`).
+**Linearity.** $R(\lambda)$ is linear because the Bochner integral commutes with addition and scalar multiplication.
 
-**Operator norm bound.** ||R(lambda)x|| <= integral of ||e^{-lambda t} S(t)x|| dt <= ||x|| * integral of e^{-lambda t} dt = ||x||/lambda. The integral evaluation uses substitution u = lambda * t (via `integral_comp_mul_left_Ioi`) and integral of e^{-t} on (0, infinity) = 1 (via `integral_exp_neg_Ioi_zero`). The resolvent is constructed via `LinearMap.mkContinuous` with bound 1/lambda, making the Hille-Yosida bound `hilleYosidaResolventBound` automatic.
+**Operator norm bound.**
+
+$$\lVert R(\lambda)x \rVert \leq \int_0^\infty e^{-\lambda t} \lVert x \rVert \, dt = \frac{\lVert x \rVert}{\lambda}.$$
+
+The integral is evaluated via substitution $u = \lambda t$ and $\int_0^\infty e^{-t} \, dt = 1$. The resolvent is constructed via `LinearMap.mkContinuous` with bound $1/\lambda$, making `hilleYosidaResolventBound` automatic.
 
 ### Stage 3: The integral shift trick
 
-This is the core computation ([EN] Thm. II.1.10, [Linares] eq. 0.15). We show that the generator difference quotient (1/h)(S(h) R(lambda)x - R(lambda)x) converges to lambda * R(lambda)x - x as h -> 0+.
+This is the core computation ([EN] Thm. II.1.10, [Linares] eq. 0.15). We show:
 
-**Step 1: Push S(h) inside the integral.** By `ContinuousLinearMap.integral_comp_comm`:
+$$\lim_{h \to 0^+} \frac{1}{h}\bigl(S(h) R(\lambda)x - R(\lambda)x\bigr) = \lambda R(\lambda)x - x.$$
 
-S(h)(R(lambda)x) = integral of e^{-lambda t} S(h)(S(t)x) dt = integral of e^{-lambda t} S(t+h)x dt.
+**Step 1: Push $S(h)$ inside the integral.** By linearity of $S(h)$ and `integral_comp_comm`:
 
-**Step 2: Factor the exponential.** Using e^{-lambda t} = e^{lambda h} * e^{-lambda(t+h)}, the integral becomes e^{lambda h} * integral of e^{-lambda(t+h)} S(t+h)x dt.
+$$S(h)\bigl(R(\lambda)x\bigr) = \int_0^\infty e^{-\lambda t} S(t+h)x \, dt.$$
 
-**Step 3: Translate the variable.** By translation invariance of Lebesgue measure (`integral_add_right_eq_self`): integral over (0, infinity) of f(t+h) dt = integral over (h, infinity) of f(u) du.
+**Step 2: Factor the exponential.** Using $e^{-\lambda t} = e^{\lambda h} \cdot e^{-\lambda(t+h)}$:
 
-**Step 4: Split the integral.** integral over (h, infinity) = integral over (0, infinity) - integral over (0, h] = R(lambda)x - integral over (0, h].
+$$= e^{\lambda h} \int_0^\infty e^{-\lambda(t+h)} S(t+h)x \, dt.$$
 
-**Step 5: Combine.** S(h) R(lambda)x - R(lambda)x = (e^{lambda h} - 1) * R(lambda)x - e^{lambda h} * integral from 0 to h of f.
+**Step 3: Translate the variable.** By translation invariance of Lebesgue measure:
 
-**Step 6: Divide by h and take the limit.** As h -> 0+:
-- (e^{lambda h} - 1)/h -> lambda (derivative of exp at 0, via `HasDerivAt.tendsto_slope_zero_right`)
-- e^{lambda h} -> 1 (continuity of exp)
-- (1/h) * integral from 0 to h of f -> f(0) = x (FTC for Bochner integrals, via `integral_hasDerivAt_of_tendsto_ae_right`; requires showing f is continuous at 0 from both sides, which uses `continuous_piecewise` with the frontier condition f(0) = x)
+$$\int_0^\infty f(t+h) \, dt = \int_h^\infty f(u) \, du.$$
 
-Therefore the limit is lambda * R(lambda)x - x.
+**Step 4: Split the integral.**
+
+$$\int_h^\infty = \int_0^\infty - \int_0^h = R(\lambda)x - \int_0^h e^{-\lambda u} S(u)x \, du.$$
+
+**Step 5: Combine.**
+
+$$S(h) R(\lambda)x - R(\lambda)x = (e^{\lambda h} - 1) \cdot R(\lambda)x - e^{\lambda h} \int_0^h e^{-\lambda u} S(u)x \, du.$$
+
+**Step 6: Divide by $h$ and take $h \to 0^+$.**
+- $(e^{\lambda h} - 1)/h \to \lambda$ (derivative of $\exp$ at $0$)
+- $e^{\lambda h} \to 1$ (continuity)
+- $(1/h) \int_0^h e^{-\lambda u} S(u)x \, du \to e^0 \cdot S(0)x = x$ (FTC for Bochner integrals)
+
+Therefore the limit is $\lambda R(\lambda)x - x$.
 
 ### Stage 4: Resolvent identity
 
-**Domain membership.** The existence of the limit in Stage 3 shows R(lambda)x is in D(A), with A(R(lambda)x) = lambda * R(lambda)x - x.
+**Domain membership.** The existence of the limit in Stage 3 shows $R(\lambda)x \in D(A)$, with $A(R(\lambda)x) = \lambda R(\lambda)x - x$.
 
-**Resolvent identity.** By `tendsto_nhds_unique`, the generator value Classical.choose equals our explicit limit, giving A(R(lambda)x) = lambda * R(lambda)x - x. Rearranging: lambda * R(lambda)x - A(R(lambda)x) = x, i.e., (lambda I - A) R(lambda) = I.
+**Resolvent identity.** By uniqueness of limits in Hausdorff spaces (`tendsto_nhds_unique`):
+
+$$A\bigl(R(\lambda)x\bigr) = \lambda R(\lambda)x - x \quad \Longrightarrow \quad (\lambda I - A) R(\lambda) x = x.$$
 
 ## Key Mathlib lemmas used
 
@@ -67,8 +93,8 @@ Therefore the limit is lambda * R(lambda)x - x.
 | `banach_steinhaus` | Uniform boundedness principle for operator norms |
 | `ContinuousLinearMap.integral_comp_comm` | Push CLM inside Bochner integral |
 | `exp_neg_integrableOn_Ioi` | Exponential decay is integrable |
-| `integral_comp_mul_left_Ioi` | Substitution u = lambda * t in set integrals |
-| `integral_exp_neg_Ioi_zero` | Evaluate integral of e^{-t} = 1 |
+| `integral_comp_mul_left_Ioi` | Substitution $u = \lambda t$ in set integrals |
+| `integral_exp_neg_Ioi_zero` | $\int_0^\infty e^{-t} \, dt = 1$ |
 | `integral_add_right_eq_self` | Translation invariance of Lebesgue measure |
 | `norm_integral_le_of_norm_le` | Norm bound for Bochner integrals |
 | `HasDerivAt.tendsto_slope_zero_right` | One-sided derivative gives slope limit |
