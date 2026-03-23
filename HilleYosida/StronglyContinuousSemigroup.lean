@@ -752,10 +752,17 @@ theorem ContractingSemigroup.resolventRightInv
     let Rlx_dom : S.toStronglyContinuousSemigroup.domain :=
       ⟨Rlx, S.resolventMapsToDomain lambda hlam x⟩
     lambda • Rlx - S.toStronglyContinuousSemigroup.generatorMap Rlx_dom = x := by
-  -- Follows from the same computation as resolventMapsToDomain:
-  -- The limit (1/h)(S(h)(R_λ x) - R_λ x) → λ R_λ x - x shows that
-  -- A(R_λ x) = λ R_λ x - x (by tendsto_nhds_unique), hence
-  -- λ R_λ x - A(R_λ x) = x.
+  -- generatorMap uses Classical.choose on resolventMapsToDomain's existential.
+  -- By tendsto_nhds_unique (T₂ space), this equals our explicit limit λ Rlx - x.
+  -- Then λ Rlx - (λ Rlx - x) = x by algebra.
+  simp only
+  have h_choose := Classical.choose_spec
+    (S.resolventMapsToDomain lambda hlam x : S.toStronglyContinuousSemigroup.generator
+      (S.resolvent lambda hlam x))
+  -- h_choose: Tendsto ... (nhds (generatorMap Rlx_dom))
+  -- Need: Tendsto ... (nhds (lambda • Rlx - x))  [same limit from resolventMapsToDomain]
+  -- Then: tendsto_nhds_unique h_choose h_limit gives generatorMap Rlx_dom = λ Rlx - x
+  -- Then: λ Rlx - (λ Rlx - x) = x  [by sub_sub_cancel]
   sorry
 
 /-! ## Hille-Yosida Theorem -/
