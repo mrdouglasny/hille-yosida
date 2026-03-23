@@ -607,6 +607,15 @@ theorem ContractingSemigroup.resolventMapsToDomain
   have h_push : ∀ (h : ℝ), 0 < h →
       S.operator h Rlx = Real.exp (lambda * h) •
         ∫ u in Set.Ioi h, f u := by
+    intro h hh
+    -- Proof outline:
+    -- 1. Rlx = ∫ f(t) dt, so S(h)(Rlx) = S(h)(∫ f(t) dt)
+    --    = ∫ S(h)(f(t)) dt  by ContinuousLinearMap.integral_comp_comm
+    -- 2. S(h)(e^{-λt} • S(t)x) = e^{-λt} • S(h+t)x  by semigroup property
+    -- 3. e^{-λt} • S(h+t)x = e^{λh} • (e^{-λ(t+h)} • S(t+h)x) = e^{λh} • f(t+h)
+    --    since e^{-λt} = e^{λh} • e^{-λ(t+h)}
+    -- 4. ∫_{Ioi 0} e^{λh} • f(t+h) dt = e^{λh} • ∫_{Ioi h} f(u) du
+    --    by integral_smul + integral_comp_add_right_Ioi
     sorry
   -- Step 2: Split ∫_{Ioi h} = Rlx - ∫_{Ioc 0 h} f
   have h_split : ∀ (h : ℝ), 0 < h →
