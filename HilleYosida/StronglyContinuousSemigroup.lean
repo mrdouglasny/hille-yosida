@@ -576,27 +576,19 @@ private lemma integral_Ioi_eq_Ioc_add_Ioi (f : ℝ → X) {h : ℝ} (hh : 0 < h)
     (hf.mono_set Set.Ioc_subset_Ioi_self)
     (hf.mono_set (Set.Ioi_subset_Ioi (le_of_lt hh)))
 
-/-- The resolvent maps all of `X` into the domain of the generator.
-
-This is part of the proof that `R(λ)` is the two-sided inverse of `λI - A`
-(eq. 0.15–0.16 in [Linares]). The key computation shows the generator
-difference quotient `(S(h) - I)/h · R(λ)x` converges as `h → 0⁺` to
-`λ R(λ)x - x`, simultaneously proving domain membership and the value
-of `A R(λ)x`.
-
-Proof outline (eq. 0.15 in [Linares]):
-  `(T(h) - I)/h · R_λ x = (e^{λh} - 1)/h · ∫₀^∞ e^{-λt} T(t)x dt
-                          - e^{λh}/h · ∫₀ʰ e^{-λt} T(t)x dt`
-  As `h → 0⁺`: first term → `λ R_λ x`, second term → `x`. -/
-theorem ContractingSemigroup.resolventMapsToDomain
-    (S : ContractingSemigroup X)
-    (lambda : ℝ) (hlam : 0 < lambda) (x : X) :
-    (S.resolvent lambda hlam x) ∈
-      S.toStronglyContinuousSemigroup.domain := by
-  -- Provide the limit value: A(R_λ x) = λ R_λ x - x
+/-- The generator difference quotient for `R(λ)x` converges to `λ R(λ)x - x`.
+This is the core computation shared by `resolventMapsToDomain` and `resolventRightInv`. -/
+private theorem ContractingSemigroup.resolvent_generator_tendsto
+    (S : ContractingSemigroup X) (lambda : ℝ) (hlam : 0 < lambda) (x : X) :
+    Filter.Tendsto (fun t => (1 / t) • (S.operator t (S.resolvent lambda hlam x) -
+      S.resolvent lambda hlam x))
+      (nhdsWithin 0 (Set.Ioi 0))
+      (nhds (lambda • S.resolvent lambda hlam x - x)) := by
   set Rlx := S.resolvent lambda hlam x
   set f := fun t => Real.exp (-(lambda * t)) • S.operator t x
-  refine ⟨lambda • Rlx - x, ?_⟩
+  -- Full integral shift computation ([EN] Thm. II.1.10(i), [Linares] eq. 0.15)
+  set Rlx := S.resolvent lambda hlam x
+  set f := fun t => Real.exp (-(lambda * t)) • S.operator t x
   -- The proof establishes the key identity for h > 0 and takes the limit.
   -- Key identity ([EN] Thm. II.1.10(i), [Linares] eq. 0.15):
   --   S(h)(Rlx) - Rlx = (e^{λh} - 1) • Rlx - e^{λh} • ∫_{Ioc 0 h} f(t) dt
@@ -718,11 +710,27 @@ theorem ContractingSemigroup.resolventMapsToDomain
           intro t ht
           apply MeasureTheory.setIntegral_congr_fun measurableSet_Ioc
           intro u hu; simp [hg_def, hu.1.le]
+        -- g is continuous (piecewise of continuous functions matching at 0)
+        have hg_continuous : Continuous g := by
+          change Continuous (Set.piecewise (Set.Ici 0) f (fun _ => x))
+          apply continuous_piecewise
+          · -- Frontier condition: f 0 = x
+            intro t ht
+            have := frontier_Ici_subset (a := (0:ℝ)) ht
+            simp [Set.mem_singleton_iff] at this; subst this
+            simp [f, S.toStronglyContinuousSemigroup.at_zero, Real.exp_zero]
+          · -- ContinuousOn f (closure (Ici 0)) = ContinuousOn f (Ici 0)
+            rw [closure_Ici]
+            exact ContinuousOn.smul
+              ((Real.continuous_exp.comp (continuous_neg.comp
+                (Continuous.mul continuous_const continuous_id))).continuousOn)
+              (fun t₀ ht₀ => S.toStronglyContinuousSemigroup.strongContAt x t₀ ht₀)
+          · exact continuousOn_const
         -- FTC for g: HasDerivAt (fun u => ∫₀ᵘ g) x 0
         have h_ftc : HasDerivAt (fun u => ∫ t in (0 : ℝ)..u, g t) x 0 :=
           intervalIntegral.integral_hasDerivAt_of_tendsto_ae_right
             IntervalIntegrable.refl
-            (sorry : StronglyMeasurableAtFilter g (nhds 0))
+            (hg_continuous.stronglyMeasurableAtFilter volume (nhds 0))
             (hg_cont.mono_left inf_le_left)
         -- Extract right Tendsto and convert
         have h_slope := h_ftc.tendsto_slope_zero_right
@@ -732,6 +740,15 @@ theorem ContractingSemigroup.resolventMapsToDomain
         exact h_slope.congr' (by
           filter_upwards [self_mem_nhdsWithin] with t (ht : 0 < t)
           rw [one_div, intervalIntegral.integral_of_le (le_of_lt ht), hg_eq t ht])
+
+/-- The resolvent maps all of `X` into the domain of the generator
+([EN] Thm. II.1.10(i), [Linares] eq. 0.15). -/
+theorem ContractingSemigroup.resolventMapsToDomain
+    (S : ContractingSemigroup X)
+    (lambda : ℝ) (hlam : 0 < lambda) (x : X) :
+    (S.resolvent lambda hlam x) ∈
+      S.toStronglyContinuousSemigroup.domain :=
+  ⟨_, S.resolvent_generator_tendsto lambda hlam x⟩
 
 /-- The fundamental resolvent identity: `(λI - A) R(λ) x = x`.
 
@@ -752,18 +769,16 @@ theorem ContractingSemigroup.resolventRightInv
     let Rlx_dom : S.toStronglyContinuousSemigroup.domain :=
       ⟨Rlx, S.resolventMapsToDomain lambda hlam x⟩
     lambda • Rlx - S.toStronglyContinuousSemigroup.generatorMap Rlx_dom = x := by
-  -- generatorMap uses Classical.choose on resolventMapsToDomain's existential.
-  -- By tendsto_nhds_unique (T₂ space), this equals our explicit limit λ Rlx - x.
-  -- Then λ Rlx - (λ Rlx - x) = x by algebra.
   simp only
-  have h_choose := Classical.choose_spec
-    (S.resolventMapsToDomain lambda hlam x : S.toStronglyContinuousSemigroup.generator
-      (S.resolvent lambda hlam x))
-  -- h_choose: Tendsto ... (nhds (generatorMap Rlx_dom))
-  -- Need: Tendsto ... (nhds (lambda • Rlx - x))  [same limit from resolventMapsToDomain]
-  -- Then: tendsto_nhds_unique h_choose h_limit gives generatorMap Rlx_dom = λ Rlx - x
-  -- Then: λ Rlx - (λ Rlx - x) = x  [by sub_sub_cancel]
-  sorry
+  -- generatorMap = Classical.choose of the generator existential
+  -- By tendsto_nhds_unique: it equals λ Rlx - x
+  have h_gen_eq : S.toStronglyContinuousSemigroup.generatorMap
+      ⟨S.resolvent lambda hlam x, S.resolventMapsToDomain lambda hlam x⟩ =
+      lambda • S.resolvent lambda hlam x - x :=
+    tendsto_nhds_unique
+      (Classical.choose_spec (S.resolventMapsToDomain lambda hlam x))
+      (S.resolvent_generator_tendsto lambda hlam x)
+  rw [h_gen_eq]; abel
 
 /-! ## Hille-Yosida Theorem -/
 
