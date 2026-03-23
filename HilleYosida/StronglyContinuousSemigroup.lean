@@ -608,15 +608,30 @@ theorem ContractingSemigroup.resolventMapsToDomain
       S.operator h Rlx = Real.exp (lambda * h) •
         ∫ u in Set.Ioi h, f u := by
     intro h hh
-    -- Proof outline:
-    -- 1. Rlx = ∫ f(t) dt, so S(h)(Rlx) = S(h)(∫ f(t) dt)
-    --    = ∫ S(h)(f(t)) dt  by ContinuousLinearMap.integral_comp_comm
-    -- 2. S(h)(e^{-λt} • S(t)x) = e^{-λt} • S(h+t)x  by semigroup property
-    -- 3. e^{-λt} • S(h+t)x = e^{λh} • (e^{-λ(t+h)} • S(t+h)x) = e^{λh} • f(t+h)
-    --    since e^{-λt} = e^{λh} • e^{-λ(t+h)}
-    -- 4. ∫_{Ioi 0} e^{λh} • f(t+h) dt = e^{λh} • ∫_{Ioi h} f(u) du
-    --    by integral_smul + integral_comp_add_right_Ioi
-    sorry
+    have hRlx : Rlx = ∫ t in Set.Ioi 0, f t := by
+      simp only [Rlx, f, ContractingSemigroup.resolvent,
+        LinearMap.mkContinuous_apply, LinearMap.coe_mk, AddHom.coe_mk]
+    -- Step 1: Push S(h) inside integral
+    rw [hRlx, ← ContinuousLinearMap.integral_comp_comm _
+      (S.integrable_resolvent_integrand lambda hlam x)]
+    -- Goal: ∫ t in Ioi 0, S(h)(f(t)) = e^{λh} • ∫ u in Ioi h, f u
+    -- Step 2: Rewrite integrand on Ioi 0 (where t > 0 hence t ≥ 0)
+    have h_eq : ∀ t ∈ Set.Ioi (0 : ℝ),
+        (S.operator h) (f t) = Real.exp (lambda * h) • f (t + h) := by
+      intro t ht
+      simp only [f, ContinuousLinearMap.map_smul]
+      rw [← ContinuousLinearMap.comp_apply,
+          ← S.semigroup h t (le_of_lt hh) (le_of_lt (Set.mem_Ioi.mp ht)),
+          show h + t = t + h from add_comm h t]
+      -- exp(-λt) • S(t+h)x = exp(λh) • (exp(-λ(t+h)) • S(t+h)x)
+      -- Since • is right-assoc: RHS = exp(λh) • (exp(-λ(t+h)) • S(t+h)x)
+      -- Use mul_smul: a • (b • x) = (a * b) • x, then exp_add + ring.
+      symm; rw [← mul_smul, ← Real.exp_add]; congr 1; ring
+    rw [MeasureTheory.setIntegral_congr_fun measurableSet_Ioi h_eq]
+    -- Goal: ∫ t in Ioi 0, e^{λh} • f(t+h) = e^{λh} • ∫ u in Ioi h, f u
+    rw [integral_smul (μ := volume.restrict (Set.Ioi (0 : ℝ)))]
+    congr 1
+    exact integral_comp_add_right_Ioi f h
   -- Step 2: Split ∫_{Ioi h} = Rlx - ∫_{Ioc 0 h} f
   have h_split : ∀ (h : ℝ), 0 < h →
       ∫ u in Set.Ioi h, f u = Rlx - ∫ u in Set.Ioc 0 h, f u := by
