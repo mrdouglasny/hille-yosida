@@ -177,10 +177,19 @@ theorem semigroupGroupBochnerExtension (d : ℕ)
       (integrable_const 1)
       (ae_of_all μ (fun p => by fun_prop))
   · -- G is PD on ℝ: ∑ c̄ᵢcⱼ G(tⱼ-tᵢ, aⱼ-aᵢ) = ∫ |∑ⱼ cⱼ exp(itⱼp+i⟨aⱼ,q⟩)|² dμ ≥ 0
-    -- Proof: expand G, swap ∑ and ∫, factor integrand as norm², integral ≥ 0.
-    -- The norm² recognition uses: ∑ᵢⱼ star(cᵢ φᵢ) (cⱼ φⱼ) = |∑ⱼ cⱼ φⱼ|²
-    -- where φⱼ(p) = exp(I tⱼ p.1) exp(I ⟨aⱼ, p.2⟩).
-    exact sorry
+    -- The double sum factors as ‖∑ⱼ cⱼ φⱼ(p)‖² which is real and nonneg.
+    -- Then ∫ (nonneg real) dμ is nonneg real.
+    intro n c ts as
+    haveI := hfin
+    -- Key algebraic identity: ∑ᵢⱼ star(zᵢ) zⱼ = ‖∑ zⱼ‖² (nonneg real)
+    -- where zⱼ(p) = cⱼ exp(I tⱼ p.1) exp(I ⟨aⱼ, p.2⟩).
+    -- After swapping ∑ and ∫, the integrand is ‖∑ zⱼ‖² ≥ 0.
+    -- The integral of a nonneg function has im = 0 and re ≥ 0.
+    constructor
+    · -- im = 0: the sum is real (it's an integral of ‖z‖² which is real)
+      sorry
+    · -- re ≥ 0: the sum is nonneg (integral of nonneg function)
+      sorry
 
 /-! ## Connection to QFT: Analytic Continuation to Unitary Group
 
