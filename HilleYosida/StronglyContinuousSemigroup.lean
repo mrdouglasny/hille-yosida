@@ -554,9 +554,16 @@ helper lemmas for the key computation. -/
 Follows from translation invariance of Lebesgue measure. -/
 private lemma integral_comp_add_right_Ioi (f : ℝ → X) (h : ℝ) :
     ∫ t in Set.Ioi 0, f (t + h) = ∫ u in Set.Ioi h, f u := by
-  -- Uses: MeasurableEmbedding of (· + h), Measure.map_add_right_eq_self,
-  -- and (· + h) '' Ioi 0 = Ioi h.
-  sorry
+  -- Express set integrals as full integrals with indicators
+  simp_rw [← MeasureTheory.integral_indicator measurableSet_Ioi]
+  -- Key: indicator_{Ioi 0}(fun t => f(t+h))(t) = indicator_{Ioi h}(f)(t+h)
+  have key : ∀ t, Set.indicator (Set.Ioi 0) (fun t => f (t + h)) t =
+      Set.indicator (Set.Ioi h) f (t + h) := by
+    intro t; simp only [Set.indicator, Set.mem_Ioi]
+    split_ifs with h1 h2 h2 <;> [rfl; linarith; linarith; rfl]
+  simp_rw [key]
+  -- Apply translation invariance of Lebesgue measure
+  exact MeasureTheory.integral_add_right_eq_self _ h
 
 /-- Splitting `∫_{Ioi 0} = ∫_{Ioc 0 h} + ∫_{Ioi h}` for `h > 0`. -/
 private lemma integral_Ioi_eq_Ioc_add_Ioi (f : ℝ → X) {h : ℝ} (hh : 0 < h)
