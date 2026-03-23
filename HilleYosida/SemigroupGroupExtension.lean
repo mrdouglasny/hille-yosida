@@ -164,9 +164,18 @@ theorem semigroupGroupBochnerExtension (d : ℕ)
         dsimp; rw [norm_mul, norm_exp_I, norm_exp_I, mul_one])))
     simp [integral_const, Measure.real]
   · -- G is continuous via MeasureTheory.continuous_of_dominated
-    -- Integrand is bounded by 1 (|exp(ix)| = 1), continuous in parameters,
-    -- and μ is finite, so the integral is continuous.
-    exact sorry
+    haveI := hfin
+    have norm_exp_I : ∀ r : ℝ, ‖exp (Complex.I * ↑r)‖ = 1 := fun r => by
+      rw [mul_comm]; exact Complex.norm_exp_ofReal_mul_I r
+    exact MeasureTheory.continuous_of_dominated
+      (F := fun (x : ℝ × (Fin d → ℝ)) p =>
+        exp (Complex.I * ↑(x.1 * p.1)) * exp (Complex.I * ↑(∑ i, p.2 i * x.2 i)))
+      (bound := fun _ => 1)
+      (fun x => (Continuous.aestronglyMeasurable (by fun_prop)))
+      (fun x => ae_of_all μ (fun p => by
+        dsimp; rw [norm_mul, norm_exp_I, norm_exp_I, mul_one]))
+      (integrable_const 1)
+      (ae_of_all μ (fun p => by fun_prop))
   · -- G is PD on ℝ: the sum ∑ c̄ᵢcⱼ G(tⱼ-tᵢ, aⱼ-aᵢ) equals
     -- ∫ |∑ⱼ cⱼ exp(itⱼp) exp(i⟨aⱼ,q⟩)|² dμ ≥ 0
     -- Proof requires: integral_finset_sum to swap ∑ and ∫, then
