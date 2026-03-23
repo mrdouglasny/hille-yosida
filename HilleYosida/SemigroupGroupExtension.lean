@@ -152,6 +152,8 @@ theorem semigroupGroupBochnerExtension (d : ℕ)
         Complex.exp (Complex.I * ↑(∑ i : Fin d, p.2 i * a i)) ∂μ
   refine ⟨μ, G, hfin, hsupp, hF, fun t a => rfl, ?_, ?_, ?_⟩
   · -- G is bounded: |e^{itp}| = 1 and μ is finite → ‖G(t,a)‖ ≤ μ(univ)
+    -- Proof: ‖G(t,a)‖ ≤ ∫ ‖exp(itp) exp(i⟨a,q⟩)‖ dμ ≤ ∫ 1 dμ = μ(univ)
+    -- Uses: norm_exp_ofReal_mul_I, norm_integral_le_integral_norm, integral_const
     sorry
   · -- G is continuous: dominated convergence (integrand bounded by 1, μ finite)
     sorry
