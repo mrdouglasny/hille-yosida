@@ -113,17 +113,17 @@ lemma spatial_slice_pd {d : ℕ} {F : ℝ → (Fin d → ℝ) → ℂ}
     (hpd : IsSemigroupGroupPD d F) (t : ℝ) (ht : 0 ≤ t) :
     IsPositiveDefinite (fun a => F t a) where
   hermitian := by
-    -- F(t, -a) = conj(F(t, a)): standard PD conjugate symmetry
-    -- Proof: instantiate IsSemigroupGroupPD with n=2, ts=[t/2,t/2],
-    -- as=[0,a], c=[1,z] for z on the unit circle, extract Im=0 and symmetry.
+    -- F(t, -a) = conj(F(t, a)): standard PD conjugate symmetry.
+    -- Requires instantiating PD with n=2 and extracting symmetry.
     exact sorry
   nonneg := by
     intro m pts c
-    -- From IsSemigroupGroupPD with ts_i = t/2: ∑ c̄ᵢcⱼ F(t, ptsⱼ - ptsᵢ) ≥ 0
-    -- The Bochner PD needs F(t, ptsᵢ - ptsⱼ). These differ by an index swap
-    -- i ↔ j, which preserves Re(∑) since the sum is hermitian.
-    -- Formally: swap indices in the double sum, then use Re(conj(z)) = Re(z).
-    exact sorry
+    -- Key trick: negate the spatial arguments! (-pts j) - (-pts i) = pts i - pts j
+    have h := (hpd m c (fun _ => t / 2) (fun i => -pts i) (fun _ => by linarith)).2
+    -- Rewrite inside sums: -ptsⱼ - (-ptsᵢ) = ptsᵢ - ptsⱼ and t/2+t/2 = t
+    simp_rw [show ∀ i j : Fin m, -pts j - -pts i = pts i - pts j from
+      fun _ _ => by abel, show t / 2 + t / 2 = t from by ring] at h
+    exact h
 
 /-! ## BCR Decomposition: Steps 2–7
 
