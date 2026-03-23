@@ -131,11 +131,11 @@ lemma spatial_slice_pd {d : ℕ} {F : ℝ → (Fin d → ℝ) → ℂ}
       show t / 2 + t / 2 = t from by ring] at h2
     -- Step 4: Combine to get F(t, -a) = conj(F(t, a))
     -- From h1: Im(F(t,a)) = -Im(F(t,-a)), from h2: Re(F(t,a)) = Re(F(t,-a))
-    apply Complex.ext
-    · -- Re part: Re(F(t,-a)) = Re(conj(F(t,a))) = Re(F(t,a))
-      sorry
-    · -- Im part: Im(F(t,-a)) = Im(conj(F(t,a))) = -Im(F(t,a))
-      sorry
+    -- h0, h1, h2 give: F(t,0) real, Im(F(t,a)+F(t,-a))=0, Re(F(t,a)-F(t,-a))=0
+    -- Combined: Re(F(t,-a)) = Re(F(t,a)) and Im(F(t,-a)) = -Im(F(t,a)) = conj
+    -- Blocked: simp doesn't fully evaluate Fin 2 sums for linarith to close.
+    -- Need: more Fin 2 / Complex arithmetic simp lemmas.
+    exact sorry
   nonneg := by
     intro m pts c
     -- Key trick: negate the spatial arguments! (-pts j) - (-pts i) = pts i - pts j
