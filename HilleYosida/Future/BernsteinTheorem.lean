@@ -114,28 +114,52 @@ lemma spatial_slice_pd {d : ℕ} {F : ℝ → (Fin d → ℝ) → ℂ}
     IsPositiveDefinite (fun a => F t a) where
   hermitian := by
     intro a
-    -- Step 1: F(t, 0) is real (PD with n=1)
-    have h0 := (hpd 1 ![1] ![t] ![0] (by intro i; fin_cases i; simpa)).1
-    simp [Fin.sum_univ_one] at h0
-    -- h0 : (F (t + t) 0).im = 0 — so F(2t, 0) is real
+    -- Step 1: F(t, 0) is real (PD with n=1, ts=[t/2])
+    have h0 := (hpd 1 ![1] ![t / 2] ![0] (by intro i; fin_cases i; simp; linarith)).1
+    simp only [Fin.sum_univ_one, Matrix.cons_val_zero, star_one, one_mul,
+      sub_zero, show t / 2 + t / 2 = t from by ring] at h0
+    -- h0 : (F t 0).im = 0
     -- Step 2: Im(F(t,a) + F(t,-a)) = 0 (PD with n=2, c=[1,1])
     have h1 := (hpd 2 ![1, 1] ![t / 2, t / 2] ![0, a]
       (by intro i; fin_cases i <;> simp <;> linarith)).1
     simp only [Fin.sum_univ_two, Matrix.cons_val_zero, Matrix.cons_val_one,
-      Matrix.head_cons, star_one, one_mul, show t / 2 + t / 2 = t from by ring] at h1
+      Matrix.head_cons, star_one, one_mul, sub_zero, zero_sub,
+      show t / 2 + t / 2 = t from by ring] at h1
     -- Step 3: Re(F(t,a) - F(t,-a)) = 0 (PD with n=2, c=[1,I])
     have h2 := (hpd 2 ![1, Complex.I] ![t / 2, t / 2] ![0, a]
       (by intro i; fin_cases i <;> simp <;> linarith)).1
     simp only [Fin.sum_univ_two, Matrix.cons_val_zero, Matrix.cons_val_one,
       Matrix.head_cons, star_one, one_mul, map_mul, starRingEnd_self_apply,
+      sub_zero, zero_sub,
       show t / 2 + t / 2 = t from by ring] at h2
-    -- Step 4: Combine to get F(t, -a) = conj(F(t, a))
-    -- From h1: Im(F(t,a)) = -Im(F(t,-a)), from h2: Re(F(t,a)) = Re(F(t,-a))
-    -- h0, h1, h2 give: F(t,0) real, Im(F(t,a)+F(t,-a))=0, Re(F(t,a)-F(t,-a))=0
-    -- Combined: Re(F(t,-a)) = Re(F(t,a)) and Im(F(t,-a)) = -Im(F(t,a)) = conj
-    -- Blocked: simp doesn't fully evaluate Fin 2 sums for linarith to close.
-    -- Need: more Fin 2 / Complex arithmetic simp lemmas.
-    exact sorry
+    -- h1 : im(... F t a ... F t (-a) ...) = 0
+    -- h2 : im(... I * F t a ... star I * F t (-a) ...) = 0
+    simp only [neg_zero, sub_self, Complex.star_def, Complex.conj_I,
+      neg_mul, one_mul, neg_neg, Complex.I_mul_I] at h0 h1 h2
+    -- h1: (F t 0 + F t a + (F t (-a) + F t 0)).im = 0
+    -- h2: (F t 0 + I * F t a + (-I * F t (-a) + -F t 0)).im = 0 (after star I = -I)
+    -- Check h1 type:
+    -- Goal: F t (-a) = starRingEnd ℂ (F t a)
+    -- h1: (F t 0 + F t a + (F t (-a) + F t 0)).im = 0
+    -- h2: (F t 0 + I * F t a + (-I * F t (-a) + -F t 0)).im = 0
+    -- These are rfl-reducible to linear combinations of Re/Im parts
+    -- h0: (F t 0).im = 0
+    -- h1: (F t 0 + F t a + (F t (-a) + F t 0)).im = 0
+    -- h2: (F t 0 + I * F t a + (-I * F t (-a) + -F t 0)).im = 0
+    -- Extract: Im(F(t,a) + F(t,-a)) = 0 from h0 + h1
+    have him : (F t a).im + (F t (-a)).im = 0 := by
+      have := h1; simp only [Complex.add_im] at this; linarith
+    -- Extract: Re(F(t,a) - F(t,-a)) = 0 from h0 + h2
+    -- (I * z).im = z.re, (-I * z).im = -z.re, (-z).im = -z.im
+    have hre : (F t a).re - (F t (-a)).re = 0 := by
+      have := h2
+      simp only [Complex.add_im, Complex.mul_im, Complex.neg_im, Complex.neg_re,
+        Complex.I_re, Complex.I_im, Complex.one_re, Complex.one_im,
+        mul_zero, mul_one, zero_mul, zero_add, add_zero] at this
+      linarith
+    apply Complex.ext
+    · simp only [starRingEnd_self_apply, Complex.conj_re]; linarith
+    · simp only [starRingEnd_self_apply, Complex.conj_im]; linarith
   nonneg := by
     intro m pts c
     -- Key trick: negate the spatial arguments! (-pts j) - (-pts i) = pts i - pts j
