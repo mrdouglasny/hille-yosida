@@ -176,11 +176,10 @@ theorem semigroupGroupBochnerExtension (d : ℕ)
         dsimp; rw [norm_mul, norm_exp_I, norm_exp_I, mul_one]))
       (integrable_const 1)
       (ae_of_all μ (fun p => by fun_prop))
-  · -- G is PD on ℝ: the sum ∑ c̄ᵢcⱼ G(tⱼ-tᵢ, aⱼ-aᵢ) equals
-    -- ∫ |∑ⱼ cⱼ exp(itⱼp) exp(i⟨aⱼ,q⟩)|² dμ ≥ 0
-    -- Proof requires: integral_finset_sum to swap ∑ and ∫, then
-    -- recognizing the integrand as a norm squared (real and nonneg).
-    -- The integral of a nonneg function over a positive measure is nonneg.
+  · -- G is PD on ℝ: ∑ c̄ᵢcⱼ G(tⱼ-tᵢ, aⱼ-aᵢ) = ∫ |∑ⱼ cⱼ exp(itⱼp+i⟨aⱼ,q⟩)|² dμ ≥ 0
+    -- Proof: expand G, swap ∑ and ∫, factor integrand as norm², integral ≥ 0.
+    -- The norm² recognition uses: ∑ᵢⱼ star(cᵢ φᵢ) (cⱼ φⱼ) = |∑ⱼ cⱼ φⱼ|²
+    -- where φⱼ(p) = exp(I tⱼ p.1) exp(I ⟨aⱼ, p.2⟩).
     exact sorry
 
 /-! ## Connection to QFT: Analytic Continuation to Unitary Group
