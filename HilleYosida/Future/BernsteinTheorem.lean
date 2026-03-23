@@ -118,9 +118,11 @@ lemma spatial_slice_pd {d : ℕ} {F : ℝ → (Fin d → ℝ) → ℂ}
     -- as=[0,a], c=[1,z] for z on the unit circle, extract Im=0 and symmetry.
     exact sorry
   nonneg := by
-    -- ∑ c̄ᵢ cⱼ F(t, ptsⱼ - ptsᵢ) ≥ 0: instantiate IsSemigroupGroupPD with ts_i = t/2.
-    -- The proof is: h := hpd m c (fun _ => t/2) pts (...), then t/2 + t/2 = t.
-    -- Blocked on: `star` vs `starRingEnd ℂ` definitional equality in Lean 4.
+    intro m pts c
+    -- From IsSemigroupGroupPD with ts_i = t/2: ∑ c̄ᵢcⱼ F(t, ptsⱼ - ptsᵢ) ≥ 0
+    -- The Bochner PD needs F(t, ptsᵢ - ptsⱼ). These differ by an index swap
+    -- i ↔ j, which preserves Re(∑) since the sum is hermitian.
+    -- Formally: swap indices in the double sum, then use Re(conj(z)) = Re(z).
     exact sorry
 
 /-! ## BCR Decomposition: Steps 2–7
