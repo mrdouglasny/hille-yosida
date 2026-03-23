@@ -673,8 +673,23 @@ theorem ContractingSemigroup.resolventMapsToDomain
       exact this.congr (fun t => by simp only [smul_eq_mul]; ring)
     · -- (1/t * e^{λt}) • ∫_{Ioc 0 t} f → 1 • x = x
       rw [show x = (1 : ℝ) • x from (one_smul ℝ x).symm]
-      -- Decompose as exp(λt) • ((1/t) • ∫ f) → 1 • x using smul_smul
-      sorry
+      -- Rewrite (a * b) • v = a • (b • v) to separate exp and 1/t
+      simp_rw [show ∀ t, (1 / t * Real.exp (lambda * t)) •
+          ∫ u in Set.Ioc 0 t, f u =
+          Real.exp (lambda * t) • ((1 / t) • ∫ u in Set.Ioc 0 t, f u) from
+        fun t => by rw [show 1 / t * Real.exp (lambda * t) =
+          Real.exp (lambda * t) * (1 / t) from by ring, mul_smul]]
+      apply Filter.Tendsto.smul
+      · -- exp(λt) → exp(0) = 1 as t → 0⁺ (continuity of exp)
+        have hexp_cont : Filter.Tendsto (fun t => Real.exp (lambda * t))
+            (nhds 0) (nhds 1) := by
+          have := hderiv.continuousAt.tendsto
+          simp [Real.exp_zero, mul_zero] at this; exact this
+        exact hexp_cont.mono_left nhdsWithin_le_nhds
+      · -- (1/t) • ∫₀ᵗ f → f(0) = x as t → 0⁺ (FTC for Bochner integrals)
+        -- f(0) = exp(0) • S(0)x = 1 • x = x
+        -- Uses: intervalIntegral.integral_hasDerivAt_of_tendsto_ae_right
+        sorry
 
 /-- The fundamental resolvent identity: `(λI - A) R(λ) x = x`.
 
