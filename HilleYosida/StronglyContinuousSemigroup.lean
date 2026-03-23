@@ -689,6 +689,8 @@ theorem ContractingSemigroup.resolventMapsToDomain
       · -- (1/t) • ∫₀ᵗ f → f(0) = x as t → 0⁺ (FTC for Bochner integrals)
         -- f(0) = exp(0) • S(0)x = 1 • x = x
         -- Uses: intervalIntegral.integral_hasDerivAt_of_tendsto_ae_right
+        -- + conversion between Ioc set integral and interval integral
+        -- + continuity of f at 0 (from strongContAt and continuous exp)
         sorry
 
 /-- The fundamental resolvent identity: `(λI - A) R(λ) x = x`.
