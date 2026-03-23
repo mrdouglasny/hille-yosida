@@ -691,7 +691,10 @@ theorem ContractingSemigroup.resolventMapsToDomain
         set g : ℝ → X := fun t => if 0 ≤ t then f t else x with hg_def
         -- g is continuous at 0 (right: strong continuity; left: constant x)
         have hg_cont : Filter.Tendsto g (nhds 0) (nhds x) := by
-          sorry -- continuity of g at 0
+          -- g = x on (-∞, 0) and g = f on [0, ∞). Both tend to x at 0.
+          -- Proof: split nhds 0 into left and right, use constant on left
+          -- and strong continuity + exp continuity on right.
+          sorry
         -- g agrees with f on (0, ∞) so set integrals match
         have hg_eq : ∀ t, 0 < t →
             ∫ u in Set.Ioc 0 t, g u = ∫ u in Set.Ioc 0 t, f u := by
