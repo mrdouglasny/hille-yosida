@@ -594,7 +594,7 @@ private theorem ContractingSemigroup.resolvent_generator_tendsto
   --   S(h)(Rlx) - Rlx = (e^{λh} - 1) • Rlx - e^{λh} • ∫_{Ioc 0 h} f(t) dt
   -- Then (1/h)(S(h)(Rlx) - Rlx) → λ Rlx - x as h → 0⁺.
   --
-  -- Each step below is proved or sorry'd individually.
+  -- Each step below is proved.
   -- Step 1: Push S(h) inside integral and use semigroup property
   have h_push : ∀ (h : ℝ), 0 < h →
       S.operator h Rlx = Real.exp (lambda * h) •
