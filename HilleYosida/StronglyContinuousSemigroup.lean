@@ -653,8 +653,12 @@ theorem ContractingSemigroup.resolventMapsToDomain
     simp only [smul_sub, sub_smul, one_smul]
     abel
   -- Step 4: Take the limit as h → 0⁺
-  -- (1/h)(S(h)(Rlx) - Rlx) = ((e^{λh}-1)/h) • Rlx - (e^{λh}/h) • ∫_{Ioc 0 h} f
-  -- → λ • Rlx - 1 • x = λ Rlx - x
+  -- Using h_identity: (1/h) • (S(h)(Rlx) - Rlx)
+  --   = ((e^{λh}-1)/h) • Rlx - (e^{λh}/h) • ∫_{Ioc 0 h} f(u) du
+  --   → λ • Rlx - 1 • x = λ Rlx - x
+  -- Requires: (e^{λh}-1)/h → λ (derivative of exp at 0)
+  --           (1/h) ∫₀ʰ f → f(0) = x (FTC / Lebesgue differentiation)
+  --           e^{λh} → 1 (continuity of exp)
   sorry
 
 /-- The fundamental resolvent identity: `(λI - A) R(λ) x = x`.
