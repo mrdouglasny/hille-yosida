@@ -691,10 +691,27 @@ theorem ContractingSemigroup.resolventMapsToDomain
         set g : ℝ → X := fun t => if 0 ≤ t then f t else x with hg_def
         -- g is continuous at 0 (right: strong continuity; left: constant x)
         have hg_cont : Filter.Tendsto g (nhds 0) (nhds x) := by
-          -- g = x on (-∞, 0) and g = f on [0, ∞). Both tend to x at 0.
-          -- Proof: split nhds 0 into left and right, use constant on left
-          -- and strong continuity + exp continuity on right.
-          sorry
+          rw [← nhdsLT_sup_nhdsGE (0 : ℝ)]
+          apply Filter.Tendsto.sup
+          · -- Left of 0: g(t) = x (constant), so Tendsto g = Tendsto const
+            exact (tendsto_const_nhds (x := x)).congr' (by
+              filter_upwards [self_mem_nhdsWithin] with t (ht : t < 0)
+              simp only [g, if_neg (not_le.mpr ht)])
+          · -- Right of 0: g(t) = f(t) → x by strong continuity + exp
+            exact (show Filter.Tendsto f (nhdsWithin 0 (Set.Ici 0)) (nhds x) from by
+              have h1 : Filter.Tendsto (fun t => Real.exp (-(lambda * t)))
+                  (nhdsWithin 0 (Set.Ici 0)) (nhds 1) := by
+                have hca : ContinuousAt (fun t => Real.exp (-(lambda * t))) 0 :=
+                  Real.continuous_exp.continuousAt.comp
+                    ((continuousAt_const.mul continuousAt_id).neg)
+                have := hca.tendsto
+                simp [mul_zero, Real.exp_zero] at this
+                exact this.mono_left nhdsWithin_le_nhds
+              have h2 := S.toStronglyContinuousSemigroup.strong_cont x
+              -- exp(-λt) • S(t)x → 1 • x = x
+              simpa [one_smul] using h1.smul h2).congr' (by
+              filter_upwards [self_mem_nhdsWithin] with t (ht : 0 ≤ t)
+              simp only [g, if_pos ht])
         -- g agrees with f on (0, ∞) so set integrals match
         have hg_eq : ∀ t, 0 < t →
             ∫ u in Set.Ioc 0 t, g u = ∫ u in Set.Ioc 0 t, f u := by
