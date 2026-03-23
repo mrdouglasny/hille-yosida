@@ -163,10 +163,9 @@ theorem semigroupGroupBochnerExtension (d : ℕ)
       (Filter.Eventually.of_forall (fun p => by
         dsimp; rw [norm_mul, norm_exp_I, norm_exp_I, mul_one])))
     simp [integral_const, Measure.real]
-  · -- G is continuous: the integrand (t,a,p) ↦ exp(itp)exp(i⟨a,q⟩) is
-    -- continuous in (t,a) for each p, bounded by 1 uniformly, and μ is finite.
-    -- By dominated convergence (tendsto_integral_of_dominated_convergence),
-    -- the integral G(t,a) = ∫ ... dμ is continuous.
+  · -- G is continuous via MeasureTheory.continuous_of_dominated
+    -- Integrand is bounded by 1 (|exp(ix)| = 1), continuous in parameters,
+    -- and μ is finite, so the integral is continuous.
     exact sorry
   · -- G is PD on ℝ: the sum ∑ c̄ᵢcⱼ G(tⱼ-tᵢ, aⱼ-aᵢ) equals
     -- ∫ |∑ⱼ cⱼ exp(itⱼp) exp(i⟨aⱼ,q⟩)|² dμ ≥ 0
