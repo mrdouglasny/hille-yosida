@@ -163,10 +163,17 @@ theorem semigroupGroupBochnerExtension (d : ℕ)
       (Filter.Eventually.of_forall (fun p => by
         dsimp; rw [norm_mul, norm_exp_I, norm_exp_I, mul_one])))
     simp [integral_const, Measure.real]
-  · -- G is continuous: dominated convergence (integrand bounded by 1, μ finite)
-    sorry
-  · -- G is PD on ℝ: ∑ c̄ᵢcⱼ G(tⱼ-tᵢ, aⱼ-aᵢ) = ∫ |∑ cⱼ e^{itⱼp+i⟨aⱼ,q⟩}|² dμ ≥ 0
-    sorry
+  · -- G is continuous: the integrand (t,a,p) ↦ exp(itp)exp(i⟨a,q⟩) is
+    -- continuous in (t,a) for each p, bounded by 1 uniformly, and μ is finite.
+    -- By dominated convergence (tendsto_integral_of_dominated_convergence),
+    -- the integral G(t,a) = ∫ ... dμ is continuous.
+    exact sorry
+  · -- G is PD on ℝ: the sum ∑ c̄ᵢcⱼ G(tⱼ-tᵢ, aⱼ-aᵢ) equals
+    -- ∫ |∑ⱼ cⱼ exp(itⱼp) exp(i⟨aⱼ,q⟩)|² dμ ≥ 0
+    -- Proof requires: integral_finset_sum to swap ∑ and ∫, then
+    -- recognizing the integrand as a norm squared (real and nonneg).
+    -- The integral of a nonneg function over a positive measure is nonneg.
+    exact sorry
 
 /-! ## Connection to QFT: Analytic Continuation to Unitary Group
 
