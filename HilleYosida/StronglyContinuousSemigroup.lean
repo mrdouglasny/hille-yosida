@@ -653,13 +653,28 @@ theorem ContractingSemigroup.resolventMapsToDomain
     simp only [smul_sub, sub_smul, one_smul]
     abel
   -- Step 4: Take the limit as h → 0⁺
-  -- Using h_identity: (1/h) • (S(h)(Rlx) - Rlx)
-  --   = ((e^{λh}-1)/h) • Rlx - (e^{λh}/h) • ∫_{Ioc 0 h} f(u) du
-  --   → λ • Rlx - 1 • x = λ Rlx - x
-  -- Requires: (e^{λh}-1)/h → λ (derivative of exp at 0)
-  --           (1/h) ∫₀ʰ f → f(0) = x (FTC / Lebesgue differentiation)
-  --           e^{λh} → 1 (continuity of exp)
-  sorry
+  -- First establish the derivative (e^{λh}-1)/h → λ
+  have hderiv : HasDerivAt (fun t => Real.exp (lambda * t)) lambda 0 := by
+    have := (Real.hasDerivAt_exp (lambda * 0)).comp (0 : ℝ)
+      ((hasDerivAt_id (0 : ℝ)).const_mul lambda)
+    simp [Real.exp_zero] at this; exact this
+  -- Use h_identity to rewrite the generator quotient
+  apply Filter.Tendsto.congr'
+  · filter_upwards [self_mem_nhdsWithin] with t (ht : 0 < t)
+    rw [h_identity t ht, smul_sub, smul_smul, smul_smul]
+  -- Show ((e^{λt}-1)/t) • Rlx - ((e^{λt})/t) • ∫_{Ioc 0 t} f → λ • Rlx - x
+  · -- Decompose: first term → λ • Rlx, second term → x
+    apply Filter.Tendsto.sub
+    · -- (1/t * (e^{λt}-1)) • Rlx → λ • Rlx
+      apply Filter.Tendsto.smul _ tendsto_const_nhds
+      -- 1/t * (e^{λt}-1) → λ from the derivative of exp at 0
+      have := hderiv.tendsto_slope_zero_right
+      simp only [zero_add, Real.exp_zero, mul_zero] at this
+      exact this.congr (fun t => by simp only [smul_eq_mul]; ring)
+    · -- (1/t * e^{λt}) • ∫_{Ioc 0 t} f → 1 • x = x
+      rw [show x = (1 : ℝ) • x from (one_smul ℝ x).symm]
+      -- Decompose as exp(λt) • ((1/t) • ∫ f) → 1 • x using smul_smul
+      sorry
 
 /-- The fundamental resolvent identity: `(λI - A) R(λ) x = x`.
 
