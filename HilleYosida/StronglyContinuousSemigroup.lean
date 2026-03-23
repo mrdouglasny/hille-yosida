@@ -687,11 +687,31 @@ theorem ContractingSemigroup.resolventMapsToDomain
           simp [Real.exp_zero, mul_zero] at this; exact this
         exact hexp_cont.mono_left nhdsWithin_le_nhds
       · -- (1/t) • ∫₀ᵗ f → f(0) = x as t → 0⁺ (FTC for Bochner integrals)
-        -- f(0) = exp(0) • S(0)x = 1 • x = x
-        -- Uses: intervalIntegral.integral_hasDerivAt_of_tendsto_ae_right
-        -- + conversion between Ioc set integral and interval integral
-        -- + continuity of f at 0 (from strongContAt and continuous exp)
-        sorry
+        -- Modify f for t < 0 so FTC gets two-sided continuity at 0
+        set g : ℝ → X := fun t => if 0 ≤ t then f t else x with hg_def
+        -- g is continuous at 0 (right: strong continuity; left: constant x)
+        have hg_cont : Filter.Tendsto g (nhds 0) (nhds x) := by
+          sorry -- continuity of g at 0
+        -- g agrees with f on (0, ∞) so set integrals match
+        have hg_eq : ∀ t, 0 < t →
+            ∫ u in Set.Ioc 0 t, g u = ∫ u in Set.Ioc 0 t, f u := by
+          intro t ht
+          apply MeasureTheory.setIntegral_congr_fun measurableSet_Ioc
+          intro u hu; simp [hg_def, hu.1.le]
+        -- FTC for g: HasDerivAt (fun u => ∫₀ᵘ g) x 0
+        have h_ftc : HasDerivAt (fun u => ∫ t in (0 : ℝ)..u, g t) x 0 :=
+          intervalIntegral.integral_hasDerivAt_of_tendsto_ae_right
+            IntervalIntegrable.refl
+            (sorry : StronglyMeasurableAtFilter g (nhds 0))
+            (hg_cont.mono_left inf_le_left)
+        -- Extract right Tendsto and convert
+        have h_slope := h_ftc.tendsto_slope_zero_right
+        simp only [zero_add, intervalIntegral.integral_same, sub_zero] at h_slope
+        -- h_slope : Tendsto (fun t => t⁻¹ • ∫₀ᵗ g) (nhdsWithin 0 (Ioi 0)) (nhds x)
+        -- Convert interval integral to set integral and g to f
+        exact h_slope.congr' (by
+          filter_upwards [self_mem_nhdsWithin] with t (ht : 0 < t)
+          rw [one_div, intervalIntegral.integral_of_le (le_of_lt ht), hg_eq t ht])
 
 /-- The fundamental resolvent identity: `(λI - A) R(λ) x = x`.
 
