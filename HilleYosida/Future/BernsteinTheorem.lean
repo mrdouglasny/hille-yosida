@@ -113,14 +113,14 @@ lemma spatial_slice_pd {d : ℕ} {F : ℝ → (Fin d → ℝ) → ℂ}
     (hpd : IsSemigroupGroupPD d F) (t : ℝ) (ht : 0 ≤ t) :
     IsPositiveDefinite (fun a => F t a) where
   hermitian := by
-    intro a
-    -- F(t, -a) = conj(F(t, a)) from PD with n=2, c=[1,1], ts=[t/2,t/2]
-    sorry
+    -- F(t, -a) = conj(F(t, a)): standard PD conjugate symmetry
+    -- Proof: instantiate IsSemigroupGroupPD with n=2, ts=[t/2,t/2],
+    -- as=[0,a], c=[1,z] for z on the unit circle, extract Im=0 and symmetry.
+    exact sorry
   nonneg := by
-    intro m pts c
-    -- ∑ᵢⱼ c̄ᵢ cⱼ F(t, ptsᵢ - ptsⱼ) ≥ 0 from IsSemigroupGroupPD with ts_i = t/2
-    -- Instantiate hpd with constant time t/2, then t/2 + t/2 = t.
-    -- Technical: star vs starRingEnd on ℂ need explicit conversion.
+    -- ∑ c̄ᵢ cⱼ F(t, ptsⱼ - ptsᵢ) ≥ 0: instantiate IsSemigroupGroupPD with ts_i = t/2.
+    -- The proof is: h := hpd m c (fun _ => t/2) pts (...), then t/2 + t/2 = t.
+    -- Blocked on: `star` vs `starRingEnd ℂ` definitional equality in Lean 4.
     exact sorry
 
 /-! ## BCR Decomposition: Steps 2–7

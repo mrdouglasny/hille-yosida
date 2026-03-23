@@ -143,11 +143,20 @@ theorem semigroupGroupBochnerExtension (d : ℕ)
         let q := ∑ i : Fin n, ∑ j : Fin n,
           star (c i) * c j * G (ts j - ts i) (as j - as i)
         q.im = 0 ∧ 0 ≤ q.re) := by
-  -- Follows from semigroupGroupBochner + properties of Fourier transforms of
-  -- finite positive measures. The PD condition for G uses the group involution
-  -- (t,a)* = (-t,-a), giving ts j - ts i (not ts i + ts j as in the semigroup case).
-  -- Verified correct by Gemini Deep Think (2026-03-23).
-  exact sorry
+  -- Step 1: Get the measure from semigroupGroupBochner
+  obtain ⟨μ, hfin, hsupp, hF⟩ := semigroupGroupBochner d F hcont hbdd hpd
+  -- Step 2: Define G via the Fourier kernel
+  set G : ℝ → (Fin d → ℝ) → ℂ := fun t a =>
+    ∫ p : ℝ × (Fin d → ℝ),
+      Complex.exp (Complex.I * ↑(t * p.1)) *
+        Complex.exp (Complex.I * ↑(∑ i : Fin d, p.2 i * a i)) ∂μ
+  refine ⟨μ, G, hfin, hsupp, hF, fun t a => rfl, ?_, ?_, ?_⟩
+  · -- G is bounded: |e^{itp}| = 1 and μ is finite → ‖G(t,a)‖ ≤ μ(univ)
+    sorry
+  · -- G is continuous: dominated convergence (integrand bounded by 1, μ finite)
+    sorry
+  · -- G is PD on ℝ: ∑ c̄ᵢcⱼ G(tⱼ-tᵢ, aⱼ-aᵢ) = ∫ |∑ cⱼ e^{itⱼp+i⟨aⱼ,q⟩}|² dμ ≥ 0
+    sorry
 
 /-! ## Connection to QFT: Analytic Continuation to Unitary Group
 
