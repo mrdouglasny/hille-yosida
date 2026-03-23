@@ -49,11 +49,14 @@ Given a bounded continuous PD function `F(t, a)` on `[0, ∞) × ℝ^d`:
 * Widder, "The Laplace Transform" (1941), Ch. IV
 -/
 
-import HilleYosida.StronglyContinuousSemigroup
+import HilleYosida.SemigroupGroupExtension
+import Bochner.Main
 
 noncomputable section
 
 open MeasureTheory
+
+-- bochner_theorem and IsPositiveDefinite are now available from Bochner.Main
 
 /-! ## Completely Monotone Functions -/
 
@@ -92,21 +95,56 @@ axiom bernstein_theorem (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f) :
       ∀ (t : ℝ), 0 ≤ t →
         f t = ∫ p, Real.exp (-(t * p)) ∂μ
 
-/-! ## BCR Decomposition Strategy
+/-! ## BCR Decomposition: Step 1 — Spatial Bochner
 
-The following outlines how to combine Bochner + Bernstein → BCR.
-When the bochner repo is imported as a dependency, the spatial
-Fourier step becomes a theorem invocation. -/
+For each fixed `t ≥ 0`, the function `a ↦ F(t, a)` is positive-definite
+on the group `(ℝ^d, +)` in the sense of `IsPositiveDefinite` from the
+bochner repo. This follows from `IsSemigroupGroupPD` by setting all
+time parameters to `t/2`. -/
 
--- NOTE: To complete the BCR proof, this project needs:
--- 1. `require bochner from git "https://github.com/mrdouglasny/bochner.git"`
---    in lakefile.toml (after toolchain alignment to v4.29)
--- 2. Import `Bochner.Main` for `bochner_theorem` and `IsPositiveDefinite`
--- 3. For each fixed t, show a ↦ F(t,a) is IsPositiveDefinite on ℝ^d
---    (from IsSemigroupGroupPD with all ts_i = t/2)
--- 4. Apply bochner_theorem to get the spatial measure ν_t
--- 5. Show t ↦ ν_t(B) is completely monotone (from semigroup PD)
--- 6. Apply bernstein_theorem to get the temporal measure
--- 7. Combine into the product measure on [0,∞) × ℝ^d
+open Complex in
+/-- For fixed `t ≥ 0`, the spatial slice `a ↦ F(t/2 + t/2, a - 0) = F(t, a)`
+is positive-definite on `(ℝ^d, +)` in the sense of the bochner repo.
+
+From `IsSemigroupGroupPD`: setting `ts_i = t/2` for all `i` gives
+`∑ᵢⱼ c̄ᵢ cⱼ F(t, aⱼ - aᵢ) ≥ 0`, which is exactly `IsPositiveDefinite`
+for the function `a ↦ F(t, a)` on the additive group `Fin d → ℝ`. -/
+lemma spatial_slice_pd {d : ℕ} {F : ℝ → (Fin d → ℝ) → ℂ}
+    (hpd : IsSemigroupGroupPD d F) (t : ℝ) (ht : 0 ≤ t) :
+    IsPositiveDefinite (fun a => F t a) where
+  hermitian := by
+    intro a
+    -- F(t, -a) = conj(F(t, a)) from PD with n=2, c=[1,1], ts=[t/2,t/2]
+    sorry
+  nonneg := by
+    intro m pts c
+    -- ∑ᵢⱼ c̄ᵢ cⱼ F(t, ptsᵢ - ptsⱼ) ≥ 0 from IsSemigroupGroupPD with ts_i = t/2
+    -- Instantiate hpd with constant time t/2, then t/2 + t/2 = t.
+    -- Technical: star vs starRingEnd on ℂ need explicit conversion.
+    exact sorry
+
+/-! ## BCR Decomposition: Steps 2–7
+
+The remaining steps to complete the BCR proof:
+
+2. For each `t ≥ 0`, apply `bochner_theorem` to `spatial_slice_pd` to get
+   a probability measure `ν_t` on `Fin d → ℝ` with
+   `F(t, a) = ∫ e^{i⟨a, q⟩} dν_t(q)`.
+   (Requires showing `F(t, ·)` is continuous and `F(t, 0) = 1`; the latter
+   may need normalization.)
+
+3. Show that for each Borel set `B ⊆ ℝ^d`, the function `t ↦ ν_t(B)` is
+   completely monotone (from the semigroup PD condition on `F`).
+
+4. Apply `bernstein_theorem` to each `t ↦ ν_t(B)` to get a measure
+   `σ_B` on `[0, ∞)` with `ν_t(B) = ∫₀^∞ e^{-tp} dσ_B(p)`.
+
+5. The family `{σ_B}` defines a product measure `μ` on `[0, ∞) × ℝ^d`.
+
+6. Verify: `F(t, a) = ∫ e^{-tp} e^{i⟨a,q⟩} dμ(p, q)` by combining
+   steps 2 and 4.
+
+7. Show `μ` is a finite measure (from boundedness of `F`).
+-/
 
 end
