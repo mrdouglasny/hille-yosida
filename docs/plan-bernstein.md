@@ -54,8 +54,16 @@ define `α_n(p)` as the step function whose Laplace-Stieltjes transform
 approximates `f`. The exact formula needs to be verified against
 Widder Ch. IV or Feller Vol. II Ch. XIII.
 
-**ACTION ITEM**: Look up the exact discrete approximation formula in
-Widder or Feller and verify it works. This is the critical step.
+**SOURCE FOUND**: Chafaï (2013) blog post gives the full proof. The key formula:
+
+```
+g(x) - g(∞) = ∫₀^∞ φ_n(xt) dσ_n(t)
+```
+
+where `φ_n(x) = (1 - x/n)^n · 𝟙_{(0,n)}(x)` converges uniformly to `e^{-x}`,
+and `σ_n` is derived from repeated integration by parts of `(-1)^n g^{(n)}`.
+The total variation `|σ_n|([0,∞)) = g(0) - g(∞)` (independent of n).
+Helly's selection theorem gives a convergent subsequence.
 
 ### Phase 3: Tightness (~30 lines)
 
@@ -124,11 +132,36 @@ or similar. Con: the transformation is non-trivial and may not preserve PD.
 Choquet simplex with extreme points `e^{-tp}`. By Choquet, f = ∫ e^{-tp} dμ.
 Con: Choquet's theorem is not in Mathlib.
 
+## Key reference: Chafaï (2013)
+
+https://djalil.chafai.net/blog/2013/03/23/the-bernstein-theorem-on-completely-monotone-functions/
+
+The Chafaï proof uses **derivatives** ((-1)^n g^{(n)} ≥ 0) and constructs
+σ_n via repeated integration by parts with φ_n(x) = (1-x/n)^n → e^{-x}.
+Helly's selection theorem gives the weak limit.
+
+**Problem**: Our `IsCompletelyMonotone` uses forward differences, not
+derivatives. Two options:
+- (A) First prove CM (differences) ⟹ C^∞ with (-1)^n f^{(n)} ≥ 0, then
+  use Chafaï's proof. Adds ~50 lines for the smoothness step.
+- (B) Use the Hausdorff moment approach which works with differences
+  directly: Widder reduces Bernstein to Hausdorff (Widder p. 160).
+
+**Recommendation**: Option (A) if we want the shortest proof (Chafaï is
+very clean). Option (B) if we want to avoid derivatives entirely.
+
+Either way, the proof structure is:
+1. Construct approximating measures (from derivatives or differences)
+2. Uniform bound on total variation
+3. Helly / Prokhorov selection
+4. Verify the limit gives the Laplace representation
+
 ## Recommendation
 
-Use the Hausdorff moment approach (Phases 1–5). It's the most elementary,
-parallels the bochner repo proof structure, and uses Mathlib's existing
-Prokhorov/Portmanteau infrastructure.
+Use option (A): prove CM ⟹ smooth, then follow Chafaï. Total ~200 lines.
+The smoothness step (CM differences ⟹ CM derivatives) is standard and
+uses: CM ⟹ non-increasing ⟹ bounded variation ⟹ a.e. differentiable,
+then induction.
 
-Before starting: **verify the exact discrete approximation formula** from
-Widder Ch. IV §4 or Feller Vol. II Ch. XIII §4.
+Alternatively, if Mathlib has Helly's selection theorem for BV functions,
+option (B) via Hausdorff may be cleaner since it avoids derivatives.
