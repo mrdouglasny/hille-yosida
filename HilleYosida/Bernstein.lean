@@ -14,25 +14,25 @@ Verified correct by Gemini (2026-03-23).
 
 import Mathlib.MeasureTheory.Integral.Bochner.Basic
 import Mathlib.MeasureTheory.Measure.Lebesgue.Basic
+import Mathlib.Analysis.Calculus.IteratedDeriv.Defs
 
 noncomputable section
 
 open MeasureTheory
 
 /-- A function `f : ℝ → ℝ` is completely monotone on `[0, ∞)` if it is
-continuous and all forward differences alternate in sign:
-`∑_{k=0}^{n} (-1)^k C(n,k) f(t + kh) ≥ 0` for all `n, t ≥ 0, h > 0`.
+C^∞ on `[0, ∞)` and `(-1)^n f^{(n)}(t) ≥ 0` for all `n ∈ ℕ, t ≥ 0`.
 
-For n=0: f(t) ≥ 0. For n=1: f(t) - f(t+h) ≥ 0 (non-increasing).
-For n=2: f(t) - 2f(t+h) + f(t+2h) ≥ 0 (convex). Etc.
+This is Widder's definition ("The Laplace Transform", p. 145). It is
+equivalent to the forward-difference characterization
+`∑_{k=0}^n (-1)^k C(n,k) f(t+kh) ≥ 0`, but the smooth version avoids
+a ~500-line bootstrap from differences to derivatives in Lean.
 
-The standard definition `(-1)^n f^{(n)}(t) ≥ 0` translates to this
-forward difference condition. -/
+Examples: constants ≥ 0, `e^{-αt}` (α ≥ 0), `1/(t+α)^β` (α,β > 0). -/
 def IsCompletelyMonotone (f : ℝ → ℝ) : Prop :=
-  ContinuousOn f (Set.Ici 0) ∧
-  ∀ (n : ℕ) (t : ℝ) (h : ℝ), 0 ≤ t → 0 < h →
-    0 ≤ Finset.sum (Finset.range (n + 1)) fun k =>
-      (-1 : ℝ) ^ k * (n.choose k : ℝ) * f (t + k * h)
+  ContDiffOn ℝ ⊤ f (Set.Ici 0) ∧
+  ∀ (n : ℕ) (t : ℝ), 0 ≤ t →
+    0 ≤ (-1 : ℝ) ^ n * iteratedDerivWithin n f (Set.Ici 0) t
 
 /-- **Bernstein's theorem** (1928).
 

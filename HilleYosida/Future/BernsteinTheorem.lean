@@ -50,6 +50,7 @@ Given a bounded continuous PD function `F(t, a)` on `[0, ∞) × ℝ^d`:
 -/
 
 import HilleYosida.SemigroupGroupExtension
+import HilleYosida.Bernstein
 import Bochner.Main
 
 noncomputable section
@@ -58,52 +59,7 @@ open MeasureTheory
 
 -- bochner_theorem and IsPositiveDefinite are now available from Bochner.Main
 
-/-! ## Completely Monotone Functions -/
-
-/-- A function `f : ℝ → ℝ` is completely monotone on `(0, ∞)` if it is
-smooth and `(-1)^n f^{(n)}(t) ≥ 0` for all `t > 0` and `n ∈ ℕ`.
-
-For the formal statement, we use the sequential characterization:
-`f` is completely monotone iff for all `n ∈ ℕ`, `t > 0`, and `h > 0`,
-the `n`-th forward difference `Δ_h^n f(t) := ∑ (-1)^k C(n,k) f(t + kh)`
-satisfies `(-1)^n Δ_h^n f(t) ≥ 0`. -/
-/-- A function `f : ℝ → ℝ` is completely monotone on `[0, ∞)` if it is
-continuous and all forward differences alternate in sign:
-`∑_{k=0}^{n} (-1)^k C(n,k) f(t + kh) ≥ 0` for all `n, t ≥ 0, h > 0`.
-
-Note: NO extra `(-1)^n` factor — the alternating signs are already in the sum.
-For n=0: f(t) ≥ 0. For n=1: f(t) - f(t+h) ≥ 0 (non-increasing).
-For n=2: f(t) - 2f(t+h) + f(t+2h) ≥ 0 (convex). Etc.
-
-Verified correct by Gemini (2026-03-23): the standard definition
-`(-1)^n f^{(n)}(t) ≥ 0` translates to this difference condition. -/
-def IsCompletelyMonotone (f : ℝ → ℝ) : Prop :=
-  ContinuousOn f (Set.Ici 0) ∧
-  ∀ (n : ℕ) (t : ℝ) (h : ℝ), 0 ≤ t → 0 < h →
-    0 ≤ Finset.sum (Finset.range (n + 1)) fun k =>
-      (-1 : ℝ) ^ k * (n.choose k : ℝ) * f (t + k * h)
-
-/-! ## Bernstein's Theorem -/
-
-/-- **Bernstein's theorem** (1928).
-
-A function `f : [0, ∞) → ℝ` is completely monotone if and only if it is
-the Laplace transform of a finite positive measure on `[0, ∞)`:
-
-  `f(t) = ∫₀^∞ e^{-tp} dμ(p)`  for all `t ≥ 0`.
-
-The forward direction (Laplace transform is CM) is elementary. The
-converse uses Widder's inversion formula or the Helly selection theorem
-(compactness in the space of measures).
-
-Ref: Bernstein (1928); Widder, "The Laplace Transform" Ch. IV;
-[EN] implicit in the proof of Thm. II.3.5 via Yosida approximation. -/
-axiom bernstein_theorem (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f) :
-    ∃ (μ : Measure ℝ),
-      IsFiniteMeasure μ ∧
-      μ (Set.Iio 0) = 0 ∧
-      ∀ (t : ℝ), 0 ≤ t →
-        f t = ∫ p, Real.exp (-(t * p)) ∂μ
+-- IsCompletelyMonotone and bernstein_theorem are imported from HilleYosida.Bernstein
 
 /-! ## BCR Decomposition: Step 1 — Spatial Bochner
 
