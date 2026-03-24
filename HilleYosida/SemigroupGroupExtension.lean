@@ -31,6 +31,7 @@ measure μ is supported on `[0,∞) × ℝ^d`, and the Fourier integral
 
 import HilleYosida.StronglyContinuousSemigroup
 import HilleYosida.Bernstein
+import HilleYosida.FourierPD
 import Mathlib.MeasureTheory.Integral.Bochner.Basic
 import Mathlib.Analysis.InnerProductSpace.Basic
 
@@ -219,21 +220,16 @@ theorem semigroupGroupBochnerExtension (d : ℕ)
       intro w
       rw [show star w * w = ↑(Complex.normSq w) from Complex.normSq_eq_conj_mul_self.symm]
       exact ⟨Complex.ofReal_im _, Complex.ofReal_re _ ▸ Complex.normSq_nonneg w⟩
-    -- Step 1: Show each term star(c_i)*c_j*G(...) = ∫ star(z_i(p))*z_j(p) dμ
-    -- Step 2: Swap ∑ and ∫
-    -- Step 3: Apply sum_star_mul to integrand
-    -- Step 4: star(∑ z)(∑ z) is nonneg real, so integral has im=0 re≥0
+    -- Use pd_quadratic_form_of_measure with χⱼ(p) = exp(I tⱼ p.1) exp(I ⟨aⱼ,p.2⟩)
+    -- The G(tⱼ-tᵢ, aⱼ-aᵢ) = ∫ star(χᵢ) χⱼ dμ by exp factoring.
+    -- Then pd_quadratic_form_of_measure gives im=0 ∧ re≥0.
     --
-    -- The exp factoring (step 1) requires showing:
-    -- star(c_i) * c_j * exp(I*(t_j-t_i)*p.1) * exp(I*⟨a_j-a_i,p.2⟩)
-    --   = star(z_i(p)) * z_j(p)
-    -- which uses star(exp(I*r)) = exp(-I*r) for real r.
-    --
-    -- The sum/integral swap (step 2) requires integrability of each summand,
-    -- which follows from |exp(ix)| = 1 and IsFiniteMeasure μ.
-    --
-    -- All helper lemmas are proved above (sum_star_mul, star_mul_self_nonneg,
-    -- norm_exp_I). The remaining work is connecting them through the integral.
+    -- Need to show: G(tⱼ-tᵢ, aⱼ-aᵢ) = ∫ star(χᵢ(p)) χⱼ(p) dμ(p)
+    -- where χⱼ(p) = exp(I tⱼ p.1) exp(I ⟨aⱼ, p.2⟩).
+    -- This follows from exp(I(tⱼ-tᵢ)p) exp(I⟨aⱼ-aᵢ,q⟩)
+    --   = exp(Itⱼp) exp(-Itᵢp) exp(I⟨aⱼ,q⟩) exp(-I⟨aᵢ,q⟩)
+    --   = [exp(Itⱼp) exp(I⟨aⱼ,q⟩)] star[exp(Itᵢp) exp(I⟨aᵢ,q⟩)]
+    --   = χⱼ(p) star(χᵢ(p)) = star(χᵢ(p)) χⱼ(p)
     exact sorry
 
 /-! ## Connection to QFT: Analytic Continuation to Unitary Group
