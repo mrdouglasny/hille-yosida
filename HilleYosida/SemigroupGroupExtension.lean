@@ -232,12 +232,24 @@ theorem semigroupGroupBochnerExtension (d : ℕ)
         exp (Complex.I * ↑(∑ k, p.2 k * (as j - as i) k)) ∂μ =
         ∫ p, star (χ i p) * χ j p ∂μ
       congr 1; ext p; simp only [χ]
-      -- star(exp(Itᵢp₁) exp(I⟨aᵢ,p₂⟩)) * (exp(Itⱼp₁) exp(I⟨aⱼ,p₂⟩))
-      -- = exp(conj(I⟨aᵢ,p₂⟩)) exp(conj(Itᵢp₁)) exp(Itⱼp₁) exp(I⟨aⱼ,p₂⟩)
-      -- = exp(-I⟨aᵢ,p₂⟩ - Itᵢp₁ + Itⱼp₁ + I⟨aⱼ,p₂⟩)
-      -- = exp(I(tⱼ-tᵢ)p₁ + I(⟨aⱼ,p₂⟩-⟨aᵢ,p₂⟩))
-      -- = exp(I(tⱼ-tᵢ)p₁) exp(I⟨aⱼ-aᵢ,p₂⟩) = LHS
-      sorry
+      -- Helper: star of each exponential
+      have hstar_exp : ∀ (r : ℝ), star (exp (Complex.I * ↑r)) =
+          exp (-(Complex.I * ↑r)) := by
+        intro r
+        rw [show (star : ℂ → ℂ) = starRingEnd ℂ from rfl,
+            ← Complex.exp_conj, map_mul, Complex.conj_I, Complex.conj_ofReal,
+            neg_mul]
+      have hstar_χ : ∀ j, star (χ j p) =
+          exp (-(Complex.I * ↑(ts j * p.1))) *
+          exp (-(Complex.I * ↑(∑ k, p.2 k * as j k))) := by
+        intro j; simp only [χ, star_mul]; rw [hstar_exp, hstar_exp]; ring
+      rw [hstar_χ]
+      simp only [← Complex.exp_add]
+      -- Both sides are exp of a single exponent; show exponents equal
+      congr 1; push_cast; simp only [Pi.sub_apply, Complex.ofReal_sub]
+      simp_rw [mul_sub]
+      rw [Finset.sum_sub_distrib]
+      ring
     simp_rw [hG_eq]
     exact pd_quadratic_form_of_measure μ c χ (fun j => by
       -- χ j is integrable: bounded by 1 on finite measure
