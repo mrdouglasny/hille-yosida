@@ -165,3 +165,36 @@ then induction.
 
 Alternatively, if Mathlib has Helly's selection theorem for BV functions,
 option (B) via Hausdorff may be cleaner since it avoids derivatives.
+
+## Gemini Review (2026-03-24)
+
+### Corrections to the plan
+
+1. **σ_n formula**: `dσ_n(t) = (-1)^n/(n-1)! · t^{n-1} · g^{(n)}(t) dt`
+   (sign is (-1)^n, not (-1)^{n-1})
+
+2. **CRITICAL: Missing pushforward step**. The Taylor remainder gives
+   kernel `(1 - x/t)^{n-1}` which does NOT converge to `e^{-x}`.
+   Must change variables `p = (n-1)/t` to get kernel
+   `(1 - xp/(n-1))^{n-1} → e^{-xp}`. Apply Helly to the pushforward
+   `σ̃_n = map (fun t => (n-1)/t) σ_n`, not to σ_n directly.
+
+3. **φ_n → e^{-x} is uniform on ALL of [0,∞)**, not just compacts.
+   Proof: Dini on [0,M] + exponential tail on (M,∞).
+
+4. **σ_n are positive**: from (-1)^n g^{(n)} ≥ 0 and t^{n-1}/(n-1)! > 0.
+
+5. **Total variation = g(0) - g(∞)**: correct, by iterated IBP using
+   the boundary lemma t^k g^{(k)}(t) → 0 as t → ∞ for CM functions.
+
+### Corrected proof outline
+
+Phase 1: CM differences → C^∞ with (-1)^n f^{(n)} ≥ 0 (~50 lines)
+Phase 2: Taylor remainder: g(x) = ∫ (1-x/t)_+^{n-1} dσ_n(t) (~40 lines)
+Phase 2b: Pushforward: σ̃_n = map((n-1)/t, σ_n), kernel → e^{-xp} (~20 lines)  ← NEW
+Phase 3: |σ̃_n| = g(0) - g(∞), tightness (~20 lines)
+Phase 4: Helly/Prokhorov on σ̃_n → σ̃ (~30 lines)
+Phase 5: Uniform φ_n → e^{-x} + weak convergence → g(x) = ∫ e^{-xp} dσ̃(p) + g(∞) (~30 lines)
+Phase 6: Set μ = σ̃ + g(∞)δ₀ (~10 lines)
+
+Total: ~200 lines
