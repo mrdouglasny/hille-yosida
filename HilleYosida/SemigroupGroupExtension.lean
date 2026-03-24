@@ -64,8 +64,19 @@ Fourier-Laplace transforms of finite positive measures supported on
 
   `F(t, a) = ∫ e^{-tp} e^{i⟨a, q⟩} dμ(p, q)`  for `t ≥ 0`
 
-Ref: Berg-Christensen-Ressel, "Harmonic Analysis on Semigroups" Thm 4.1.13 -/
-theorem semigroupGroupBochner (d : ℕ)
+Ref: Berg-Christensen-Ressel, "Harmonic Analysis on Semigroups" Thm 4.1.13.
+Verified correct by Gemini Deep Think (2026-03-23).
+
+**Proof route** (not yet formalized):
+- Step 1: `bochner_theorem ∘ spatial_slice_pd` → spatial Fourier measures `ν_t`
+- Step 2: Show `t ↦ ν_t(B)` is `IsCompletelyMonotone` (from semigroup PD)
+- Step 3: `bernstein_theorem` → temporal Laplace measures `σ_B`
+- Step 4: Combine `{σ_B}` into product measure `μ` on `[0,∞) × ℝ^d`
+
+All tools are available: `spatial_slice_pd` (proved), `bochner_theorem` (imported
+from mrdouglasny/bochner), `bernstein_theorem` (axiom in Bernstein.lean).
+Steps 2–4 require ~100 lines of measure theory. -/
+axiom semigroupGroupBochner (d : ℕ)
     (F : ℝ → (Fin d → ℝ) → ℂ)
     (hcont : ContinuousOn (fun p : ℝ × (Fin d → ℝ) => F p.1 p.2) (Set.Ici 0 ×ˢ Set.univ))
     (hbdd : ∃ C : ℝ, ∀ t a, 0 ≤ t → ‖F t a‖ ≤ C)
@@ -77,27 +88,7 @@ theorem semigroupGroupBochner (d : ℕ)
         F t a = ∫ p : ℝ × (Fin d → ℝ),
           Complex.exp (-(↑(t * p.1) : ℂ)) *
             Complex.exp (Complex.I * ↑(∑ i : Fin d, p.2 i * a i))
-          ∂μ := by
-  -- BCR 4.1.13 = Bochner on ℝ^d (proved) + Bernstein on [0,∞) (axiom).
-  --
-  -- Step 1: Apply bochner_theorem to each spatial slice F(t, ·).
-  -- This gives, for each t ≥ 0, a probability measure ν_t on (Fin d → ℝ)
-  -- with F(t, a) = ∫ exp(i⟨a,q⟩) dν_t(q). (Requires F(t,0) = 1 for
-  -- normalization, or use a scaled version.)
-  --
-  -- Step 2: Show t ↦ ν_t(B) is IsCompletelyMonotone for each Borel B.
-  -- This follows from the semigroup PD condition on F.
-  --
-  -- Step 3: Apply bernstein_theorem to each t ↦ ν_t(B) to get a
-  -- Laplace measure σ_B on [0,∞).
-  --
-  -- Step 4: The family {σ_B} defines a product measure μ on [0,∞) × ℝ^d
-  -- with F(t,a) = ∫ e^{-tp} e^{i⟨a,q⟩} dμ(p,q).
-  --
-  -- Steps 2-4 require ~100 lines of measure theory.
-  -- The Bochner step uses spatial_slice_pd (proved) + bochner_theorem (imported).
-  -- The Bernstein step uses bernstein_theorem (axiom in Bernstein.lean).
-  exact sorry
+          ∂μ
 
 /-! ## Group Extension from Bochner Representation
 
