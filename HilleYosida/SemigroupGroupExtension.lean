@@ -219,9 +219,12 @@ theorem semigroupGroupBochnerExtension (d : ℕ)
       intro w
       rw [show star w * w = ↑(Complex.normSq w) from Complex.normSq_eq_conj_mul_self.symm]
       exact ⟨Complex.ofReal_im _, Complex.ofReal_re _ ▸ Complex.normSq_nonneg w⟩
-    -- The full proof needs: swap ∑ and ∫ in q, apply sum_star_mul to the integrand,
-    -- then show ∫ (nonneg real) dμ has im=0 and re≥0.
-    -- The sum/integral swap requires integrability of each summand.
+    -- Apply sum_star_mul + star_mul_self_nonneg to show q is nonneg real.
+    -- q = ∑ᵢⱼ star(cᵢ) cⱼ G(tⱼ-tᵢ, aⱼ-aᵢ) where G is the Fourier integral.
+    -- After pulling constants and swapping ∑/∫, q = ∫ ‖∑ zⱼ(p)‖² dμ.
+    -- The swap requires integrability; each summand is bounded by |cᵢ||cⱼ|
+    -- (since |exp(ix)| = 1) and μ is finite.
+    -- Remaining: formally execute the swap and factoring (~30 lines).
     exact sorry
 
 /-! ## Connection to QFT: Analytic Continuation to Unitary Group
