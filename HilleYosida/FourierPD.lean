@@ -34,13 +34,12 @@ theorem pd_quadratic_form_of_measure
     (hχ_int : ∀ j, Integrable (χ j) μ) :
     let q := ∑ i, ∑ j, star (c i) * c j * ∫ ξ, star (χ i ξ) * χ j ξ ∂μ
     q.im = 0 ∧ 0 ≤ q.re := by
-  -- The proof requires swapping ∑ and ∫ (integral linearity for finite sums),
-  -- then factoring the integrand as normSq. This is standard but requires
-  -- careful Lean manipulation of integral_finset_sum + integral_mul_left.
-  --
-  -- Key identity (proved as helpers in SemigroupGroupExtension.lean):
-  -- sum_star_mul: ∑ᵢⱼ star(wᵢ) wⱼ = star(∑ w)(∑ w)
-  -- star_mul_self_nonneg: (star w * w).im = 0 ∧ 0 ≤ (star w * w).re
+  -- q = ∑ᵢⱼ star(cᵢ) cⱼ ∫ star(χᵢ) χⱼ dμ
+  -- The proof strategy: show q = ∫ ↑(normSq(∑ cⱼ χⱼ)) dμ, then im=0 ∧ re≥0.
+  -- Blocked on: swapping the double sum through the integral requires
+  -- integral_smul (to pull star(cᵢ)cⱼ inside) + integral_finset_sum (to swap ∑ and ∫).
+  -- Each step needs integrability conditions and careful ℂ algebra.
+  -- The mathematical content is: ∫ |∑ cⱼ χⱼ|² dμ ≥ 0.
   exact sorry
 
 end
