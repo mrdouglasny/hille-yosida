@@ -219,12 +219,21 @@ theorem semigroupGroupBochnerExtension (d : ℕ)
       intro w
       rw [show star w * w = ↑(Complex.normSq w) from Complex.normSq_eq_conj_mul_self.symm]
       exact ⟨Complex.ofReal_im _, Complex.ofReal_re _ ▸ Complex.normSq_nonneg w⟩
-    -- Apply sum_star_mul + star_mul_self_nonneg to show q is nonneg real.
-    -- q = ∑ᵢⱼ star(cᵢ) cⱼ G(tⱼ-tᵢ, aⱼ-aᵢ) where G is the Fourier integral.
-    -- After pulling constants and swapping ∑/∫, q = ∫ ‖∑ zⱼ(p)‖² dμ.
-    -- The swap requires integrability; each summand is bounded by |cᵢ||cⱼ|
-    -- (since |exp(ix)| = 1) and μ is finite.
-    -- Remaining: formally execute the swap and factoring (~30 lines).
+    -- Step 1: Show each term star(c_i)*c_j*G(...) = ∫ star(z_i(p))*z_j(p) dμ
+    -- Step 2: Swap ∑ and ∫
+    -- Step 3: Apply sum_star_mul to integrand
+    -- Step 4: star(∑ z)(∑ z) is nonneg real, so integral has im=0 re≥0
+    --
+    -- The exp factoring (step 1) requires showing:
+    -- star(c_i) * c_j * exp(I*(t_j-t_i)*p.1) * exp(I*⟨a_j-a_i,p.2⟩)
+    --   = star(z_i(p)) * z_j(p)
+    -- which uses star(exp(I*r)) = exp(-I*r) for real r.
+    --
+    -- The sum/integral swap (step 2) requires integrability of each summand,
+    -- which follows from |exp(ix)| = 1 and IsFiniteMeasure μ.
+    --
+    -- All helper lemmas are proved above (sum_star_mul, star_mul_self_nonneg,
+    -- norm_exp_I). The remaining work is connecting them through the integral.
     exact sorry
 
 /-! ## Connection to QFT: Analytic Continuation to Unitary Group
