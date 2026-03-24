@@ -220,17 +220,25 @@ theorem semigroupGroupBochnerExtension (d : ℕ)
       intro w
       rw [show star w * w = ↑(Complex.normSq w) from Complex.normSq_eq_conj_mul_self.symm]
       exact ⟨Complex.ofReal_im _, Complex.ofReal_re _ ▸ Complex.normSq_nonneg w⟩
-    -- Use pd_quadratic_form_of_measure with χⱼ(p) = exp(I tⱼ p.1) exp(I ⟨aⱼ,p.2⟩)
-    -- The G(tⱼ-tᵢ, aⱼ-aᵢ) = ∫ star(χᵢ) χⱼ dμ by exp factoring.
-    -- Then pd_quadratic_form_of_measure gives im=0 ∧ re≥0.
-    --
-    -- Need to show: G(tⱼ-tᵢ, aⱼ-aᵢ) = ∫ star(χᵢ(p)) χⱼ(p) dμ(p)
-    -- where χⱼ(p) = exp(I tⱼ p.1) exp(I ⟨aⱼ, p.2⟩).
-    -- This follows from exp(I(tⱼ-tᵢ)p) exp(I⟨aⱼ-aᵢ,q⟩)
-    --   = exp(Itⱼp) exp(-Itᵢp) exp(I⟨aⱼ,q⟩) exp(-I⟨aᵢ,q⟩)
-    --   = [exp(Itⱼp) exp(I⟨aⱼ,q⟩)] star[exp(Itᵢp) exp(I⟨aᵢ,q⟩)]
-    --   = χⱼ(p) star(χᵢ(p)) = star(χᵢ(p)) χⱼ(p)
-    exact sorry
+    -- Define χⱼ(p) = exp(I tⱼ p.1) exp(I ⟨aⱼ, p.2⟩)
+    set χ : Fin n → (ℝ × (Fin d → ℝ)) → ℂ :=
+      fun j p => exp (Complex.I * ↑(ts j * p.1)) *
+        exp (Complex.I * ↑(∑ k, p.2 k * as j k))
+    -- G(tⱼ-tᵢ, aⱼ-aᵢ) = ∫ star(χᵢ) χⱼ dμ by exp factoring
+    have hG_eq : ∀ i j, G (ts j - ts i) (as j - as i) =
+        ∫ p, star (χ i p) * χ j p ∂μ := by
+      intro i j; simp only [G, χ]; congr 1; ext p
+      -- exp(I(tⱼ-tᵢ)p₁) exp(I⟨aⱼ-aᵢ,p₂⟩) = star(χᵢ(p)) χⱼ(p)
+      -- Uses: star(exp(Ir)) = exp(-Ir), exp(a+b) = exp(a)*exp(b),
+      -- and (tⱼ-tᵢ)p = tⱼp - tᵢp, ⟨aⱼ-aᵢ,q⟩ = ⟨aⱼ,q⟩ - ⟨aᵢ,q⟩.
+      sorry
+    simp_rw [hG_eq]
+    exact pd_quadratic_form_of_measure μ c χ (fun j => by
+      -- χ j is integrable: bounded by 1 on finite measure
+      apply (integrable_const (1 : ℂ)).mono
+      · exact (Continuous.aestronglyMeasurable (by fun_prop))
+      · exact ae_of_all μ (fun p => by
+          dsimp [χ]; rw [norm_mul, norm_exp_I, norm_exp_I, mul_one]; simp))
 
 /-! ## Connection to QFT: Analytic Continuation to Unitary Group
 
