@@ -227,10 +227,16 @@ theorem semigroupGroupBochnerExtension (d : ℕ)
     -- G(tⱼ-tᵢ, aⱼ-aᵢ) = ∫ star(χᵢ) χⱼ dμ by exp factoring
     have hG_eq : ∀ i j, G (ts j - ts i) (as j - as i) =
         ∫ p, star (χ i p) * χ j p ∂μ := by
-      intro i j; simp only [G, χ]; congr 1; ext p
-      -- exp(I(tⱼ-tᵢ)p₁) exp(I⟨aⱼ-aᵢ,p₂⟩) = star(χᵢ(p)) χⱼ(p)
-      -- Uses: star(exp(Ir)) = exp(-Ir), exp(a+b) = exp(a)*exp(b),
-      -- and (tⱼ-tᵢ)p = tⱼp - tᵢp, ⟨aⱼ-aᵢ,q⟩ = ⟨aⱼ,q⟩ - ⟨aᵢ,q⟩.
+      intro i j
+      show ∫ p, exp (Complex.I * ↑((ts j - ts i) * p.1)) *
+        exp (Complex.I * ↑(∑ k, p.2 k * (as j - as i) k)) ∂μ =
+        ∫ p, star (χ i p) * χ j p ∂μ
+      congr 1; ext p; simp only [χ]
+      -- star(exp(Itᵢp₁) exp(I⟨aᵢ,p₂⟩)) * (exp(Itⱼp₁) exp(I⟨aⱼ,p₂⟩))
+      -- = exp(conj(I⟨aᵢ,p₂⟩)) exp(conj(Itᵢp₁)) exp(Itⱼp₁) exp(I⟨aⱼ,p₂⟩)
+      -- = exp(-I⟨aᵢ,p₂⟩ - Itᵢp₁ + Itⱼp₁ + I⟨aⱼ,p₂⟩)
+      -- = exp(I(tⱼ-tᵢ)p₁ + I(⟨aⱼ,p₂⟩-⟨aᵢ,p₂⟩))
+      -- = exp(I(tⱼ-tᵢ)p₁) exp(I⟨aⱼ-aᵢ,p₂⟩) = LHS
       sorry
     simp_rw [hG_eq]
     exact pd_quadratic_form_of_measure μ c χ (fun j => by
