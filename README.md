@@ -20,10 +20,12 @@ See the [proof outline](docs/proof-outline.md) for an informal summary of the pr
 
 ## Structure
 
-| File | Contents | Sorries |
-|------|----------|---------|
-| [`StronglyContinuousSemigroup.lean`][SC] | [C0-semigroups, generators, resolvent, Hille-Yosida](summary/HilleYosida/StronglyContinuousSemigroup.md) | **0** |
-| [`SemigroupGroupExtension.lean`][SGE] | [BCR Theorem 4.1.13, group extension](summary/HilleYosida/SemigroupGroupExtension.md) | 2 |
+| File | Contents | Status |
+|------|----------|--------|
+| [`StronglyContinuousSemigroup.lean`][SC] | [C₀-semigroups, generators, resolvent, Hille-Yosida](summary/HilleYosida/StronglyContinuousSemigroup.md) | **Fully proved** (0 axioms) |
+| [`SemigroupGroupExtension.lean`][SGE] | [BCR Theorem 4.1.13, group extension](summary/HilleYosida/SemigroupGroupExtension.md) | Proved modulo 3 axioms |
+| [`Bernstein.lean`][B] | Completely monotone functions, Bernstein's theorem | 1 axiom |
+| [`FourierPD.lean`][FPD] | Fourier PD quadratic form | 1 axiom |
 
 [SC]: HilleYosida/StronglyContinuousSemigroup.lean
 [SGE]: HilleYosida/SemigroupGroupExtension.lean
@@ -59,15 +61,24 @@ See the [proof outline](docs/proof-outline.md) for an informal summary of the pr
 [SC-800]: HilleYosida/StronglyContinuousSemigroup.lean#L800
 [SC-820]: HilleYosida/StronglyContinuousSemigroup.lean#L820
 
-## What is stated (2 sorries — BCR axioms)
+## Axioms (trust boundary)
 
-These require Choquet's theorem and completely monotone function theory, not available in Mathlib. Mathematical correctness verified by Gemini Deep Think.
+The project builds with **0 sorries** but relies on **3 axioms** in the
+semigroup-to-group extension layer. Downstream users importing `HilleYosida`
+inherit these assumptions. The forward Hille-Yosida theorem
+(`StronglyContinuousSemigroup.lean`) is fully proved with no axioms.
 
-- [`semigroupGroupBochner`][SGE-66]: BCR Theorem 4.1.13 — Laplace representation of PD functions
-- [`semigroupGroupBochnerExtension`][SGE-116]: Group extension with Fourier formula + PD
+| Axiom | File | Statement |
+|-------|------|-----------|
+| `semigroupGroupBochner` | [`SemigroupGroupExtension.lean`][SGE] | BCR Thm 4.1.13: Fourier-Laplace representation of PD functions |
+| `bernstein_theorem` | [`Bernstein.lean`][B] | Completely monotone functions are Laplace transforms |
+| `pd_quadratic_form_of_measure` | [`FourierPD.lean`][FPD] | Fourier transform of positive measure is PD ("easy Bochner") |
 
-[SGE-66]: HilleYosida/SemigroupGroupExtension.lean#L66
-[SGE-116]: HilleYosida/SemigroupGroupExtension.lean#L116
+[B]: HilleYosida/Bernstein.lean
+[FPD]: HilleYosida/FourierPD.lean
+
+Mathematical correctness of all axioms verified by Gemini Deep Think.
+See [docs/status.md](docs/status.md) for the full trust boundary and dependency chain.
 
 ## Goal
 
