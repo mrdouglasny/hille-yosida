@@ -78,13 +78,24 @@ theorem semigroupGroupBochner (d : ℕ)
             Complex.exp (Complex.I * ↑(∑ i : Fin d, p.2 i * a i))
           ∂μ := by
   -- BCR 4.1.13 = Bochner on ℝ^d (proved) + Bernstein on [0,∞) (axiom).
-  -- Available: spatial_slice_pd, bochner_theorem (imported), bernstein_theorem (axiom).
   --
-  -- Step 1: For each t, bochner_theorem (spatial_slice_pd hpd t ht) gives ν_t on ℝ^d.
-  -- Step 2: Show t ↦ ν_t(B) is completely monotone (from semigroup PD).
-  -- Step 3: bernstein_theorem gives Laplace measure σ_B on [0,∞).
-  -- Step 4: Combine {σ_B} into product measure μ on [0,∞) × ℝ^d.
-  -- Steps 2 and 4 require ~100 lines of measure theory (not yet written).
+  -- Step 1: Apply bochner_theorem to each spatial slice F(t, ·).
+  -- This gives, for each t ≥ 0, a probability measure ν_t on (Fin d → ℝ)
+  -- with F(t, a) = ∫ exp(i⟨a,q⟩) dν_t(q). (Requires F(t,0) = 1 for
+  -- normalization, or use a scaled version.)
+  --
+  -- Step 2: Show t ↦ ν_t(B) is IsCompletelyMonotone for each Borel B.
+  -- This follows from the semigroup PD condition on F.
+  --
+  -- Step 3: Apply bernstein_theorem to each t ↦ ν_t(B) to get a
+  -- Laplace measure σ_B on [0,∞).
+  --
+  -- Step 4: The family {σ_B} defines a product measure μ on [0,∞) × ℝ^d
+  -- with F(t,a) = ∫ e^{-tp} e^{i⟨a,q⟩} dμ(p,q).
+  --
+  -- Steps 2-4 require ~100 lines of measure theory.
+  -- The Bochner step uses spatial_slice_pd (proved) + bochner_theorem (imported).
+  -- The Bernstein step uses bernstein_theorem (axiom in Bernstein.lean).
   exact sorry
 
 /-! ## Group Extension from Bochner Representation
@@ -185,10 +196,17 @@ theorem semigroupGroupBochnerExtension (d : ℕ)
     -- Then ∫ (nonneg real) dμ is nonneg real.
     intro n c ts as
     haveI := hfin
-    -- The double sum ∑ᵢⱼ star(cᵢ) cⱼ G(tⱼ-tᵢ, aⱼ-aᵢ) factors as
-    -- ∫ |∑ⱼ cⱼ exp(I tⱼ p.1) exp(I ⟨aⱼ, p.2⟩)|² dμ, which is real and nonneg.
-    -- Proof requires: swap ∑ and ∫, then ∑ᵢⱼ star(zᵢ)zⱼ = star(∑ z)(∑ z) = ‖∑ z‖².
-    -- The integral of a nonneg real function has im = 0 and re ≥ 0.
+    have norm_exp_I : ∀ r : ℝ, ‖exp (Complex.I * ↑r)‖ = 1 := fun r => by
+      rw [mul_comm]; exact Complex.norm_exp_ofReal_mul_I r
+    -- Define zⱼ(p) = cⱼ exp(I tⱼ p.1) exp(I ⟨aⱼ, p.2⟩)
+    set z : Fin n → (ℝ × (Fin d → ℝ)) → ℂ :=
+      fun j p => c j * exp (Complex.I * ↑(ts j * p.1)) *
+        exp (Complex.I * ↑(∑ i, p.2 i * as j i))
+    -- Key identity: ∑ᵢⱼ star(cᵢ) cⱼ exp(I(tⱼ-tᵢ)p) exp(I⟨aⱼ-aᵢ,q⟩)
+    --   = ∑ᵢⱼ star(zᵢ(p)) zⱼ(p) = star(∑ z(p)) * (∑ z(p)) = ‖∑ z‖²
+    -- Then q = ∫ ‖∑ z(p)‖² dμ, which has im=0 and re≥0.
+    -- The swap of ∑ and ∫ uses linearity; the ∑ᵢⱼ factoring uses Finset.sum_mul_sum.
+    -- Both require substantial Lean formalization (~40 lines).
     exact sorry
 
 /-! ## Connection to QFT: Analytic Continuation to Unitary Group
