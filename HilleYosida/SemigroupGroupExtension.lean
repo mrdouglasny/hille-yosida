@@ -206,7 +206,22 @@ theorem semigroupGroupBochnerExtension (d : ℕ)
     --   = ∑ᵢⱼ star(zᵢ(p)) zⱼ(p) = star(∑ z(p)) * (∑ z(p)) = ‖∑ z‖²
     -- Then q = ∫ ‖∑ z(p)‖² dμ, which has im=0 and re≥0.
     -- The swap of ∑ and ∫ uses linearity; the ∑ᵢⱼ factoring uses Finset.sum_mul_sum.
-    -- Both require substantial Lean formalization (~40 lines).
+    -- Key algebra: ∑ᵢⱼ star(wᵢ) wⱼ = star(∑ w)(∑ w) for any w : Fin n → ℂ
+    have sum_star_mul : ∀ (m : ℕ) (w : Fin m → ℂ),
+        ∑ i, ∑ j, star (w i) * w j = star (∑ i, w i) * (∑ j, w j) := by
+      intro m w
+      have h1 : (∑ i, star (w i)) * (∑ j, w j) = ∑ i, ∑ j, star (w i) * w j := by
+        simp_rw [Finset.sum_mul, Finset.mul_sum]
+      rw [← h1, show (∑ i, star (w i)) = star (∑ i, w i) from
+        (map_sum (starRingEnd ℂ) w Finset.univ).symm]
+    -- And star(z) * z is real and nonneg for any z : ℂ
+    have star_mul_self_nonneg : ∀ (w : ℂ), (star w * w).im = 0 ∧ 0 ≤ (star w * w).re := by
+      intro w
+      rw [show star w * w = ↑(Complex.normSq w) from Complex.normSq_eq_conj_mul_self.symm]
+      exact ⟨Complex.ofReal_im _, Complex.ofReal_re _ ▸ Complex.normSq_nonneg w⟩
+    -- The full proof needs: swap ∑ and ∫ in q, apply sum_star_mul to the integrand,
+    -- then show ∫ (nonneg real) dμ has im=0 and re≥0.
+    -- The sum/integral swap requires integrability of each summand.
     exact sorry
 
 /-! ## Connection to QFT: Analytic Continuation to Unitary Group
