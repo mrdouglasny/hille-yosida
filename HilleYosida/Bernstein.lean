@@ -731,27 +731,188 @@ private lemma chafai_identity (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
     f x - L = ∫ p, bernstein_kernel n x p ∂(cm_rescaled f n) := by
   sorry
 
-/-- **Prokhorov extraction + limit identification** for CM measures.
+/-- **Subsequential weak limit extraction** for finite measures.
 
-Given:
-- Finite measures `σ̃_n = cm_rescaled f n` on `ℝ` with support on `[0,∞)` and
-  mass `≤ f(0) - L`.
-- The Chafaï identity: `f(x) - L = ∫ φ_n(x,p) dσ̃_n(p)` for `x ≥ 0`.
-- `φ_n(x,p) → e^{-xp}` pointwise (`bernstein_kernel_tendsto`).
+Given a sequence `σ` of finite measures on `ℝ` with uniformly bounded mass
+and supported on `[0,∞)`, there exists a subsequence converging weakly to
+a limit `μ₀` that is also finite, supported on `[0,∞)`, and satisfies
+`∫ g dσ_{φ(k)} → ∫ g dμ₀` for every bounded continuous `g`.
 
-Conclude: there exists `μ₀` finite, supported on `[0,∞)`, with
-  `f(x) = L + ∫ e^{-xp} dμ₀(p)`.
+This encapsulates the Prokhorov extraction argument:
+- Tightness from support on `[0,∞)` + mass bound (take `K_m = Icc 0 m`)
+- Prokhorov compactness (`isCompact_setOf_finiteMeasure_mass_le_compl_isCompact_le`)
+- Sequential compactness extraction
+- Portmanteau for the support condition -/
+private lemma finite_measure_subseq_limit
+    (σ : ℕ → Measure ℝ) (C : ℝ)
+    (hfin : ∀ n, IsFiniteMeasure (σ n))
+    (hmass : ∀ n, (σ n) Set.univ ≤ ENNReal.ofReal C)
+    (hsupp : ∀ n, (σ n) (Set.Iio 0) = 0) :
+    ∃ (μ₀ : Measure ℝ) (φ : ℕ → ℕ), IsFiniteMeasure μ₀ ∧ StrictMono φ ∧
+      μ₀ (Set.Iio 0) = 0 ∧
+      μ₀ Set.univ ≤ ENNReal.ofReal C ∧
+      ∀ (g : BoundedContinuousFunction ℝ ℝ), Tendsto (fun k => ∫ p, g p ∂(σ (φ k))) atTop
+        (nhds (∫ p, g p ∂μ₀)) := by
+  sorry
 
-The proof uses:
-1. **Tightness**: Markov's inequality + first moment bound from the Chafaï
-   identity differentiated at `x = 0` gives `∫ p dσ̃_n ≤ -f'(0)`.
-2. **Prokhorov** (`isCompact_setOf_finiteMeasure_mass_eq_compl_isCompact_le`):
-   tightness + bounded mass ⟹ compact set of measures ⟹ sequentially
-   compact ⟹ convergent subsequence `σ̃_{n_k} → μ₀`.
-3. **Diagonal convergence**: `∫ φ_{n_k} dσ̃_{n_k} → ∫ e^{-xp} dμ₀`
-   by approximating `φ_{n_k}` by continuous compactly-supported functions
-   and using weak convergence + dominated convergence.
-4. **Support**: Portmanteau on the open set `(-∞, 0)` gives `μ₀(Iio 0) = 0`. -/
+/-- The bounded continuous function `p ↦ e^{-x·max(p,0)}`, which agrees with
+`p ↦ e^{-xp}` on `[0,∞)` and is bounded by 1. Used to apply weak convergence
+of measures supported on `[0,∞)` to the Laplace kernel. -/
+private noncomputable def exp_bcf (x : ℝ) (hx : 0 ≤ x) : BoundedContinuousFunction ℝ ℝ where
+  toFun p := Real.exp (-(x * max p 0))
+  continuous_toFun := by
+    apply Continuous.rexp; apply Continuous.neg
+    exact continuous_const.mul (continuous_id.max continuous_const)
+  map_bounded' := by
+    use 2; intro p q
+    simp only [dist_eq_norm, Real.norm_eq_abs]
+    have h1 : Real.exp (-(x * max p 0)) ≤ 1 :=
+      Real.exp_le_one_iff.mpr (neg_nonpos.mpr (mul_nonneg hx (le_max_right _ _)))
+    have h2 : Real.exp (-(x * max q 0)) ≤ 1 :=
+      Real.exp_le_one_iff.mpr (neg_nonpos.mpr (mul_nonneg hx (le_max_right _ _)))
+    rw [abs_le]; constructor <;> linarith [Real.exp_pos (-(x * max p 0)),
+      Real.exp_pos (-(x * max q 0))]
+
+/-- `exp_bcf x hx p = e^{-xp}` for `p ≥ 0`. -/
+private lemma exp_bcf_eq (x : ℝ) (hx : 0 ≤ x) (p : ℝ) (hp : 0 ≤ p) :
+    exp_bcf x hx p = Real.exp (-(x * p)) := by
+  simp [exp_bcf, max_eq_left hp]
+
+/-- The integral of `exp_bcf` equals the integral of `e^{-xp}` for measures
+supported on `[0,∞)`. -/
+private lemma integral_exp_bcf_eq {μ : Measure ℝ} (hsupp : μ (Set.Iio 0) = 0)
+    (x : ℝ) (hx : 0 ≤ x) :
+    ∫ p, exp_bcf x hx p ∂μ = ∫ p, Real.exp (-(x * p)) ∂μ := by
+  apply MeasureTheory.integral_congr_ae
+  refine ae_iff.mpr (measure_mono_null ?_ hsupp)
+  intro p hp
+  simp only [Set.mem_setOf_eq, Set.mem_Iio] at *
+  by_contra h; push_neg at h
+  exact hp (exp_bcf_eq x hx p h)
+
+/-- Weak convergence of `e^{-xp}` integrals for measures supported on `[0,∞)`,
+via the bounded continuous surrogate `exp_bcf`. -/
+private lemma tendsto_exp_integral
+    (σ : ℕ → Measure ℝ) (φ : ℕ → ℕ) (μ₀ : Measure ℝ)
+    (hweak : ∀ (g : BoundedContinuousFunction ℝ ℝ),
+      Tendsto (fun k => ∫ p, g p ∂(σ (φ k))) atTop (nhds (∫ p, g p ∂μ₀)))
+    (hsupp_σ : ∀ n, (σ n) (Set.Iio 0) = 0)
+    (hsupp_μ : μ₀ (Set.Iio 0) = 0)
+    (x : ℝ) (hx : 0 ≤ x) :
+    Tendsto (fun k => ∫ p, Real.exp (-(x * p)) ∂(σ (φ k))) atTop
+      (nhds (∫ p, Real.exp (-(x * p)) ∂μ₀)) := by
+  have h1 : ∀ k, ∫ p, Real.exp (-(x * p)) ∂(σ (φ k)) =
+      ∫ p, exp_bcf x hx p ∂(σ (φ k)) :=
+    fun k => (integral_exp_bcf_eq (hsupp_σ (φ k)) x hx).symm
+  have h2 : ∫ p, Real.exp (-(x * p)) ∂μ₀ = ∫ p, exp_bcf x hx p ∂μ₀ :=
+    (integral_exp_bcf_eq hsupp_μ x hx).symm
+  rw [h2]; exact (hweak (exp_bcf x hx)).congr (fun k => (h1 k).symm)
+
+/-- **Kernel approximation error → 0**: For measures `σ_n` supported on `[0,∞)`
+with uniformly bounded mass, the integral of the difference
+`φ_{n+2}(x,·) - e^{-x·}` against `σ_n` tends to zero.
+
+This uses:
+- `bernstein_kernel_tendsto`: `φ_n(x,p) → e^{-xp}` pointwise for `x,p ≥ 0`
+- Both `φ_n` and `e^{-xp}` are bounded by 1 on `[0,∞)`
+- Uniform mass bound `σ_n(ℝ) ≤ C`
+- The convergence is uniform on each compact `[0,R]`, and the tail
+  `σ_n((R,∞))` can be controlled using tightness of the compact set
+  of measures (from Prokhorov). -/
+private lemma kernel_approx_error_tendsto
+    (σ : ℕ → Measure ℝ) (φ : ℕ → ℕ) (hφ : StrictMono φ)
+    (hfin : ∀ n, IsFiniteMeasure (σ n))
+    (hmass : ∀ n, (σ n) Set.univ ≤ ENNReal.ofReal C)
+    (hsupp : ∀ n, (σ n) (Set.Iio 0) = 0)
+    (x : ℝ) (hx : 0 ≤ x) :
+    Tendsto (fun k => ∫ p, (bernstein_kernel (φ k + 2) x p -
+        Real.exp (-(x * p))) ∂(σ (φ k))) atTop (nhds 0) := by
+  sorry
+
+/-- The integral `∫ φ_{n+2}(x,p) dσ_n` converges to `∫ e^{-xp} dμ₀` along
+the subsequence. Decomposes as:
+  `∫ φ_{n_k+2} dσ_{n_k} = ∫ (φ_{n_k+2} - e^{-xp}) dσ_{n_k} + ∫ e^{-xp} dσ_{n_k}`
+where the first term → 0 (`kernel_approx_error_tendsto`) and the second
+term → `∫ e^{-xp} dμ₀` (`tendsto_exp_integral`). -/
+private lemma integral_bernstein_kernel_tendsto
+    (σ : ℕ → Measure ℝ) (φ : ℕ → ℕ) (μ₀ : Measure ℝ)
+    [IsFiniteMeasure μ₀]
+    (hfin : ∀ n, IsFiniteMeasure (σ n))
+    (hφ : StrictMono φ)
+    (hweak : ∀ (g : BoundedContinuousFunction ℝ ℝ),
+      Tendsto (fun k => ∫ p, g p ∂(σ (φ k))) atTop (nhds (∫ p, g p ∂μ₀)))
+    (hmass : ∀ n, (σ n) Set.univ ≤ ENNReal.ofReal C)
+    (hsupp_σ : ∀ n, (σ n) (Set.Iio 0) = 0)
+    (hsupp_μ : μ₀ (Set.Iio 0) = 0)
+    (x : ℝ) (hx : 0 ≤ x) :
+    Tendsto (fun k => ∫ p, bernstein_kernel (φ k + 2) x p ∂(σ (φ k))) atTop
+      (nhds (∫ p, Real.exp (-(x * p)) ∂μ₀)) := by
+  -- Strategy: show the difference with ∫ e^{-xp} dσ_{φ(k)} → 0 (kernel error),
+  -- and ∫ e^{-xp} dσ_{φ(k)} → ∫ e^{-xp} dμ₀ (weak convergence).
+  -- Combined: ∫ φ_{φ(k)+2} dσ_{φ(k)} → ∫ e^{-xp} dμ₀.
+  have hterm1 := kernel_approx_error_tendsto (C := C) σ φ hφ hfin hmass hsupp_σ x hx
+  have hterm2 := tendsto_exp_integral σ φ μ₀ hweak hsupp_σ hsupp_μ x hx
+  -- The sum of a sequence tending to 0 and one tending to L tends to L
+  rw [show (∫ p, Real.exp (-(x * p)) ∂μ₀) = 0 + ∫ p, Real.exp (-(x * p)) ∂μ₀ from
+    (zero_add _).symm]
+  apply Tendsto.congr _ (hterm1.add hterm2)
+  intro k; haveI := hfin (φ k)
+  -- ∫ (φ - e^{-xp}) dσ + ∫ e^{-xp} dσ = ∫ φ dσ (linearity)
+  -- Bernstein kernel is bounded on [0,∞) ⊆ support, hence integrable on finite σ
+  have hbk_int : Integrable (fun p => bernstein_kernel (φ k + 2) x p) (σ (φ k)) := by
+    apply Integrable.mono' (integrable_const (1 : ℝ))
+    · apply Measurable.aestronglyMeasurable
+      simp only [bernstein_kernel]
+      exact Measurable.ite (measurableSet_le measurable_const measurable_const)
+        measurable_const
+        ((measurable_const.sub (measurable_id.const_mul x |>.div_const _) |>.max
+          measurable_const).pow measurable_const)
+    · rw [ae_iff]; apply measure_mono_null (fun p hp => ?_) (hsupp_σ (φ k))
+      simp only [Set.mem_setOf_eq, Real.norm_eq_abs, not_le, Set.mem_Iio] at *
+      by_contra hge; push_neg at hge
+      simp only [bernstein_kernel, show ¬(φ k + 2 ≤ 1) from by omega, ite_false,
+        show φ k + 2 - 1 = φ k + 1 from by omega] at hp
+      have hmax : max (1 - x * p / ↑(φ k + 1)) 0 ≤ 1 := by
+        apply max_le _ (by norm_num)
+        have : 0 ≤ x * p / ↑(φ k + 1) := div_nonneg (mul_nonneg hx hge) (by positivity)
+        linarith
+      have : 0 ≤ max (1 - x * p / ↑(φ k + 1)) 0 := le_max_right _ _
+      rw [abs_of_nonneg (pow_nonneg this _)] at hp
+      linarith [pow_le_one₀ (n := φ k + 1) this hmax]
+  have hexp_int : Integrable (fun p => Real.exp (-(x * p))) (σ (φ k)) := by
+    apply Integrable.mono' (integrable_const (1 : ℝ))
+    · exact Measurable.aestronglyMeasurable (by fun_prop)
+    · rw [ae_iff]; apply measure_mono_null (fun p hp => ?_) (hsupp_σ (φ k))
+      simp only [Set.mem_setOf_eq, Real.norm_eq_abs, not_le, Set.mem_Iio] at *
+      by_contra hge; push_neg at hge
+      have : Real.exp (-(x * p)) ≤ 1 :=
+        Real.exp_le_one_iff.mpr (neg_nonpos.mpr (mul_nonneg hx hge))
+      rw [abs_of_pos (Real.exp_pos _)] at hp; linarith
+  linarith [MeasureTheory.integral_sub hbk_int hexp_int]
+
+private lemma diagonal_convergence
+    (f : ℝ → ℝ) (L : ℝ)
+    (σ : ℕ → Measure ℝ) (φ : ℕ → ℕ) (μ₀ : Measure ℝ)
+    [IsFiniteMeasure μ₀]
+    (hfin : ∀ n, IsFiniteMeasure (σ n))
+    (hφ : StrictMono φ)
+    (hweak : ∀ (g : BoundedContinuousFunction ℝ ℝ),
+      Tendsto (fun k => ∫ p, g p ∂(σ (φ k))) atTop (nhds (∫ p, g p ∂μ₀)))
+    (hmass : ∀ n, (σ n) Set.univ ≤ ENNReal.ofReal C)
+    (hsupp_σ : ∀ n, (σ n) (Set.Iio 0) = 0)
+    (hsupp_μ : μ₀ (Set.Iio 0) = 0)
+    (x : ℝ) (hx : 0 ≤ x)
+    (hident : ∀ n, f x - L = ∫ p, bernstein_kernel (n + 2) x p ∂(σ n)) :
+    f x - L = ∫ p, Real.exp (-(x * p)) ∂μ₀ := by
+  -- The sequence ∫ φ_{φ(k)+2}(x,p) dσ_{φ(k)} = f(x) - L for all k (constant!)
+  have hconst : ∀ k, ∫ p, bernstein_kernel (φ k + 2) x p ∂(σ (φ k)) = f x - L :=
+    fun k => (hident (φ k)).symm
+  -- The same sequence converges to ∫ e^{-xp} dμ₀
+  have htends := integral_bernstein_kernel_tendsto (C := C)
+    σ φ μ₀ hfin hφ hweak hmass hsupp_σ hsupp_μ x hx
+  -- A constant sequence converging to a limit implies the constant equals the limit
+  exact tendsto_nhds_unique (tendsto_const_nhds.congr (fun k => (hconst k).symm)) htends
+
 private lemma prokhorov_limit_identification (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
     (L : ℝ) (hL : Filter.Tendsto f Filter.atTop (nhds L)) (hL_nn : 0 ≤ L)
     (hmass_bound : ∀ n, 2 ≤ n →
@@ -762,7 +923,25 @@ private lemma prokhorov_limit_identification (f : ℝ → ℝ) (hcm : IsComplete
       f x - L = ∫ p, bernstein_kernel n x p ∂(cm_rescaled f n)) :
     ∃ (μ₀ : Measure ℝ), IsFiniteMeasure μ₀ ∧ μ₀ (Set.Iio 0) = 0 ∧
       ∀ t, 0 ≤ t → f t = L + ∫ p, Real.exp (-(t * p)) ∂μ₀ := by
-  sorry
+  -- Shift indices: work with σ(n) = cm_rescaled f (n+2) to avoid the n ≥ 2 condition
+  set σ := fun n => cm_rescaled f (n + 2) with hσ_def
+  have hfin_σ : ∀ n, IsFiniteMeasure (σ n) := fun n => hfin (n + 2) (by omega)
+  have hmass_σ : ∀ n, (σ n) Set.univ ≤ ENNReal.ofReal (f 0 - L) :=
+    fun n => hmass_bound (n + 2) (by omega)
+  have hsupp_σ : ∀ n, (σ n) (Set.Iio 0) = 0 := fun n => hsupp (n + 2) (by omega)
+  have hident_σ : ∀ n, 2 ≤ n + 2 → ∀ x, 0 ≤ x →
+      f x - L = ∫ p, bernstein_kernel (n + 2) x p ∂(σ n) :=
+    fun n hn2 x hx => hidentity (n + 2) hn2 x hx
+  -- Step 1: Prokhorov extraction — get subsequence σ_{φ(k)} → μ₀
+  obtain ⟨μ₀, φ, hfin_μ, hφ_mono, hsupp_μ, hmass_μ, hweak⟩ :=
+    finite_measure_subseq_limit σ (f 0 - L) hfin_σ hmass_σ hsupp_σ
+  -- Step 2: Verify the Laplace identity via diagonal convergence
+  refine ⟨μ₀, hfin_μ, hsupp_μ, fun t ht => ?_⟩
+  -- We need: f t = L + ∫ e^{-tp} dμ₀, i.e., f t - L = ∫ e^{-tp} dμ₀
+  have hdiag := diagonal_convergence (C := f 0 - L) f L
+    σ φ μ₀ hfin_σ hφ_mono hweak hmass_σ hsupp_σ hsupp_μ t ht
+    (fun n => hident_σ n (by omega) t ht)
+  linarith
 
 /-- **Prokhorov extraction + Laplace verification** (Chafaï 2013).
 
