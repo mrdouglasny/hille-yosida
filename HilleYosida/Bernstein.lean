@@ -701,6 +701,69 @@ lemma cm_measure_finite_mass (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
 
 /-! ### Prokhorov extraction + Laplace representation -/
 
+/-- The rescaled measure `cm_rescaled f n` is a finite measure when the
+underlying `cm_measure f n` is finite. -/
+private lemma cm_rescaled_isFiniteMeasure (f : ℝ → ℝ) (n : ℕ)
+    [IsFiniteMeasure (cm_measure f n)] :
+    IsFiniteMeasure (cm_rescaled f n) where
+  measure_univ_lt_top := by
+    unfold cm_rescaled
+    rw [Measure.map_apply (cm_rescaling_measurable n) MeasurableSet.univ, Set.preimage_univ]
+    exact IsFiniteMeasure.measure_univ_lt_top
+
+/-- **Chafaï identity**: For a CM function `f` with `f(t) → L` and `n ≥ 2, x ≥ 0`:
+
+  `f(x) - L = ∫ φ_n(x,p) dσ̃_n(p)`
+
+where `φ_n` is `bernstein_kernel` and `σ̃_n = cm_rescaled f n`.
+
+**Proof sketch** (Chafaï 2013): The Taylor integral remainder on `[x, T]` gives
+  `f(x) - f(T) + B_n(T) = ∫_x^T ρ_n(t) dt`
+where `B_n(T) ≤ 0` by the CM sign condition.
+The change of variables `p = (n-1)/t` transforms the RHS to
+  `∫ φ_n(x,p) dσ̃_n|_{[(n-1)/T,∞)}(p)`.
+As `T → ∞`: `f(T) → L`, `B_n(T) → 0` (boundary decay for CM functions:
+`T^k f^{(k)}(T) → 0` from integrability + monotonicity of `(-1)^k f^{(k)}`),
+and the integration domain fills `[0, ∞)`. -/
+private lemma chafai_identity (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
+    (n : ℕ) (hn : 2 ≤ n) (x : ℝ) (hx : 0 ≤ x)
+    (L : ℝ) (hL : Filter.Tendsto f Filter.atTop (nhds L)) :
+    f x - L = ∫ p, bernstein_kernel n x p ∂(cm_rescaled f n) := by
+  sorry
+
+/-- **Prokhorov extraction + limit identification** for CM measures.
+
+Given:
+- Finite measures `σ̃_n = cm_rescaled f n` on `ℝ` with support on `[0,∞)` and
+  mass `≤ f(0) - L`.
+- The Chafaï identity: `f(x) - L = ∫ φ_n(x,p) dσ̃_n(p)` for `x ≥ 0`.
+- `φ_n(x,p) → e^{-xp}` pointwise (`bernstein_kernel_tendsto`).
+
+Conclude: there exists `μ₀` finite, supported on `[0,∞)`, with
+  `f(x) = L + ∫ e^{-xp} dμ₀(p)`.
+
+The proof uses:
+1. **Tightness**: Markov's inequality + first moment bound from the Chafaï
+   identity differentiated at `x = 0` gives `∫ p dσ̃_n ≤ -f'(0)`.
+2. **Prokhorov** (`isCompact_setOf_finiteMeasure_mass_eq_compl_isCompact_le`):
+   tightness + bounded mass ⟹ compact set of measures ⟹ sequentially
+   compact ⟹ convergent subsequence `σ̃_{n_k} → μ₀`.
+3. **Diagonal convergence**: `∫ φ_{n_k} dσ̃_{n_k} → ∫ e^{-xp} dμ₀`
+   by approximating `φ_{n_k}` by continuous compactly-supported functions
+   and using weak convergence + dominated convergence.
+4. **Support**: Portmanteau on the open set `(-∞, 0)` gives `μ₀(Iio 0) = 0`. -/
+private lemma prokhorov_limit_identification (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
+    (L : ℝ) (hL : Filter.Tendsto f Filter.atTop (nhds L)) (hL_nn : 0 ≤ L)
+    (hmass_bound : ∀ n, 2 ≤ n →
+      (cm_rescaled f n) Set.univ ≤ ENNReal.ofReal (f 0 - L))
+    (hsupp : ∀ n, 2 ≤ n → (cm_rescaled f n) (Set.Iio 0) = 0)
+    (hfin : ∀ n, 2 ≤ n → IsFiniteMeasure (cm_rescaled f n))
+    (hidentity : ∀ n, 2 ≤ n → ∀ x, 0 ≤ x →
+      f x - L = ∫ p, bernstein_kernel n x p ∂(cm_rescaled f n)) :
+    ∃ (μ₀ : Measure ℝ), IsFiniteMeasure μ₀ ∧ μ₀ (Set.Iio 0) = 0 ∧
+      ∀ t, 0 ≤ t → f t = L + ∫ p, Real.exp (-(t * p)) ∂μ₀ := by
+  sorry
+
 /-- **Prokhorov extraction + Laplace verification** (Chafaï 2013).
 
 For each `n ≥ 2`, the pushforward `σ̃_n = cm_rescaled f n` has:
@@ -736,15 +799,21 @@ lemma cm_prokhorov_and_verify (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
     ∃ (μ₀ : Measure ℝ), IsFiniteMeasure μ₀ ∧ μ₀ (Set.Iio 0) = 0 ∧
       ∀ t, 0 ≤ t →
         f t = L + ∫ p, Real.exp (-(t * p)) ∂μ₀ := by
-  -- The Chafaï (2013) argument:
-  -- (a) Correct identity: f(x) - L = ∫ φ_n(xp) dσ̃_n(p) for each n ≥ 2
-  --     (from Taylor remainder on [x,T] + boundary decay T^k f^{(k)}(T) → 0)
-  -- (b) Prokhorov: σ̃_{n_k} → μ₀ weakly
-  --     (isCompact_setOf_finiteMeasure_mass_le_compl_isCompact_le)
-  -- (c) Diagonal convergence: ∫ φ_{n_k} dσ̃_{n_k} → ∫ e^{-xp} dμ₀
-  --     (bernstein_kernel_tendsto + weak convergence + dominated convergence)
-  -- (d) Conclusion: f(x) - L = ∫ e^{-xp} dμ₀
-  exact sorry
+  -- Step 1: cm_rescaled is finite for n ≥ 2
+  have hfin_rescaled : ∀ n, 2 ≤ n → IsFiniteMeasure (cm_rescaled f n) := by
+    intro n hn; haveI := (hmass n hn).1
+    exact cm_rescaled_isFiniteMeasure f n
+  -- Step 2: mass bound for rescaled measures
+  have hmass_rescaled : ∀ n, 2 ≤ n →
+      (cm_rescaled f n) Set.univ ≤ ENNReal.ofReal (f 0 - L) := by
+    intro n hn; rw [cm_rescaled_mass_eq]; exact (hmass n hn).2
+  -- Step 3: Chafaï identity (proved in chafai_identity, sorry'd there)
+  have hchafai : ∀ n, 2 ≤ n → ∀ x, 0 ≤ x →
+      f x - L = ∫ p, bernstein_kernel n x p ∂(cm_rescaled f n) :=
+    fun n hn x hx => chafai_identity f hcm n hn x hx L hL
+  -- Step 4: Prokhorov extraction + limit identification
+  exact prokhorov_limit_identification f hcm L hL hL_nn hmass_rescaled hsupp
+    hfin_rescaled hchafai
 
 /-- **CM Laplace representation** (Chafaï 2013 argument). For a CM function
 `f` with limit `L ≥ 0` at infinity, there exists a finite positive measure
