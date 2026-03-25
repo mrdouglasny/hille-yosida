@@ -960,8 +960,26 @@ private lemma finite_measure_subseq_limit
       μ₀ Set.univ ≤ ENNReal.ofReal C ∧
       ∀ (g : BoundedContinuousFunction ℝ ℝ), Tendsto (fun k => ∫ p, g p ∂(σ (φ k))) atTop
         (nhds (∫ p, g p ∂μ₀)) := by
-  -- Normalization to ProbabilityMeasure + Prokhorov extraction
-  -- Uses: normalize_le, prob_seq_compact, isCompact_closure_of_isTightMeasureSet
+  -- Step 1: Define ν_n = σ_n + δ_{-1}, π_n = normalize(ν_n)
+  haveI hν_fin : ∀ n, IsFiniteMeasure (σ n + Measure.dirac (-1 : ℝ)) := fun n => by
+    haveI := hfin n; constructor
+    simp only [Measure.add_apply, Measure.dirac_apply, Set.indicator_univ, Pi.one_apply]
+    exact ENNReal.add_lt_top.mpr ⟨measure_lt_top _ _, ENNReal.one_lt_top⟩
+  set ν : ℕ → FiniteMeasure ℝ := fun n => ⟨σ n + Measure.dirac (-1 : ℝ), hν_fin n⟩
+  set π : ℕ → ProbabilityMeasure ℝ := fun n => (ν n).normalize
+  -- Step 2: Show {↑π_n} is tight (from htight + hsupp + normalize_le)
+  have htight_π : IsTightMeasureSet {μ : Measure ℝ | ∃ n, ↑(π n) = μ} := by
+    sorry -- normalize_le + htight + hsupp → tight with K = Icc(-1)(R)
+  -- Step 3: Prokhorov → compact → seq compact → subseq
+  have htight' : IsTightMeasureSet {μ : Measure ℝ | ∃ p ∈ range π, ↑p = μ} := by
+    convert htight_π using 1; ext μ; simp [eq_comm]
+  have hcpt := isCompact_closure_of_isTightMeasureSet htight'
+  obtain ⟨π₀, _, φ, hφ, hπ_tend⟩ :=
+    (isCompact_iff_isSeqCompact.mp hcpt).subseq_of_frequently_in
+      ((frequently_atTop.mpr fun n =>
+        ⟨n, le_refl n, subset_closure (mem_range.mpr ⟨n, rfl⟩)⟩))
+  -- Step 4: Recover σ convergence from π convergence
+  -- Set μ₀ = underlying measure of limit, restricted appropriately
   sorry
 
 /-- The bounded continuous function `p ↦ e^{-x·max(p,0)}`, which agrees with
