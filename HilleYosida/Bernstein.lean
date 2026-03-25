@@ -1534,12 +1534,11 @@ private lemma prokhorov_limit_identification (f : ℝ → ℝ) (hcm : IsComplete
     fun n hn2 x hx => hidentity (n + 2) hn2 x hx
   -- Step 1: Prokhorov extraction — get subsequence σ_{φ(k)} → μ₀
   have htight_σ : ∀ ε, 0 < ε → ∃ K : ℝ, ∀ n, (σ n) (Set.Ioi K) ≤ ENNReal.ofReal ε := by
-    -- From hidentity: f(x) - L = ∫ kernel dσ_n and kernel ≤ exp(-xp):
-    -- For p ≥ K: 1 - kernel(n,x₀,p) ≥ 1 - exp(-x₀K) (using kernel ≤ exp(-xp)).
-    -- So (1-exp(-x₀K))·σ_n(Ioi K) ≤ ∫(1-kernel)dσ_n = σ_n(ℝ)-(f(x₀)-L) ≤ f(0)-f(x₀).
-    -- Given ε > 0: choose x₀ > 0 with f(0)-f(x₀) < ε/2 (continuity at 0),
-    -- then K with 1-exp(-x₀K) > 1/2. Result: σ_n(Ioi K) ≤ ε for all n.
-    sorry
+    -- Tightness from CM structure:
+    -- (1-exp(-x₀K)) · σ_n(Ioi K) ≤ f(0) - f(x₀)
+    -- Choose x₀ with f(0)-f(x₀) < ε/2, then K with 1-exp(-x₀K) > 1/2.
+    -- Then σ_n(Ioi K) ≤ ε.
+    sorry -- ~15 lines: continuity at 0 + ENNReal bound from integral identity
   obtain ⟨μ₀, φ, hfin_μ, hφ_mono, hsupp_μ, hmass_μ, hweak⟩ :=
     finite_measure_subseq_limit σ (f 0 - L) hfin_σ hmass_σ hsupp_σ htight_σ
   -- Step 2: Verify the Laplace identity via diagonal convergence
