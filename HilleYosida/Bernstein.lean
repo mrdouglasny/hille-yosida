@@ -221,6 +221,38 @@ lemma IsCompletelyMonotone.integral_mass (hcm : IsCompletelyMonotone f)
       -iteratedDerivWithin 1 f (Icc 0 T) t = f 0 - f T := by
   linarith [IsCompletelyMonotone.integral_neg_deriv hcm 0 T le_rfl hT]
 
+/-! ## Measure construction for Bernstein -/
+
+/-- The density `ρ_n(t) = (-1)^n/(n-1)! · t^{n-1} · f^{(n)}(t)` for the n-th
+approximating measure in the Bernstein proof (Chafaï 2013). -/
+def cm_density (f : ℝ → ℝ) (n : ℕ) (t : ℝ) : ℝ :=
+  if n = 0 then 0
+  else (-1 : ℝ) ^ n / (Nat.factorial (n - 1) : ℝ) *
+    t ^ (n - 1) * iteratedDerivWithin n f (Set.Ici 0) t
+
+/-- The n-th approximating measure σ_n for the Bernstein proof, with density
+`ρ_n` on `(0, ∞)`. -/
+def cm_measure (f : ℝ → ℝ) (n : ℕ) : Measure ℝ :=
+  (volume.restrict (Set.Ioi 0)).withDensity
+    (fun t => ENNReal.ofReal (cm_density f n t))
+
+/-- The density `ρ_n` is nonneg for CM functions (product of nonneg factors). -/
+lemma cm_density_nonneg (hcm : IsCompletelyMonotone f) (n : ℕ)
+    (t : ℝ) (ht : 0 < t) : 0 ≤ cm_density f n t := by
+  simp only [cm_density]
+  split_ifs with hn
+  · exact le_refl 0
+  · have hcm_sign := hcm.2 n t (le_of_lt ht)
+    have hfact_pos : (0 : ℝ) < ↑(Nat.factorial (n - 1)) :=
+      Nat.cast_pos.mpr (Nat.factorial_pos _)
+    calc (-1 : ℝ) ^ n / ↑(Nat.factorial (n - 1)) * t ^ (n - 1) *
+          iteratedDerivWithin n f (Set.Ici 0) t
+        = t ^ (n - 1) / ↑(Nat.factorial (n - 1)) *
+          ((-1 : ℝ) ^ n * iteratedDerivWithin n f (Set.Ici 0) t) := by
+          field_simp
+      _ ≥ 0 := mul_nonneg (div_nonneg (pow_nonneg (le_of_lt ht) _)
+          (le_of_lt hfact_pos)) hcm_sign
+
 /-- The total mass `∫₀ᵀ (-f') dt → f(0) - L` as `T → ∞`, where `L = lim f(t)`.
 This is the key uniform bound for the tightness argument in Bernstein's theorem. -/
 lemma IsCompletelyMonotone.tendsto_total_mass
