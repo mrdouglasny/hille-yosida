@@ -969,9 +969,19 @@ private lemma finite_measure_subseq_limit
   set π : ℕ → ProbabilityMeasure ℝ := fun n => (ν n).normalize
   -- Step 2: Show {↑π_n} is tight (from htight + hsupp + normalize_le)
   have hν_ne : ∀ n, ν n ≠ 0 := fun n => by
-    sorry -- ν_n has mass ≥ 1 > 0 (contains δ_{-1})
+    intro h; have := congr_arg (· Set.univ) (congr_arg FiniteMeasure.toMeasure h)
+    simp only [ν, FiniteMeasure.toMeasure_mk, Measure.add_apply, Measure.dirac_apply,
+      Set.indicator_univ, Pi.one_apply, FiniteMeasure.toMeasure_zero,
+      Measure.coe_zero, Pi.zero_apply] at this
+    exact absurd this (ne_of_gt (lt_of_lt_of_le zero_lt_one (le_add_left le_rfl)))
   have hν_mass : ∀ n, 1 ≤ (ν n).mass := fun n => by
-    sorry -- mass(σ_n + δ_{-1}) = mass(σ_n) + 1 ≥ 1
+    change 1 ≤ ((↑(ν n) : Measure ℝ) Set.univ).toNNReal
+    simp only [ν, FiniteMeasure.toMeasure_mk, Measure.add_apply, Measure.dirac_apply,
+      Set.indicator_univ, Pi.one_apply]
+    rw [show (1 : NNReal) = (1 : ENNReal).toNNReal from by simp,
+      ENNReal.toNNReal_le_toNNReal ENNReal.one_ne_top
+        (ENNReal.add_lt_top.mpr ⟨measure_lt_top _ _, ENNReal.one_lt_top⟩).ne]
+    exact le_add_left le_rfl
   have htight_π : IsTightMeasureSet {μ : Measure ℝ | ∃ n, ↑(π n) = μ} := by
     rw [isTightMeasureSet_iff_exists_isCompact_measure_compl_le]
     intro ε hε
