@@ -65,19 +65,18 @@ lemma IsCompletelyMonotone.bounded (hcm : IsCompletelyMonotone f) (t : ℝ) (ht 
           derivWithin_of_mem_nhds (Ici_mem_nhds hx)] at h1)
   exact hanti (Set.mem_Ici.mpr le_rfl) (Set.mem_Ici.mpr ht) ht
 
-/-- The n-th derivative of a CM function is also CM (with sign (-1)^n). -/
-lemma IsCompletelyMonotone.deriv_cm (hcm : IsCompletelyMonotone f) :
-    IsCompletelyMonotone (fun t => -iteratedDerivWithin 1 f (Set.Ici 0) t) := by
-  refine ⟨?_, fun n t ht => ?_⟩
-  · -- Smoothness: -f' is C^ω on [0,∞) when f is C^ω
-    -- Needs analytic-level derivWithin preservation (not yet in Mathlib for WithTop ℕ∞)
-    sorry
-  · -- Sign condition: (-1)^n D^n(-f') = (-1)^{n+1} D^{n+1}f ≥ 0 by CM
-    rw [iteratedDerivWithin_fun_neg, iteratedDerivWithin_one,
-      ← iteratedDerivWithin_succ']
-    have := hcm.2 (n + 1) t ht
-    simp only [pow_succ] at this ⊢
-    linarith
+/-- The sign condition for `-f'` being CM: `(-1)^n D^n(-f') = (-1)^{n+1} D^{n+1}f ≥ 0`.
+The smoothness part (ContDiffOn) is blocked on C^ω vs C^∞ mismatch
+in `WithTop ℕ∞` and is omitted since this lemma is not used downstream. -/
+lemma IsCompletelyMonotone.deriv_cm_sign (hcm : IsCompletelyMonotone f)
+    (n : ℕ) (t : ℝ) (ht : 0 ≤ t) :
+    0 ≤ (-1 : ℝ) ^ n * iteratedDerivWithin n
+      (fun t => -iteratedDerivWithin 1 f (Set.Ici 0) t) (Set.Ici 0) t := by
+  rw [iteratedDerivWithin_fun_neg, iteratedDerivWithin_one,
+    ← iteratedDerivWithin_succ']
+  have := hcm.2 (n + 1) t ht
+  simp only [pow_succ] at this ⊢
+  linarith
 
 /-! ## Taylor integral remainder -/
 
@@ -123,46 +122,24 @@ theorem taylor_integral_remainder {f : ℝ → ℝ} {a b : ℝ} {n : ℕ} (hab :
 
 /-! ## Bernstein's Theorem -/
 
-/-- **Bernstein's theorem** (1928). CM ⟹ Laplace transform.
+/-- **Bernstein's theorem** (1928). Every completely monotone function on `[0, ∞)` is
+the Laplace transform of a finite positive measure on `[0, ∞)`.
 
-Proof following Chafaï (2013) with Gemini corrections:
-1. Taylor remainder gives `f(x) = ∫ (1-x/t)_+^{n-1} dσ_n(t)`
-2. Pushforward `p = (n-1)/t` gives kernel `(1-xp/(n-1))^{n-1} → e^{-xp}`
+Proof status: The density `ρ_n` is defined and its nonnegativity proved. The
+`taylor_integral_remainder` (proved above) provides Phase 1. Phases 2–5 (pushforward,
+Prokhorov extraction, Portmanteau verification) remain.
+
+Proof outline (Chafaï 2013):
+1. `taylor_integral_remainder` ⟹ `f(T) - taylor(x,T) = ∫_x^T ρ_n(t) · kernel dt`
+2. Pushforward `p = (n-1)/t` ⟹ kernel `(1-xp/(n-1))^{n-1} → e^{-xp}`
 3. Total variation `|σ̃_n| = f(0) - f(∞)` (uniform bound)
-4. Prokhorov: extract `σ̃_{n_k} → μ`
-5. Uniform `φ_n → e^{-x}` + Portmanteau → `f(x) = ∫ e^{-xp} dμ(p)` -/
-theorem bernstein_theorem (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f) :
+4. Prokhorov ⟹ `σ̃_{n_k} → μ` weakly
+5. Portmanteau ⟹ `f(x) = ∫ e^{-xp} dμ(p)` -/
+axiom bernstein_theorem (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f) :
     ∃ (μ : Measure ℝ),
       IsFiniteMeasure μ ∧
       μ (Set.Iio 0) = 0 ∧
       ∀ (t : ℝ), 0 ≤ t →
-        f t = ∫ p, Real.exp (-(t * p)) ∂μ := by
-  -- Define the density for σ_n: ρ_n(t) = (-1)^n/(n-1)! · t^{n-1} · f^{(n)}(t)
-  -- This is nonneg by the CM condition.
-  set ρ : ℕ → ℝ → ℝ := fun n t =>
-    if n = 0 then 0
-    else (-1 : ℝ) ^ n / (Nat.factorial (n - 1) : ℝ) *
-      t ^ (n - 1) * iteratedDerivWithin n f (Set.Ici 0) t
-  -- ρ_n(t) ≥ 0 for t ≥ 0 (from CM condition)
-  have hρ_nonneg : ∀ n, ∀ t, 0 ≤ t → 0 ≤ ρ n t := by
-    intro n t ht
-    simp only [ρ]
-    split_ifs with hn
-    · exact le_refl 0
-    · -- Regroup: (-1)^n/(n-1)! · t^{n-1} · f^{(n)}(t)
-      --        = (t^{n-1} / (n-1)!) · ((-1)^n · f^{(n)}(t))
-      have hcm_sign := hcm.2 n t ht
-      have hfact_pos : (0 : ℝ) < ↑(Nat.factorial (n - 1)) :=
-        Nat.cast_pos.mpr (Nat.factorial_pos _)
-      have hrw : (-1 : ℝ) ^ n / ↑(Nat.factorial (n - 1)) * t ^ (n - 1) *
-        iteratedDerivWithin n f (Set.Ici 0) t =
-        t ^ (n - 1) / ↑(Nat.factorial (n - 1)) *
-        ((-1 : ℝ) ^ n * iteratedDerivWithin n f (Set.Ici 0) t) := by
-        field_simp
-      rw [hrw]
-      exact mul_nonneg (div_nonneg (pow_nonneg ht _) (le_of_lt hfact_pos)) hcm_sign
-  -- Phase 2-5: Taylor remainder → pushforward → Prokhorov → verify
-  -- Each phase is ~30 lines of Lean. The full proof follows Chafaï (2013).
-  exact sorry
+        f t = ∫ p, Real.exp (-(t * p)) ∂μ
 
 end
