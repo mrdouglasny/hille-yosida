@@ -775,20 +775,59 @@ private lemma chafai_kernel_density_eq (f : ℝ → ℝ) (_hcm : IsCompletelyMon
         iteratedDerivWithin n f (Set.Ici 0) t := by ring
     _ = _ := by rw [key]
 
+set_option maxHeartbeats 6400000 in
 private lemma chafai_repeated_ibp (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
     (n : ℕ) (hn : 1 ≤ n) (x : ℝ) (hx : 0 ≤ x)
     (L : ℝ) (hL : Filter.Tendsto f Filter.atTop (nhds L)) :
     ∫ t in Set.Ioi x, (-1 : ℝ) ^ n / ↑(n - 1).factorial *
-      (t - x) ^ (n - 1) * iteratedDerivWithin n f (Set.Ici 0) t =
-      f x - L := by
-  sorry -- Repeated IBP + boundary decay (~30 lines)
+      (t - x) ^ (n - 1) *
+      iteratedDerivWithin n f (Set.Ici 0) t = f x - L := by
+  induction n with
+  | zero => omega
+  | succ k ih =>
+    by_cases hk : k = 0
+    · -- Base case: n = 1, integrand simplifies to -f'(t)
+      subst hk
+      have hsimpl :
+          (fun t => (-1 : ℝ) ^ (0 + 1) / ↑(0 + 1 - 1).factorial *
+            (t - x) ^ (0 + 1 - 1) *
+            iteratedDerivWithin (0 + 1) f (Set.Ici 0) t) =
+          (fun t => -iteratedDerivWithin 1 f (Set.Ici 0) t) := by
+        ext t; simp
+      rw [hsimpl]
+      have hintx : IntegrableOn
+          (fun t => -iteratedDerivWithin 1 f (Set.Ici 0) t)
+          (Set.Ioi x) :=
+        (hcm.neg_deriv_integrableOn hL).mono_set (Set.Ioi_subset_Ioi hx)
+      refine tendsto_nhds_unique
+        (intervalIntegral_tendsto_integral_Ioi x hintx Filter.tendsto_id) ?_
+      simp only [id]
+      refine Filter.Tendsto.congr' ?_ (Tendsto.sub tendsto_const_nhds hL)
+      filter_upwards [Filter.eventually_gt_atTop (max x 1)] with T hT
+      have hxT : x < T := lt_of_le_of_lt (le_max_left x 1) hT
+      rw [show (∫ t in x..T, -iteratedDerivWithin 1 f (Set.Ici 0) t) =
+          ∫ t in x..T, -iteratedDerivWithin 1 f (Set.Icc x T) t from by
+        apply intervalIntegral.integral_congr_ae
+        apply ae_of_all volume; intro t ht
+        rw [uIoc_of_le (le_of_lt hxT)] at ht
+        have ht_pos : 0 < t := lt_of_le_of_lt hx ht.1
+        have hcda : ContDiffAt ℝ (↑1 : WithTop ℕ∞) f t :=
+          (hcm.1.of_le le_top).contDiffAt (Ici_mem_nhds ht_pos)
+        congr 1
+        rw [iteratedDerivWithin_eq_iteratedDeriv
+            (uniqueDiffOn_Icc hxT) hcda (Ioc_subset_Icc_self ht),
+          iteratedDerivWithin_eq_iteratedDeriv
+            (uniqueDiffOn_Ici 0) hcda
+            (Set.mem_Ici.mpr (le_of_lt ht_pos))]]
+      exact hcm.integral_neg_deriv x T hx hxT
+    · -- Inductive step: n = k + 1 with k ≥ 1. IBP + boundary decay.
+      sorry
 
 private lemma chafai_identity (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
     (n : ℕ) (hn : 2 ≤ n) (x : ℝ) (hx : 0 ≤ x)
     (L : ℝ) (hL : Filter.Tendsto f Filter.atTop (nhds L)) :
     f x - L = ∫ p, bernstein_kernel n x p ∂(cm_rescaled f n) := by
   have hn0 : n ≠ 0 := by omega
-  -- Step 1: Pushforward integral formula
   have step1 : ∫ p, bernstein_kernel n x p ∂(cm_rescaled f n) =
       ∫ t, bernstein_kernel n x (((n : ℝ) - 1) / t) ∂(cm_measure f n) := by
     unfold cm_rescaled
@@ -796,16 +835,21 @@ private lemma chafai_identity (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
       (show Measurable (bernstein_kernel n x) by
         unfold bernstein_kernel; split_ifs
         · exact measurable_const
-        · fun_prop).stronglyMeasurable
-  -- Step 2: WithDensity integral = weighted integral on Ioi 0
-  -- (integral_withDensity_eq_integral_toReal_smul + ofReal/toReal cancellation)
+        · show Measurable fun p : ℝ =>
+              (max (1 - x * p / (↑(n - 1) : ℝ)) 0) ^ (n - 1)
+          fun_prop).stronglyMeasurable
   have step2 : ∫ t, bernstein_kernel n x (((n : ℝ) - 1) / t) ∂(cm_measure f n) =
       ∫ t in Set.Ioi 0,
         bernstein_kernel n x (((n : ℝ) - 1) / t) * cm_density f n t := by
-    sorry
-  -- Step 3: Kernel-density simplification
+    unfold cm_measure
+    rw [integral_withDensity_eq_integral_toReal_smul
+      (sorry : Measurable (fun t => ENNReal.ofReal (cm_density f n t)))
+      (ae_of_all _ fun _ => ENNReal.ofReal_lt_top)]
+    exact setIntegral_congr_ae measurableSet_Ioi
+      (ae_of_all _ fun t ht => by
+        simp only [smul_eq_mul, Set.mem_Ioi] at ht ⊢
+        rw [ENNReal.toReal_ofReal (cm_density_nonneg hcm n t ht)]; ring)
   have step3 := chafai_kernel_density_eq f hcm n hn x hx
-  -- Step 4: Repeated IBP
   have step4 := chafai_repeated_ibp f hcm n (by omega) x hx L hL
   linarith
 
