@@ -120,6 +120,29 @@ theorem taylor_integral_remainder {f : ℝ → ℝ} {a b : ℝ} {n : ℕ} (hab :
   simp only [taylorWithinEval_self, smul_eq_mul] at hftc
   linarith
 
+/-- A CM function has a limit at infinity: it is antitone and bounded below by 0,
+so `f(t) → L ≥ 0` as `t → ∞`. -/
+lemma IsCompletelyMonotone.tendsto_atTop (hcm : IsCompletelyMonotone f) :
+    ∃ L, Filter.Tendsto f Filter.atTop (nhds L) ∧ 0 ≤ L := by
+  have htop : (⊤ : WithTop ℕ∞) ≠ 0 := Ne.symm (ne_of_beq_false rfl)
+  have hanti : AntitoneOn f (Set.Ici 0) :=
+    antitoneOn_of_deriv_nonpos (convex_Ici 0) hcm.1.continuousOn
+      ((hcm.1.differentiableOn htop).mono interior_subset)
+      (fun x hx => by
+        rw [interior_Ici] at hx
+        have h1 := hcm.deriv_nonpos x (le_of_lt hx)
+        rwa [iteratedDerivWithin_one,
+          derivWithin_of_mem_nhds (Ici_mem_nhds hx)] at h1)
+  set g := fun t : ℝ => f (max t 0)
+  have hg_anti : Antitone g := fun a b hab =>
+    hanti (Set.mem_Ici.mpr (le_max_right _ _))
+      (Set.mem_Ici.mpr (le_max_right _ _)) (max_le_max_right 0 hab)
+  have hg_bdd : BddBelow (Set.range g) :=
+    ⟨0, fun _ ⟨t, ht⟩ => ht ▸ hcm.nonneg _ (le_max_right _ _)⟩
+  refine ⟨⨅ i, g i, ?_, le_ciInf (fun t => hcm.nonneg _ (le_max_right _ _))⟩
+  exact (tendsto_atTop_ciInf hg_anti hg_bdd).congr'
+    (Filter.eventually_atTop.mpr ⟨0, fun t ht => by simp [g, max_eq_left ht]⟩)
+
 /-! ## Bernstein's Theorem -/
 
 /-- For a CM function `f` on `[0,∞)`, the n=1 Taylor integral remainder gives
@@ -159,10 +182,28 @@ theorem bernstein_theorem (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f) :
       μ (Set.Iio 0) = 0 ∧
       ∀ (t : ℝ), 0 ≤ t →
         f t = ∫ p, Real.exp (-(t * p)) ∂μ := by
-  -- Phases 2-5 of Chafaï (2013). Each phase is ~30 lines of Lean.
-  -- Phase 1 (taylor_integral_remainder) is proved above.
-  -- The density ρ_n(t) = (-1)^n/(n-1)! · t^{n-1} · f^{(n)}(t) ≥ 0 is established
-  -- by IsCompletelyMonotone.nonneg and the CM sign condition.
+  /-
+  Proof outline (Chafaï 2013):
+  Phase 1: taylor_integral_remainder (PROVED above, sorry-free)
+  Phase 2: For each n, define σ_n with density ρ_n on [0,∞).
+           Use taylor_integral_remainder to get:
+           f(x) = boundary(n,T) + ∫_x^T ρ_n(t)·(T-t)^{n-1}/(n-1)! dt
+  Phase 3: Pushforward σ̃_n = map((n-1)/·, σ_n).
+           Total mass |σ̃_n| = f(0) - f(∞) (uniform bound).
+  Phase 4: Prokhorov (isCompact_closure_of_isTightMeasureSet) gives
+           σ̃_{n_k} → μ weakly.
+  Phase 5: Portmanteau + uniform φ_n → e^{-x} gives f(x) = ∫ e^{-xp} dμ(p).
+
+  Key Mathlib infrastructure available:
+  - MeasureTheory.Measure.Prokhorov (isCompact_closure_of_isTightMeasureSet)
+  - MeasureTheory.Measure.Portmanteau
+  - MeasureTheory.Measure.Tight (IsTightMeasureSet)
+  -/
+  -- Step 1: f has a limit at infinity (antitone + bounded below ⟹ convergent)
+  -- Step 2: Construct approximating measures from taylor_integral_remainder
+  -- Step 3: Extract weak limit via Prokhorov
+  -- Step 4: Verify Laplace representation via Portmanteau
+  -- Each step is ~30-40 lines. Total ~150 lines remaining.
   exact sorry
 
 end
