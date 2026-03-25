@@ -397,45 +397,130 @@ lemma bernstein_packaging {f : ℝ → ℝ} {L : ℝ} (hL : 0 ≤ L)
       integral_dirac, ENNReal.toReal_ofReal hL,
       mul_zero, neg_zero, Real.exp_zero, smul_eq_mul, mul_one]
 
-/-- **CM Laplace representation** (Chafaï 2013 argument). For a CM function `f` with
-limit `L ≥ 0` at infinity, there exists a finite positive measure `μ₀` on `[0, ∞)` with
-`f(t) = L + ∫ e^{-tp} dμ₀(p)`.
+/-! ## Rescaled measures and Prokhorov extraction -/
 
-Proof method: For each `n ≥ 2`, define σ̃_n = Measure.map ((n-1)/·) (cm_measure f n).
-Show total mass ≤ f(0) - L (from `taylor_integral_remainder`), tightness, then extract
-a weak limit via Prokhorov (`isCompact_setOf_finiteMeasure_mass_le_compl_isCompact_le`).
-Verify the representation via Portmanteau (`tendsto_of_forall_isClosed_limsup_le`) +
-uniform convergence of kernels `(1-xp/(n-1))^{n-1} → e^{-xp}` on compacts. -/
+/-- The rescaled measure σ̃_n: pushforward of `cm_measure f n` under the map
+`t ↦ (n-1)/t`, which sends `(0, ∞)` to `(0, ∞)`. After this change of
+variable, the Taylor integral kernel becomes `(1 - xp/(n-1))_+^{n-1}`,
+which converges pointwise to `e^{-xp}` as `n → ∞`. -/
+def cm_rescaled (f : ℝ → ℝ) (n : ℕ) : Measure ℝ :=
+  Measure.map (fun t => ((n : ℝ) - 1) / t) (cm_measure f n)
+
+/-- The rescaling map `t ↦ (n-1)/t` is measurable. -/
+lemma cm_rescaling_measurable (n : ℕ) :
+    Measurable (fun t : ℝ => ((n : ℝ) - 1) / t) :=
+  measurable_const.div measurable_id
+
+/-- `cm_measure f n` lives on `(0, ∞)`: its complement has zero mass. -/
+lemma cm_measure_compl_Ioi (f : ℝ → ℝ) (n : ℕ) :
+    (cm_measure f n) (Set.Ioi 0)ᶜ = 0 := by
+  unfold cm_measure
+  rw [withDensity_apply _ (measurableSet_Ioi.compl)]
+  apply setLIntegral_measure_zero
+  rw [Measure.restrict_apply (measurableSet_Ioi.compl)]
+  have : (Set.Ioi (0 : ℝ))ᶜ ∩ Set.Ioi 0 = ∅ := by
+    ext x; simp [Set.mem_Ioi]
+  rw [this, measure_empty]
+
+/-- The rescaled measure σ̃_n is supported on `[0, ∞)` for `n ≥ 2`:
+`t ↦ (n-1)/t` maps `(0, ∞)` into `(0, ∞)` when `n ≥ 2`. -/
+lemma cm_rescaled_Iio_zero (f : ℝ → ℝ) (n : ℕ) (hn : 2 ≤ n) :
+    (cm_rescaled f n) (Set.Iio 0) = 0 := by
+  unfold cm_rescaled
+  rw [Measure.map_apply (cm_rescaling_measurable n) measurableSet_Iio]
+  have h_sub :
+      (fun t : ℝ => ((n : ℝ) - 1) / t) ⁻¹' Set.Iio 0 ⊆ (Set.Ioi 0)ᶜ := by
+    intro t ht
+    simp only [Set.mem_preimage, Set.mem_Iio] at ht
+    simp only [Set.mem_compl_iff, Set.mem_Ioi, not_lt]
+    by_contra h; push_neg at h
+    have : (0 : ℝ) < (↑n : ℝ) - 1 := by
+      have : (2 : ℝ) ≤ ↑n := by exact_mod_cast hn
+      linarith
+    linarith [div_pos this h]
+  exact le_antisymm
+    (le_trans (measure_mono h_sub) (le_of_eq (cm_measure_compl_Ioi f n)))
+    (zero_le _)
+
+/-- Pushforward preserves total mass. -/
+lemma cm_rescaled_mass_eq (f : ℝ → ℝ) (n : ℕ) :
+    (cm_rescaled f n) Set.univ = (cm_measure f n) Set.univ := by
+  unfold cm_rescaled
+  rw [Measure.map_apply (cm_rescaling_measurable n) MeasurableSet.univ,
+    Set.preimage_univ]
+
+/-- **Total mass bound**: `cm_measure f n` is a finite measure with total mass
+`≤ f(0) - L` for CM functions with `f(t) → L`.
+
+By Taylor's formula with integral remainder at `x = 0`:
+  `f(0) - f(T) = Σ_{k=1}^{n-1} (boundary terms at T) + ∫₀ᵀ ρ_n(t) dt`
+where each boundary term `(-1)^k f^{(k)}(T) T^k / k!` is nonneg (CM sign)
+and tends to 0 as `T → ∞` (since `f^{(k)}(T) → 0` for CM functions).
+Taking `T → ∞`: `∫₀^∞ ρ_n(t) dt ≤ f(0) - L`. -/
+lemma cm_measure_finite_mass (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
+    (n : ℕ) (hn : 2 ≤ n) (L : ℝ)
+    (hL : Filter.Tendsto f Filter.atTop (nhds L)) :
+    IsFiniteMeasure (cm_measure f n) ∧
+    (cm_measure f n) Set.univ ≤ ENNReal.ofReal (f 0 - L) := by
+  exact sorry
+
+/-- **Prokhorov extraction + representation verification** (combined).
+
+Given:
+  - σ̃_n = `cm_rescaled f n` supported on `[0, ∞)` with mass `≤ f(0) - L`
+
+Produces: a finite measure `μ₀` on `[0, ∞)` with `f(t) = L + ∫ e^{-tp} dμ₀`.
+
+**Step 1 — Tightness**: `σ̃_n([0,R]ᶜ) ≤ C/R` by Markov's inequality on the
+first moment `∫ p dσ̃_n(p)`, which is uniformly bounded.
+
+**Step 2 — Prokhorov**: The set
+  `{μ : FiniteMeasure ℝ | μ.mass ≤ C ∧ ∀ k, μ(Icc(-k)(k))ᶜ ≤ u_k}`
+is compact by `isCompact_setOf_finiteMeasure_mass_le_compl_isCompact_le`.
+The σ̃_n lie in this set. Extract σ̃_{n_k} → μ₀ weakly via sequential
+compactness (`IsCompact.isSeqCompact`).
+
+**Step 3 — Representation**: For fixed `x ≥ 0`, the Taylor integral identity
+gives `f(x) - L = lim_k ∫ φ_{n_k}(x,p) dσ̃_{n_k}(p)` where
+`φ_n(x,p) = (1 - xp/(n-1))_+^{n-1}`. Since `φ_n → e^{-x·}` uniformly on
+compacts with `|φ_n| ≤ 1`, the weak convergence
+(`FiniteMeasure.tendsto_iff_forall_integral_tendsto`) + dominated convergence
+gives `∫ e^{-xp} dμ₀(p) = f(x) - L`. -/
+lemma cm_prokhorov_and_verify (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
+    (L : ℝ) (hL : Filter.Tendsto f Filter.atTop (nhds L))
+    (hL_nn : 0 ≤ L)
+    (hmass : ∀ n, 2 ≤ n → IsFiniteMeasure (cm_measure f n) ∧
+      (cm_measure f n) Set.univ ≤ ENNReal.ofReal (f 0 - L))
+    (hsupp : ∀ n, 2 ≤ n → (cm_rescaled f n) (Set.Iio 0) = 0) :
+    ∃ (μ₀ : Measure ℝ), IsFiniteMeasure μ₀ ∧ μ₀ (Set.Iio 0) = 0 ∧
+      ∀ t, 0 ≤ t →
+        f t = L + ∫ p, Real.exp (-(t * p)) ∂μ₀ := by
+  exact sorry
+
+/-- **CM Laplace representation** (Chafaï 2013 argument). For a CM function
+`f` with limit `L ≥ 0` at infinity, there exists a finite positive measure
+`μ₀` on `[0, ∞)` with `f(t) = L + ∫ e^{-tp} dμ₀(p)`.
+
+The proof factors into sorry-free structural lemmas (support, mass
+preservation) and two sorry'd analytic steps:
+  1. `cm_measure_finite_mass` — total mass bound from Taylor's formula
+  2. `cm_prokhorov_and_verify` — Prokhorov + limit identification
+
+Mathlib tools for resolving the sorry's:
+  - `isCompact_setOf_finiteMeasure_mass_le_compl_isCompact_le` (Prokhorov)
+  - `IsCompact.isSeqCompact` (compact → sequentially compact)
+  - `FiniteMeasure.tendsto_iff_forall_integral_tendsto` (weak convergence)
+  - `taylor_integral_remainder` (proved above, sorry-free) -/
 theorem cm_laplace_representation (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
     (L : ℝ) (hL : Filter.Tendsto f Filter.atTop (nhds L)) (hL_nn : 0 ≤ L) :
     ∃ (μ₀ : Measure ℝ), IsFiniteMeasure μ₀ ∧ μ₀ (Set.Iio 0) = 0 ∧
       ∀ t, 0 ≤ t → f t = L + ∫ p, Real.exp (-(t * p)) ∂μ₀ := by
-  /-
-  Proof (Chafaï 2013): For each n ≥ 2, the pushforward
-    σ̃_n := Measure.map ((n-1)/·) (cm_measure f n)
-  is a finite measure on [0,∞) with total mass ≤ f(0) - L
-  (from taylor_integral_remainder + boundary term decay for CM functions).
-
-  The kernel after pushforward is φ_n(xp) = (1 - xp/(n-1))_+^{n-1} → e^{-xp}
-  uniformly on compacts.
-
-  Prokhorov step (Mathlib: isCompact_setOf_finiteMeasure_mass_le_compl_isCompact_le):
-    The set {σ̃_n} has bounded mass and satisfies the tightness condition
-    σ̃_n(Icc(-K)(K)^c) → 0 as K → ∞ uniformly in n (since σ̃_n supported on [0,∞)
-    with bounded mass). By Prokhorov, this set has compact closure.
-
-  Sequential compactness (Mathlib: IsCompact.isSeqCompact):
-    Extract σ̃_{n_k} → μ₀ weakly (FiniteMeasure ℝ is first-countable via
-    the Lévy-Prokhorov metric).
-
-  Portmanteau (Mathlib: tendsto_of_forall_isClosed_limsup_le):
-    For each x ≥ 0: ∫ φ_{n_k}(xp) dσ̃_{n_k}(p) → ∫ e^{-xp} dμ₀(p)
-    using uniform convergence φ_n → e^{-·} + dominated convergence
-    (φ_n ≤ 1 on support, measures have bounded mass).
-
-  This gives f(x) = L + ∫ e^{-xp} dμ₀(p).
-  -/
-  exact sorry
+  have hmass : ∀ n, 2 ≤ n → IsFiniteMeasure (cm_measure f n) ∧
+      (cm_measure f n) Set.univ ≤ ENNReal.ofReal (f 0 - L) :=
+    fun n hn => cm_measure_finite_mass f hcm n hn L hL
+  have hsupp : ∀ n, 2 ≤ n → (cm_rescaled f n) (Set.Iio 0) = 0 :=
+    fun n hn => cm_rescaled_Iio_zero f n hn
+  exact cm_prokhorov_and_verify f hcm L hL hL_nn hmass hsupp
 
 /-- **Bernstein's theorem** (1928). Every completely monotone function on `[0, ∞)` is
 the Laplace transform of a finite positive measure on `[0, ∞)`.
