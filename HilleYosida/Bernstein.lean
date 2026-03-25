@@ -34,6 +34,35 @@ def IsCompletelyMonotone (f : ℝ → ℝ) : Prop :=
   ∀ (n : ℕ) (t : ℝ), 0 ≤ t →
     0 ≤ (-1 : ℝ) ^ n * iteratedDerivWithin n f (Set.Ici 0) t
 
+/-! ## Basic properties of CM functions -/
+
+/-- A CM function is nonneg (n=0 case). -/
+lemma IsCompletelyMonotone.nonneg (hcm : IsCompletelyMonotone f) (t : ℝ) (ht : 0 ≤ t) :
+    0 ≤ f t := by
+  have := hcm.2 0 t ht
+  simp [iteratedDerivWithin_zero] at this
+  exact this
+
+/-- A CM function is non-increasing on [0, ∞) (n=1 case gives f' ≤ 0). -/
+lemma IsCompletelyMonotone.deriv_nonpos (hcm : IsCompletelyMonotone f) (t : ℝ) (ht : 0 ≤ t) :
+    iteratedDerivWithin 1 f (Set.Ici 0) t ≤ 0 := by
+  have := hcm.2 1 t ht
+  simp only [pow_one] at this
+  linarith
+
+/-- A CM function is bounded by f(0) on [0, ∞). -/
+lemma IsCompletelyMonotone.bounded (hcm : IsCompletelyMonotone f) (t : ℝ) (ht : 0 ≤ t) :
+    f t ≤ f 0 := by
+  -- f is non-increasing and continuous, so f(t) ≤ f(0)
+  sorry
+
+/-- The n-th derivative of a CM function is also CM (with sign (-1)^n). -/
+lemma IsCompletelyMonotone.deriv_cm (hcm : IsCompletelyMonotone f) :
+    IsCompletelyMonotone (fun t => -iteratedDerivWithin 1 f (Set.Ici 0) t) := by
+  sorry
+
+/-! ## Bernstein's Theorem -/
+
 /-- **Bernstein's theorem** (1928).
 
 A function `f : [0, ∞) → ℝ` is completely monotone if and only if it is
@@ -41,9 +70,16 @@ the Laplace transform of a finite positive measure on `[0, ∞)`:
 
   `f(t) = ∫₀^∞ e^{-tp} dμ(p)`  for all `t ≥ 0`.
 
-Finiteness follows from `f(0) = μ([0,∞)) < ∞`.
+Proof strategy (Chafaï 2013, corrected by Gemini review):
+1. Taylor remainder: `f(x) = ∫ (1-x/t)_+^{n-1} dσ_n(t)` where
+   `dσ_n(t) = (-1)^n/(n-1)! t^{n-1} f^{(n)}(t) dt` (positive by CM)
+2. Pushforward: `p = (n-1)/t` gives kernel `(1-xp/(n-1))^{n-1} → e^{-xp}`
+3. Total variation: `|σ̃_n| = f(0) - f(∞)` (uniform bound)
+4. Prokhorov: extract weakly convergent subsequence `σ̃_{n_k} → μ`
+5. Uniform convergence `φ_n → e^{-x}` + Portmanteau → `f(x) = ∫ e^{-xp} dμ(p)`
 
-Ref: Bernstein (1928); Widder, "The Laplace Transform" Ch. IV. -/
+Ref: Bernstein (1928); Widder, "The Laplace Transform" Ch. IV;
+Chafaï (2013) blog post. -/
 axiom bernstein_theorem (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f) :
     ∃ (μ : Measure ℝ),
       IsFiniteMeasure μ ∧
