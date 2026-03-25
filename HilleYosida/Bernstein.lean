@@ -167,6 +167,13 @@ lemma IsCompletelyMonotone.integral_neg_deriv (hcm : IsCompletelyMonotone f)
   rw [intervalIntegral.integral_neg]
   linarith
 
+/-- The integral of `-f'` on `[0, T]` equals `f(0) - f(T)` and is bounded by `f(0)`. -/
+lemma IsCompletelyMonotone.integral_mass (hcm : IsCompletelyMonotone f)
+    (T : ℝ) (hT : 0 < T) :
+    ∫ t in (0 : ℝ)..T,
+      -iteratedDerivWithin 1 f (Icc 0 T) t = f 0 - f T := by
+  linarith [IsCompletelyMonotone.integral_neg_deriv hcm 0 T le_rfl hT]
+
 /-- **Bernstein's theorem** (1928). Every completely monotone function on `[0, ∞)` is
 the Laplace transform of a finite positive measure on `[0, ∞)`.
 
