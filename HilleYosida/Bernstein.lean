@@ -503,13 +503,50 @@ lemma cm_measure_finite_mass (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
     (hL : Filter.Tendsto f Filter.atTop (nhds L)) :
     IsFiniteMeasure (cm_measure f n) ∧
     (cm_measure f n) Set.univ ≤ ENNReal.ofReal (f 0 - L) := by
+  have hn0 : n ≠ 0 := by omega
+  -- cm_density is continuous on [0,∞)
+  have hcont : ContinuousOn (cm_density f n) (Set.Ici 0) := by
+    unfold cm_density; simp only [hn0, ↓reduceIte]
+    exact ((continuousOn_const.mul
+      ((continuousOn_pow _).mono fun _ _ => trivial)).mul
+      (hcm.1.continuousOn_iteratedDerivWithin le_top (uniqueDiffOn_Ici 0)))
   -- IBP recursion: ∫_0^T ρ_n ≤ f(0) - f(T) ≤ f(0) - L
+  -- (each IBP step adds a nonpositive boundary term by CM sign condition)
   have hbound : ∀ T, 0 < T →
       ∫ t in (0 : ℝ)..T, cm_density f n t ≤ f 0 - L := by
-    sorry -- IBP recursion (~20 lines)
+    sorry -- IBP recursion: I_k = B_k + I_{k-1}, B_k ≤ 0, I_1 = f(0)-f(T)
+  -- cm_density integrable on (0,∞) from bounded interval integrals
+  have hint : IntegrableOn (cm_density f n) (Set.Ioi 0) := by
+    apply integrableOn_Ioi_of_intervalIntegral_norm_bounded (f 0 - L) 0
+      (l := Filter.atTop) (b := id)
+    · intro T
+      exact (hcont.mono Set.Icc_subset_Ici_self).integrableOn_compact isCompact_Icc
+        |>.mono_set Set.Ioc_subset_Icc_self
+    · exact Filter.tendsto_id
+    · filter_upwards [Filter.eventually_gt_atTop 0] with T hT; simp only [id]
+      calc ∫ t in (0 : ℝ)..T, ‖cm_density f n t‖
+          = ∫ t in (0 : ℝ)..T, cm_density f n t := by
+            apply intervalIntegral.integral_congr_ae; apply ae_of_all
+            intro t ht; rw [uIoc_of_le (le_of_lt hT)] at ht
+            rw [Real.norm_eq_abs, abs_of_nonneg (cm_density_nonneg hcm n t ht.1)]
+        _ ≤ f 0 - L := hbound T hT
+  -- IsFiniteMeasure from integrability
+  have hfin : IsFiniteMeasure (cm_measure f n) := by
+    unfold cm_measure
+    exact isFiniteMeasure_withDensity_ofReal hint.hasFiniteIntegral
+  -- Mass bound: lintegral = ofReal(integral) ≤ ofReal(f(0) - L)
   have hmass : (cm_measure f n) Set.univ ≤ ENNReal.ofReal (f 0 - L) := by
-    sorry -- monotone convergence from hbound (~15 lines)
-  exact ⟨⟨lt_of_le_of_lt hmass ENNReal.ofReal_lt_top⟩, hmass⟩
+    change (volume.restrict (Set.Ioi 0)).withDensity
+      (fun t => ENNReal.ofReal (cm_density f n t)) Set.univ ≤ _
+    rw [withDensity_apply _ MeasurableSet.univ]; simp only [Measure.restrict_univ]
+    rw [← ofReal_integral_eq_lintegral_ofReal hint
+      ((ae_restrict_mem measurableSet_Ioi).mono fun t (ht : 0 < t) =>
+        cm_density_nonneg hcm n t ht)]
+    exact ENNReal.ofReal_le_ofReal
+      (le_of_tendsto (intervalIntegral_tendsto_integral_Ioi 0 hint
+        Filter.tendsto_id) (Filter.eventually_atTop.mpr
+          ⟨1, fun T hT => hbound T (by linarith)⟩))
+  exact ⟨hfin, hmass⟩
 
 /-! ### Sub-lemmas for the Prokhorov + Portmanteau argument -/
 
