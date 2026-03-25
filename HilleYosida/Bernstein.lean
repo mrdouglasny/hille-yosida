@@ -363,12 +363,11 @@ lemma bernstein_packaging {f : ℝ → ℝ} {L : ℝ} (hL : 0 ≤ L)
       ↓reduceIte, mul_zero, hsupp₀, add_zero]
   · intro t ht
     rw [hrep t ht]
-    -- L + ∫ dμ₀ = ∫ d(μ₀ + L·δ₀) via integral_add_measure + integral_dirac
-    have h1 : Integrable (fun p => Real.exp (-(t * p))) μ₀ := sorry
-    have h2 : Integrable (fun p => Real.exp (-(t * p)))
-        ((ENNReal.ofReal L) • Measure.dirac (0 : ℝ)) := sorry
-    -- ∫ e^{-tp} d(μ₀ + L·δ₀) = ∫ e^{-tp} dμ₀ + L·e^0 = ∫ dμ₀ + L
-    -- (integral_add_measure + integral_smul_measure + integral_dirac)
+    -- ∫ e^{-tp} d(μ₀ + L·δ₀) = ∫ e^{-tp} dμ₀ + L
+    set ν := (ENNReal.ofReal L) • Measure.dirac (0 : ℝ)
+    -- ∫ e^{-tp} d(μ₀ + ν) = ∫ e^{-tp} dμ₀ + ∫ e^{-tp} dν = ∫ dμ₀ + L
+    -- via integral_add_measure + integral_smul_measure + integral_dirac
+    -- (blocked on ∂(c • μ) parsing ambiguity in Lean 4)
     sorry
 
 /-- **Bernstein's theorem** (1928). Every completely monotone function on `[0, ∞)` is
