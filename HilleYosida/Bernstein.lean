@@ -939,7 +939,8 @@ private lemma finite_measure_subseq_limit
     (σ : ℕ → Measure ℝ) (C : ℝ)
     (hfin : ∀ n, IsFiniteMeasure (σ n))
     (hmass : ∀ n, (σ n) Set.univ ≤ ENNReal.ofReal C)
-    (hsupp : ∀ n, (σ n) (Set.Iio 0) = 0) :
+    (hsupp : ∀ n, (σ n) (Set.Iio 0) = 0)
+    (htight : ∀ ε, 0 < ε → ∃ K : ℝ, ∀ n, (σ n) (Set.Ioi K) ≤ ENNReal.ofReal ε) :
     ∃ (μ₀ : Measure ℝ) (φ : ℕ → ℕ), IsFiniteMeasure μ₀ ∧ StrictMono φ ∧
       μ₀ (Set.Iio 0) = 0 ∧
       μ₀ Set.univ ≤ ENNReal.ofReal C ∧
@@ -1170,8 +1171,10 @@ private lemma prokhorov_limit_identification (f : ℝ → ℝ) (hcm : IsComplete
       f x - L = ∫ p, bernstein_kernel (n + 2) x p ∂(σ n) :=
     fun n hn2 x hx => hidentity (n + 2) hn2 x hx
   -- Step 1: Prokhorov extraction — get subsequence σ_{φ(k)} → μ₀
+  have htight_σ : ∀ ε, 0 < ε → ∃ K : ℝ, ∀ n, (σ n) (Set.Ioi K) ≤ ENNReal.ofReal ε := by
+    sorry -- Tightness: from first moment bound ∫ p dσ_n ≤ -f'(0) + Markov
   obtain ⟨μ₀, φ, hfin_μ, hφ_mono, hsupp_μ, hmass_μ, hweak⟩ :=
-    finite_measure_subseq_limit σ (f 0 - L) hfin_σ hmass_σ hsupp_σ
+    finite_measure_subseq_limit σ (f 0 - L) hfin_σ hmass_σ hsupp_σ htight_σ
   -- Step 2: Verify the Laplace identity via diagonal convergence
   refine ⟨μ₀, hfin_μ, hsupp_μ, fun t ht => ?_⟩
   -- We need: f t = L + ∫ e^{-tp} dμ₀, i.e., f t - L = ∫ e^{-tp} dμ₀
