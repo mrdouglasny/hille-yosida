@@ -253,6 +253,11 @@ lemma cm_density_nonneg (hcm : IsCompletelyMonotone f) (n : ℕ)
       _ ≥ 0 := mul_nonneg (div_nonneg (pow_nonneg (le_of_lt ht) _)
           (le_of_lt hfact_pos)) hcm_sign
 
+/-- For `n = 1`, the density simplifies to `-f'(t)`. -/
+lemma cm_density_one (t : ℝ) :
+    cm_density f 1 t = -iteratedDerivWithin 1 f (Set.Ici 0) t := by
+  simp [cm_density]
+
 /-- The total mass `∫₀ᵀ (-f') dt → f(0) - L` as `T → ∞`, where `L = lim f(t)`.
 This is the key uniform bound for the tightness argument in Bernstein's theorem. -/
 lemma IsCompletelyMonotone.tendsto_total_mass
