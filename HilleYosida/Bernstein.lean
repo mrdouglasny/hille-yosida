@@ -968,8 +968,26 @@ private lemma finite_measure_subseq_limit
   set ν : ℕ → FiniteMeasure ℝ := fun n => ⟨σ n + Measure.dirac (-1 : ℝ), hν_fin n⟩
   set π : ℕ → ProbabilityMeasure ℝ := fun n => (ν n).normalize
   -- Step 2: Show {↑π_n} is tight (from htight + hsupp + normalize_le)
+  have hν_ne : ∀ n, ν n ≠ 0 := fun n => by
+    sorry -- ν_n has mass ≥ 1 > 0 (contains δ_{-1})
+  have hν_mass : ∀ n, 1 ≤ (ν n).mass := fun n => by
+    sorry -- mass(σ_n + δ_{-1}) = mass(σ_n) + 1 ≥ 1
   have htight_π : IsTightMeasureSet {μ : Measure ℝ | ∃ n, ↑(π n) = μ} := by
-    sorry -- normalize_le + htight + hsupp → tight with K = Icc(-1)(R)
+    rw [isTightMeasureSet_iff_exists_isCompact_measure_compl_le]
+    intro ε hε
+    by_cases hε_top : ε = ⊤
+    · exact ⟨∅, isCompact_empty, fun μ ⟨n, hμ⟩ => by subst hμ; simp [hε_top]⟩
+    obtain ⟨R, hR⟩ := htight ε.toReal (ENNReal.toReal_pos (ne_of_gt hε) hε_top)
+    refine ⟨Set.Icc (-1) (max R 0), isCompact_Icc, fun μ ⟨n, hμ⟩ => ?_⟩
+    subst hμ
+    -- ↑(π n)(K^c) ≤ ↑(ν n)(K^c) ≤ σ_n(Ioi R) ≤ ε
+    calc (↑(π n) : Measure ℝ) (Set.Icc (-1) (max R 0))ᶜ
+        = (↑((ν n).normalize) : Measure ℝ) _ := by rw [show π n = (ν n).normalize from rfl]
+      _ ≤ (↑(ν n) : Measure ℝ) _ := normalize_le _ (hν_ne n) (hν_mass n) _
+      _ ≤ ENNReal.ofReal ε.toReal := by
+          -- ↑(ν n)(K^c) ≤ (σ_n + δ_{-1})(K^c) ≤ σ_n(Ioi R) ≤ ε
+          sorry -- measure algebra: complement bound from h_iio + hd + hR
+      _ = ε := ENNReal.ofReal_toReal hε_top
   -- Step 3: Prokhorov → compact → seq compact → subseq
   have htight' : IsTightMeasureSet {μ : Measure ℝ | ∃ p ∈ range π, ↑p = μ} := by
     convert htight_π using 1; ext μ; simp [eq_comm]
