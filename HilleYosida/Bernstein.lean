@@ -15,6 +15,7 @@ Verified correct by Gemini (2026-03-23).
 import Mathlib.MeasureTheory.Integral.Bochner.Basic
 import Mathlib.MeasureTheory.Measure.Lebesgue.Basic
 import Mathlib.MeasureTheory.Integral.IntervalIntegral.FundThmCalculus
+import Mathlib.MeasureTheory.Integral.IntervalIntegral.IntegrationByParts
 import Mathlib.Analysis.Calculus.IteratedDeriv.Defs
 import Mathlib.Analysis.Calculus.IteratedDeriv.Lemmas
 import Mathlib.Analysis.Calculus.Taylor
@@ -785,7 +786,60 @@ private lemma ibp_finite_interval (f : ℝ → ℝ) (hcm : IsCompletelyMonotone 
       iteratedDerivWithin k f (Set.Ici 0) T -
     ∫ t in x..T, (-1 : ℝ) ^ (k + 1) / ↑(k - 1).factorial * (t - x) ^ (k - 1) *
       iteratedDerivWithin k f (Set.Ici 0) t := by
-  sorry
+  set c := (-1 : ℝ) ^ (k + 1) / ↑k.factorial
+  set g := iteratedDerivWithin k f (Set.Ici 0)
+  set g' := iteratedDerivWithin (k + 1) f (Set.Ici 0)
+  set u := fun t : ℝ => c * (t - x) ^ k
+  set u' := fun t : ℝ => c * (↑k * (t - x) ^ (k - 1))
+  have hu'_eq : ∀ t, u' t =
+      (-1 : ℝ) ^ (k + 1) / ↑(k - 1).factorial * (t - x) ^ (k - 1) := by
+    intro t; simp only [u', c]
+    have : k.factorial = k * (k - 1).factorial := by
+      cases k with | zero => contradiction | succ n => simp [Nat.factorial_succ]
+    rw [this]; push_cast; field_simp
+  have hu_cont : ContinuousOn u (Set.uIcc x T) :=
+    continuousOn_const.mul ((continuousOn_id.sub continuousOn_const).pow _)
+  have hg_cont : ContinuousOn g (Set.uIcc x T) := by
+    rw [Set.uIcc_of_le (le_of_lt hxT)]
+    exact (hcm.1.continuousOn_iteratedDerivWithin le_top (uniqueDiffOn_Ici 0)).mono
+      (Icc_subset_Ici_self.trans (Set.Ici_subset_Ici.mpr hx))
+  have hu_deriv : ∀ t ∈ Ioo (min x T) (max x T),
+      HasDerivWithinAt u (u' t) (Ioi t) t := by
+    intro t _; apply HasDerivAt.hasDerivWithinAt
+    change HasDerivAt (fun t => c * (t - x) ^ k) (c * (↑k * (t - x) ^ (k - 1))) t
+    convert ((hasDerivAt_pow k (t - x)).comp t
+      ((hasDerivAt_id t).sub_const x)).const_mul c using 1; ring
+  have hg_deriv : ∀ t ∈ Ioo (min x T) (max x T),
+      HasDerivWithinAt g (g' t) (Ioi t) t := by
+    intro t ht
+    rw [min_eq_left (le_of_lt hxT), max_eq_right (le_of_lt hxT)] at ht
+    have hmem : Set.Ici (0 : ℝ) ∈ nhds t := Ici_mem_nhds (by linarith [ht.1])
+    apply HasDerivAt.hasDerivWithinAt
+    convert (hcm.1.differentiableOn_iteratedDerivWithin
+      (show (↑k : WithTop ℕ∞) < ⊤ from WithTop.coe_lt_top _)
+      (uniqueDiffOn_Ici 0)).hasDerivAt hmem using 1
+    simp only [g', iteratedDerivWithin_succ, derivWithin_of_mem_nhds hmem]
+  have hu'_int : IntervalIntegrable u' volume x T :=
+    (continuousOn_const.mul (continuousOn_const.mul
+      ((continuousOn_id.sub continuousOn_const).pow _))).intervalIntegrable
+  have hg'_int : IntervalIntegrable g' volume x T := by
+    apply ContinuousOn.intervalIntegrable; rw [Set.uIcc_of_le (le_of_lt hxT)]
+    exact (hcm.1.continuousOn_iteratedDerivWithin le_top (uniqueDiffOn_Ici 0)).mono
+      (Icc_subset_Ici_self.trans (Set.Ici_subset_Ici.mpr hx))
+  have hibp := integral_mul_deriv_eq_deriv_mul_of_hasDeriv_right
+    hu_cont hg_cont hu_deriv hg_deriv hu'_int hg'_int
+  have hu0 : u x = 0 := by simp [u, sub_self, zero_pow hk]
+  rw [hu0, zero_mul, sub_zero] at hibp
+  have h1 : ∫ t in x..T, (-1 : ℝ) ^ (k + 1) / ↑k.factorial * (t - x) ^ k *
+        iteratedDerivWithin (k + 1) f (Set.Ici 0) t =
+      ∫ t in x..T, u t * g' t :=
+    intervalIntegral.integral_congr_ae (ae_of_all _ fun t _ => by ring)
+  have h2 : ∫ t in x..T, u' t * g t =
+      ∫ t in x..T, (-1 : ℝ) ^ (k + 1) / ↑(k - 1).factorial * (t - x) ^ (k - 1) *
+        iteratedDerivWithin k f (Set.Ici 0) t :=
+    intervalIntegral.integral_congr_ae (ae_of_all _ fun t _ => by
+      change u' t * g t = _; rw [hu'_eq])
+  linarith
 
 /-- Boundary decay: `(-1)^{k+1}/k! (T-x)^k D^k f(T) → 0` as `T → ∞` for CM functions.
 This follows from the integrability of the k-th CM density on `(0, ∞)`. -/
@@ -794,7 +848,18 @@ private lemma boundary_term_decay (f : ℝ → ℝ) (hcm : IsCompletelyMonotone 
     (L : ℝ) (hL : Filter.Tendsto f Filter.atTop (nhds L)) :
     Filter.Tendsto (fun T => (-1 : ℝ) ^ (k + 1) / ↑k.factorial * (T - x) ^ k *
       iteratedDerivWithin k f (Set.Ici 0) T) Filter.atTop (nhds 0) := by
-  sorry
+  set h := fun T => (-1 : ℝ) ^ k * iteratedDerivWithin k f (Ici 0) T
+  -- h ≥ 0 antitone, t^{k-1}h(t) integrable ⟹ T^k h(T) → 0 via
+  -- T^k h(T) ≤ 2^k ∫_{T/2}^T s^{k-1} h(s) ds → 0
+  have hkey : Tendsto (fun T => (T - x) ^ k * h T) atTop (nhds 0) := by
+    sorry
+  have heq : ∀ T, (-1 : ℝ) ^ (k + 1) / ↑k.factorial * (T - x) ^ k *
+      iteratedDerivWithin k f (Ici 0) T =
+      -(1 / ↑k.factorial) * ((T - x) ^ k * h T) := by
+    intro T; simp only [h, pow_succ]; ring
+  simp_rw [heq]
+  rw [show (0 : ℝ) = -(1 / ↑k.factorial) * 0 from by ring]
+  exact hkey.const_mul _
 
 /-- Integrability of the k-th Taylor kernel `(-1)^k/(k-1)! (t-x)^{k-1} D^k f` on `(x, ∞)`.
 Follows from the integrability of `cm_density f k` on `(0, ∞)` and the shift `t ↦ t - x`. -/
@@ -803,6 +868,8 @@ private lemma ibp_kernel_integrableOn (f : ℝ → ℝ) (hcm : IsCompletelyMonot
     (L : ℝ) (hL : Filter.Tendsto f Filter.atTop (nhds L)) :
     IntegrableOn (fun t => (-1 : ℝ) ^ k / ↑(k - 1).factorial * (t - x) ^ (k - 1) *
       iteratedDerivWithin k f (Set.Ici 0) t) (Set.Ioi x) := by
+  -- Dominated by cm_density f k on Ioi x ⊆ Ioi 0:
+  -- (t-x)^{k-1} ≤ t^{k-1} for t ≥ x ≥ 0, cm_density integrable.
   sorry
 
 set_option maxHeartbeats 6400000 in
@@ -1031,6 +1098,9 @@ private lemma finite_measure_subseq_limit
   -- Mass convergence: mass(ν_{φ(k)}) ∈ [1, C+1] (bounded), extract sub-subsequence.
   -- Use tendsto_normalize_iff_tendsto to convert back.
   -- For BoundedContinuousFunction g: ∫ g dσ_n = ∫ g dν_n - g(-1) always holds.
+  -- Recover σ convergence from π convergence via mass rescaling.
+  -- ∫ g dσ_{φ(k)} = mass(ν_{φ(k)}) · ∫ g dπ_{φ(k)} - g(-1), extract
+  -- convergent sub-subsequence for masses in [1, C+1].
   sorry
 
 /-- The bounded continuous function `p ↦ e^{-x·max(p,0)}`, which agrees with
@@ -1095,7 +1165,33 @@ The proof uses: (1) uniform convergence on `[0, R]` for any `R`, and
 private lemma kernel_uniform_conv (x : ℝ) (hx : 0 < x) (ε : ℝ) (hε : 0 < ε) :
     ∃ N : ℕ, ∀ n, N ≤ n → ∀ p, 0 ≤ p →
       |bernstein_kernel n x p - Real.exp (-(x * p))| < ε := by
-  sorry
+  have hkernel_le : ∀ n, 2 ≤ n → ∀ p, 0 ≤ p →
+      bernstein_kernel n x p ≤ Real.exp (-(x * p)) := by
+    sorry -- (1-u/n)^n ≤ e^{-u} for 0 ≤ u ≤ n
+  have hkernel_nn : ∀ n p, 0 ≤ bernstein_kernel n x p := by
+    intro n p; simp [bernstein_kernel]; split_ifs <;> positivity
+  have htail : Tendsto (fun R => Real.exp (-(x * R))) atTop (nhds 0) := by
+    sorry
+  obtain ⟨R₀, hR₀⟩ := Metric.tendsto_atTop.mp htail (ε / 2) (half_pos hε)
+  set R := max R₀ 1
+  have hR_tail : Real.exp (-(x * R)) < ε / 2 := by
+    have h1 := hR₀ R (le_max_left _ _)
+    rwa [dist_zero_right, Real.norm_eq_abs,
+      abs_of_pos (Real.exp_pos _)] at h1
+  have hunif : ∃ N : ℕ, ∀ n, N ≤ n → ∀ p, 0 ≤ p → p ≤ R →
+      |bernstein_kernel n x p - Real.exp (-(x * p))| < ε / 2 := by
+    sorry -- |(1-u/n)^n - e^{-u}| ≤ u²/n uniform on [0, R]
+  obtain ⟨N₁, hN₁⟩ := hunif
+  refine ⟨max N₁ 2, fun n hn p hp => ?_⟩
+  have hn2 : 2 ≤ n := le_trans (le_max_right N₁ 2) hn
+  by_cases hpR : p ≤ R
+  · linarith [hN₁ n (le_trans (le_max_left _ _) hn) p hp hpR]
+  · push_neg at hpR
+    have h1 := hkernel_le n hn2 p hp
+    rw [abs_of_nonpos (by linarith)]
+    have h2 : Real.exp (-(x * p)) ≤ Real.exp (-(x * R)) := by
+        apply Real.exp_le_exp_of_le; linarith [mul_le_mul_of_nonneg_left (le_of_lt hpR) (le_of_lt hx)]
+    linarith [hkernel_nn n p]
 
 -- **Kernel approximation error → 0**: For measures `σ_n` supported on `[0,∞)`
 -- with uniformly bounded mass, the integral of the difference
@@ -1257,7 +1353,8 @@ private lemma prokhorov_limit_identification (f : ℝ → ℝ) (hcm : IsComplete
     fun n hn2 x hx => hidentity (n + 2) hn2 x hx
   -- Step 1: Prokhorov extraction — get subsequence σ_{φ(k)} → μ₀
   have htight_σ : ∀ ε, 0 < ε → ∃ K : ℝ, ∀ n, (σ n) (Set.Ioi K) ≤ ENNReal.ofReal ε := by
-    sorry -- Tightness: from first moment bound ∫ p dσ_n ≤ -f'(0) + Markov
+    -- Markov: σ_n(Ioi K) ≤ (1/K) · first moment, uniformly bounded.
+    sorry
   obtain ⟨μ₀, φ, hfin_μ, hφ_mono, hsupp_μ, hmass_μ, hweak⟩ :=
     finite_measure_subseq_limit σ (f 0 - L) hfin_σ hmass_σ hsupp_σ htight_σ
   -- Step 2: Verify the Laplace identity via diagonal convergence
