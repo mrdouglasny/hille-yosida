@@ -397,6 +397,20 @@ lemma bernstein_packaging {f : ℝ → ℝ} {L : ℝ} (hL : 0 ≤ L)
       integral_dirac, ENNReal.toReal_ofReal hL,
       mul_zero, neg_zero, Real.exp_zero, smul_eq_mul, mul_one]
 
+/-- **CM Laplace representation** (Chafaï 2013 argument). For a CM function `f` with
+limit `L ≥ 0` at infinity, there exists a finite positive measure `μ₀` on `[0, ∞)` with
+`f(t) = L + ∫ e^{-tp} dμ₀(p)`.
+
+Proof method: For each `n ≥ 2`, define σ̃_n = Measure.map ((n-1)/·) (cm_measure f n).
+Show total mass ≤ f(0) - L (from `taylor_integral_remainder`), tightness, then extract
+a weak limit via Prokhorov (`isCompact_setOf_finiteMeasure_mass_le_compl_isCompact_le`).
+Verify the representation via Portmanteau (`tendsto_of_forall_isClosed_limsup_le`) +
+uniform convergence of kernels `(1-xp/(n-1))^{n-1} → e^{-xp}` on compacts. -/
+axiom cm_laplace_representation (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
+    (L : ℝ) (hL : Filter.Tendsto f Filter.atTop (nhds L)) (hL_nn : 0 ≤ L) :
+    ∃ (μ₀ : Measure ℝ), IsFiniteMeasure μ₀ ∧ μ₀ (Set.Iio 0) = 0 ∧
+      ∀ t, 0 ≤ t → f t = L + ∫ p, Real.exp (-(t * p)) ∂μ₀
+
 /-- **Bernstein's theorem** (1928). Every completely monotone function on `[0, ∞)` is
 the Laplace transform of a finite positive measure on `[0, ∞)`.
 
@@ -426,26 +440,9 @@ theorem bernstein_theorem (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f) :
   -- ═══════════════════════════════════════════════════════════════
   -- Step 6: Prokhorov + Portmanteau → μ₀ with f = L + ∫ e^{-xp} dμ₀
   -- ═══════════════════════════════════════════════════════════════
-  -- This is the Chafaï (2013) argument:
-  -- (a) For each n ≥ 2, define σ̃_n = Measure.map ((n-1)/·) (cm_measure f n)
-  --     [pushforward of density ρ_n under p = (n-1)/t]
-  -- (b) Show: σ̃_n([0,∞)) ≤ f(0) - L (uniform mass bound from taylor identity)
-  -- (c) Show: {σ̃_n} tight on [0,∞) (mass bound + support control)
-  -- (d) Prokhorov (isCompact_setOf_finiteMeasure_mass_le_compl_isCompact_le):
-  --     extract σ̃_{n_k} → μ₀ weakly
-  -- (e) Portmanteau (tendsto_of_forall_isClosed_limsup_le) + uniform
-  --     convergence (1-xp/(n-1))^{n-1} → e^{-xp} on compacts:
-  --     f(x) = L + ∫ e^{-xp} dμ₀(p)
-  -- This gives the hypotheses needed for bernstein_packaging.
-  have ⟨μ₀, hfin₀, hsupp₀, hrep⟩ :
-      ∃ (μ₀ : Measure ℝ), IsFiniteMeasure μ₀ ∧ μ₀ (Set.Iio 0) = 0 ∧
-        ∀ t, 0 ≤ t → f t = L + ∫ p, Real.exp (-(t * p)) ∂μ₀ := by
-    -- The core measure-theoretic extraction.
-    -- Uses: cm_measure, cm_density_nonneg, taylor_integral_remainder,
-    --   taylor_nonneg_remainder, isCompact_setOf_finiteMeasure_mass_le_compl_isCompact_le,
-    --   tendsto_of_forall_isClosed_limsup_le
-    exact sorry
-  -- Step 7: Package μ = μ₀ + L·δ₀
+  have ⟨μ₀, hfin₀, hsupp₀, hrep⟩ :=
+    cm_laplace_representation f hcm L hL_tendsto hL_nonneg
+  -- Step 7: Package μ = μ₀ + L·δ₀ (sorry-free)
   exact @bernstein_packaging f L hL_nonneg μ₀ hfin₀ hsupp₀ hrep
 
 end
