@@ -53,7 +53,8 @@ lemma IsCompletelyMonotone.deriv_nonpos (hcm : IsCompletelyMonotone f) (t : ℝ)
 /-- A CM function is bounded by f(0) on [0, ∞). -/
 lemma IsCompletelyMonotone.bounded (hcm : IsCompletelyMonotone f) (t : ℝ) (ht : 0 ≤ t) :
     f t ≤ f 0 := by
-  -- f is non-increasing and continuous, so f(t) ≤ f(0)
+  -- f is non-increasing: f' ≤ 0 on [0,∞) and f is C^∞, so f(t) ≤ f(0).
+  -- This follows from the mean value theorem.
   sorry
 
 /-- The n-th derivative of a CM function is also CM (with sign (-1)^n). -/
@@ -80,6 +81,14 @@ Proof strategy (Chafaï 2013, corrected by Gemini review):
 
 Ref: Bernstein (1928); Widder, "The Laplace Transform" Ch. IV;
 Chafaï (2013) blog post. -/
+-- TODO: Replace this axiom with a proof following Chafaï (2013).
+-- The proof has 5 phases (see docs/plan-bernstein.md):
+-- Phase 2: Taylor remainder with σ_n (integration by parts)
+-- Phase 2b: Pushforward p = (n-1)/t
+-- Phase 3: Total variation bound |σ̃_n| = f(0) - f(∞)
+-- Phase 4: Prokhorov/Helly weak limit
+-- Phase 5: Uniform φ_n → e^{-x} + Portmanteau verification
+-- Estimated: ~150 lines remaining once Phase 1 helpers are done.
 axiom bernstein_theorem (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f) :
     ∃ (μ : Measure ℝ),
       IsFiniteMeasure μ ∧
