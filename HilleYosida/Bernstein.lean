@@ -359,25 +359,29 @@ theorem bernstein_theorem (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f) :
       μ (Set.Iio 0) = 0 ∧
       ∀ (t : ℝ), 0 ≤ t →
         f t = ∫ p, Real.exp (-(t * p)) ∂μ := by
+  -- ═══════════════════════════════════════════════════════════════
+  -- Established infrastructure (all sorry-free):
+  -- ═══════════════════════════════════════════════════════════════
   -- Step 1: f has a limit L ≥ 0 at infinity
   obtain ⟨L, hL_tendsto, hL_nonneg⟩ := IsCompletelyMonotone.tendsto_atTop hcm
-  -- Step 2: For each n, density ρ_n(t) = (-1)^n/(n-1)! · t^{n-1} · f^{(n)}(t) ≥ 0
-  -- and defines a measure σ_n on [0,∞) with total mass f(0) - L.
-  -- The Taylor integral remainder (proved) gives:
-  --   f(T) - taylorPoly(x,T) = ∫_x^T ρ_n(t,T) dt
-  -- The sign condition (taylor_nonneg_remainder, proved) ensures nonnegativity.
-  -- Step 3: Pushforward σ̃_n = map((n-1)/·, σ_n) has kernel
-  --   (1-xp/(n-1))^{n-1} → e^{-xp} uniformly on compacts.
-  -- Step 4: {σ̃_n} is tight (total mass = f(0) - L, uniformly bounded).
-  --   By Prokhorov (isCompact_closure_of_isTightMeasureSet):
-  --   ∃ subsequence σ̃_{n_k} → μ₀ weakly.
-  -- Step 5: By Portmanteau (tendsto_of_forall_isClosed_limsup_le) +
-  --   uniform convergence of kernels (1-xp/(n-1))^{n-1} → e^{-xp}:
-  --   f(x) = L + ∫ e^{-xp} dμ₀(p)
-  -- Step 6: Set μ = μ₀ + L · Measure.dirac 0.
-  --   Then f(x) = ∫ e^{-xp} dμ(p) (using e^{-x·0} = 1).
-  -- Steps 2-6 require ~100 lines of measure theory using Mathlib's
-  -- Prokhorov, Portmanteau, and Measure.withDensity/map infrastructure.
+  -- Step 2: -f' is integrable on (0,∞) with total mass f(0) - L
+  have hint := IsCompletelyMonotone.neg_deriv_integrableOn hcm hL_tendsto
+  have hmass := IsCompletelyMonotone.integral_Ioi_neg_deriv hcm hL_tendsto hint
+  -- Step 3: The density ρ_n is nonneg (cm_density_nonneg)
+  -- Step 4: The Taylor remainder has definite sign (taylor_nonneg_remainder)
+  -- Step 5: f(x) - f(T) = ∫ (-f') dt on each [x,T] (integral_neg_deriv)
+  -- ═══════════════════════════════════════════════════════════════
+  -- Remaining: Prokhorov extraction + Portmanteau verification
+  -- ═══════════════════════════════════════════════════════════════
+  -- For each n ≥ 2, the pushforward σ̃_n = map((n-1)/·, cm_measure f n)
+  -- has total mass f(0) - L and kernel (1-xp/(n-1))^{n-1} → e^{-xp}.
+  -- By Prokhorov (isCompact_closure_of_isTightMeasureSet):
+  --   extract σ̃_{n_k} → μ₀ weakly.
+  -- By Portmanteau (tendsto_of_forall_isClosed_limsup_le) +
+  --   uniform convergence of kernels:
+  --   f(x) = L + ∫ e^{-xp} dμ₀(p).
+  -- Set μ = μ₀ + L · Measure.dirac 0.
+  -- Then f(x) = ∫ e^{-xp} dμ(p) with μ finite and supported on [0,∞).
   exact sorry
 
 end
