@@ -1590,6 +1590,18 @@ private lemma prokhorov_limit_identification (f : ℝ → ℝ) (hcm : IsComplete
        via integral_indicator/setIntegral and ENNReal.le_ofReal_iff_toReal_le.
        The continuity-at-0 step needs ContinuousOn.tendsto or Filter.Tendsto
        from hcm.1.continuousOn. Total: ~35 lines. -/
+    intro ε hε
+    -- Mass identity: (σ n univ).toReal = f 0 - L (from hident at x=0, kernel=1)
+    have hmass_real : ∀ n, (σ n Set.univ).toReal = f 0 - L := by
+      intro n; haveI := hfin_σ n
+      have h1 := hident_σ n (by omega) 0 le_rfl
+      simp [bernstein_kernel, show ¬(n + 2 ≤ 1) from by omega] at h1
+      -- h1 : f 0 - L = ∫ 1 dσ_n = (σ_n).real univ
+      rw [show (σ n).real Set.univ = (σ n Set.univ).toReal from by
+        simp [Measure.real]] at h1
+      linarith
+    -- For the tightness bound, we need ∫ (1 - kernel) = f(0) - f(x₀) and
+    -- this ≥ (1-exp(-x₀K)) · σ(Ioi K). This is ~25 lines of integral manipulation.
     sorry
   obtain ⟨μ₀, φ, hfin_μ, hφ_mono, hsupp_μ, hmass_μ, hweak⟩ :=
     finite_measure_subseq_limit σ (f 0 - L) hfin_σ hmass_σ hsupp_σ htight_σ
