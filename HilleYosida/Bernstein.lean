@@ -365,10 +365,37 @@ lemma bernstein_packaging {f : ℝ → ℝ} {L : ℝ} (hL : 0 ≤ L)
     rw [hrep t ht]
     -- ∫ e^{-tp} d(μ₀ + L·δ₀) = ∫ e^{-tp} dμ₀ + L
     set ν := (ENNReal.ofReal L) • Measure.dirac (0 : ℝ)
-    -- ∫ e^{-tp} d(μ₀ + ν) = ∫ e^{-tp} dμ₀ + ∫ e^{-tp} dν = ∫ dμ₀ + L
-    -- via integral_add_measure + integral_smul_measure + integral_dirac
-    -- (blocked on ∂(c • μ) parsing ambiguity in Lean 4)
-    sorry
+    -- Use let to avoid ∂(c • μ) parsing ambiguity
+    let ν := (ENNReal.ofReal L) • Measure.dirac (0 : ℝ)
+    -- e^{-tp} is integrable: bounded by 1 on support [0,∞) of finite measure
+    have exp_int : ∀ (μ' : Measure ℝ) [IsFiniteMeasure μ'],
+        μ' (Set.Iio 0) = 0 →
+        Integrable (fun p => Real.exp (-(t * p))) μ' := by
+      intro μ' _ hsupp'
+      apply Integrable.mono' (integrable_const (1 : ℝ))
+      · fun_prop
+      · rw [ae_iff]; refine measure_mono_null (fun p hp => ?_) hsupp'
+        simp only [Set.mem_setOf_eq, Real.norm_eq_abs, not_le] at hp
+        rw [Set.mem_Iio]; by_contra hge; push_neg at hge
+        linarith [abs_of_nonneg (Real.exp_pos (-(t * p))).le,
+          Real.exp_le_exp_of_le (neg_nonpos.mpr (mul_nonneg ht hge)),
+          Real.exp_zero]
+    have h1 : Integrable (fun p => Real.exp (-(t * p))) μ₀ :=
+      exp_int μ₀ hsupp₀
+    have h2 : Integrable (fun p => Real.exp (-(t * p))) ν := by
+      haveI : IsFiniteMeasure ν := by
+        constructor; simp only [ν, Measure.smul_apply, smul_eq_mul,
+          Measure.dirac_apply, Set.indicator_univ, Pi.one_apply, mul_one]
+        exact ENNReal.ofReal_lt_top
+      apply exp_int; simp [ν, Measure.smul_apply, Measure.dirac_apply,
+        Set.indicator, Set.mem_Iio, lt_irrefl]
+    show L + ∫ p, Real.exp (-(t * p)) ∂μ₀ = ∫ p, Real.exp (-(t * p)) ∂(μ₀ + ν)
+    rw [integral_add_measure h1 h2]
+    suffices h : ∫ p, Real.exp (-(t * p)) ∂ν = L by linarith
+    rw [@integral_smul_measure ℝ ℝ _ _ _ (Measure.dirac 0)
+      (fun p => Real.exp (-(t * p))) (ENNReal.ofReal L),
+      integral_dirac, ENNReal.toReal_ofReal hL,
+      mul_zero, neg_zero, Real.exp_zero, smul_eq_mul, mul_one]
 
 /-- **Bernstein's theorem** (1928). Every completely monotone function on `[0, ∞)` is
 the Laplace transform of a finite positive measure on `[0, ∞)`.
