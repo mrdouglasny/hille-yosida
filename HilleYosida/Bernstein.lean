@@ -775,6 +775,36 @@ private lemma chafai_kernel_density_eq (f : ℝ → ℝ) (_hcm : IsCompletelyMon
         iteratedDerivWithin n f (Set.Ici 0) t := by ring
     _ = _ := by rw [key]
 
+/-- IBP on `[x, T]`: integrating the `(k+1)`-th order Taylor kernel by parts gives
+a boundary term plus the `k`-th order kernel (with a sign flip). -/
+private lemma ibp_finite_interval (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
+    (k : ℕ) (hk : k ≠ 0) (x T : ℝ) (hx : 0 ≤ x) (hxT : x < T) :
+    ∫ t in x..T, (-1 : ℝ) ^ (k + 1) / ↑k.factorial * (t - x) ^ k *
+      iteratedDerivWithin (k + 1) f (Set.Ici 0) t =
+    (-1 : ℝ) ^ (k + 1) / ↑k.factorial * (T - x) ^ k *
+      iteratedDerivWithin k f (Set.Ici 0) T -
+    ∫ t in x..T, (-1 : ℝ) ^ (k + 1) / ↑(k - 1).factorial * (t - x) ^ (k - 1) *
+      iteratedDerivWithin k f (Set.Ici 0) t := by
+  sorry
+
+/-- Boundary decay: `(-1)^{k+1}/k! (T-x)^k D^k f(T) → 0` as `T → ∞` for CM functions.
+This follows from the integrability of the k-th CM density on `(0, ∞)`. -/
+private lemma boundary_term_decay (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
+    (k : ℕ) (hk : k ≠ 0) (x : ℝ) (hx : 0 ≤ x)
+    (L : ℝ) (hL : Filter.Tendsto f Filter.atTop (nhds L)) :
+    Filter.Tendsto (fun T => (-1 : ℝ) ^ (k + 1) / ↑k.factorial * (T - x) ^ k *
+      iteratedDerivWithin k f (Set.Ici 0) T) Filter.atTop (nhds 0) := by
+  sorry
+
+/-- Integrability of the k-th Taylor kernel `(-1)^k/(k-1)! (t-x)^{k-1} D^k f` on `(x, ∞)`.
+Follows from the integrability of `cm_density f k` on `(0, ∞)` and the shift `t ↦ t - x`. -/
+private lemma ibp_kernel_integrableOn (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
+    (k : ℕ) (hk : 1 ≤ k) (x : ℝ) (hx : 0 ≤ x)
+    (L : ℝ) (hL : Filter.Tendsto f Filter.atTop (nhds L)) :
+    IntegrableOn (fun t => (-1 : ℝ) ^ k / ↑(k - 1).factorial * (t - x) ^ (k - 1) *
+      iteratedDerivWithin k f (Set.Ici 0) t) (Set.Ioi x) := by
+  sorry
+
 set_option maxHeartbeats 6400000 in
 private lemma chafai_repeated_ibp (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
     (n : ℕ) (hn : 1 ≤ n) (x : ℝ) (hx : 0 ≤ x)
@@ -821,7 +851,40 @@ private lemma chafai_repeated_ibp (f : ℝ → ℝ) (hcm : IsCompletelyMonotone 
             (Set.mem_Ici.mpr (le_of_lt ht_pos))]]
       exact hcm.integral_neg_deriv x T hx hxT
     · -- Inductive step: n = k + 1 with k ≥ 1. IBP + boundary decay.
-      sorry
+      have hk1 : 1 ≤ k := Nat.one_le_iff_ne_zero.mpr hk
+      have ih_applied := ih hk1
+      simp only [show k + 1 - 1 = k from by omega]
+      have hintk := ibp_kernel_integrableOn f hcm k hk1 x hx L hL
+      have hintkp1 := ibp_kernel_integrableOn f hcm (k + 1) (by omega) x hx L hL
+      simp only [show k + 1 - 1 = k from by omega] at hintkp1
+      have hibp := fun T (hT : x < T) => ibp_finite_interval f hcm k hk x T hx hT
+      have hbdry := boundary_term_decay f hcm k hk x hx L hL
+      have htend_k : Filter.Tendsto (fun T => ∫ t in x..T,
+          (-1 : ℝ) ^ k / ↑(k - 1).factorial * (t - x) ^ (k - 1) *
+          iteratedDerivWithin k f (Set.Ici 0) t) Filter.atTop (nhds (f x - L)) := by
+        rw [← ih_applied]; exact intervalIntegral_tendsto_integral_Ioi x hintk tendsto_id
+      have hsign : ∀ T, ∫ t in x..T,
+          (-1 : ℝ) ^ (k + 1) / ↑(k - 1).factorial * (t - x) ^ (k - 1) *
+          iteratedDerivWithin k f (Set.Ici 0) t =
+          -(∫ t in x..T, (-1 : ℝ) ^ k / ↑(k - 1).factorial * (t - x) ^ (k - 1) *
+          iteratedDerivWithin k f (Set.Ici 0) t) := by
+        intro T; rw [← intervalIntegral.integral_neg]
+        apply intervalIntegral.integral_congr_ae; apply ae_of_all; intro t _
+        have : (-1 : ℝ) ^ (k + 1) = (-1) ^ k * (-1) := pow_succ (-1) k; rw [this]; ring
+      have htend_sum : Filter.Tendsto (fun T =>
+          (-1 : ℝ) ^ (k + 1) / ↑k.factorial * (T - x) ^ k *
+            iteratedDerivWithin k f (Set.Ici 0) T +
+          ∫ t in x..T, (-1 : ℝ) ^ k / ↑(k - 1).factorial * (t - x) ^ (k - 1) *
+            iteratedDerivWithin k f (Set.Ici 0) t) Filter.atTop (nhds (f x - L)) := by
+        simpa [zero_add] using hbdry.add htend_k
+      have htend_via_ibp : Filter.Tendsto (fun T => ∫ t in x..T,
+          (-1 : ℝ) ^ (k + 1) / ↑k.factorial * (t - x) ^ k *
+          iteratedDerivWithin (k + 1) f (Set.Ici 0) t) Filter.atTop (nhds (f x - L)) :=
+        Tendsto.congr' (Filter.Eventually.mono (Filter.eventually_gt_atTop x) fun T hxT => by
+          have := hibp T hxT; linarith [hsign T]) htend_sum
+      exact tendsto_nhds_unique
+        ((intervalIntegral_tendsto_integral_Ioi x hintkp1 tendsto_id).congr
+          (fun T => by simp [id])) htend_via_ibp
 
 private lemma chafai_identity (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
     (n : ℕ) (hn : 2 ≤ n) (x : ℝ) (hx : 0 ≤ x)
@@ -842,8 +905,15 @@ private lemma chafai_identity (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
       ∫ t in Set.Ioi 0,
         bernstein_kernel n x (((n : ℝ) - 1) / t) * cm_density f n t := by
     unfold cm_measure
-    rw [integral_withDensity_eq_integral_toReal_smul
-      (sorry : Measurable (fun t => ENNReal.ofReal (cm_density f n t)))
+    have hcont_density : ContinuousOn (cm_density f n) (Set.Ici 0) := by
+      unfold cm_density; simp only [hn0, ↓reduceIte]
+      exact ((continuousOn_const.mul
+        ((continuousOn_pow _).mono fun _ _ => trivial)).mul
+        (hcm.1.continuousOn_iteratedDerivWithin le_top (uniqueDiffOn_Ici 0)))
+    rw [integral_withDensity_eq_integral_toReal_smul₀
+      (AEMeasurable.ennreal_ofReal
+        ((hcont_density.mono Set.Ioi_subset_Ici_self).aestronglyMeasurable
+          measurableSet_Ioi |>.aemeasurable))
       (ae_of_all _ fun _ => ENNReal.ofReal_lt_top)]
     exact setIntegral_congr_ae measurableSet_Ioi
       (ae_of_all _ fun t ht => by
@@ -930,17 +1000,25 @@ private lemma tendsto_exp_integral
     (integral_exp_bcf_eq hsupp_μ x hx).symm
   rw [h2]; exact (hweak (exp_bcf x hx)).congr (fun k => (h1 k).symm)
 
-/-- **Kernel approximation error → 0**: For measures `σ_n` supported on `[0,∞)`
-with uniformly bounded mass, the integral of the difference
-`φ_{n+2}(x,·) - e^{-x·}` against `σ_n` tends to zero.
+/-- **Uniform convergence of the Bernstein kernel** on `[0, ∞)` for fixed `x > 0`:
+For any `ε > 0`, eventually in `n`, `|φ_n(x,p) - e^{-xp}| < ε` for ALL `p ≥ 0`.
 
-This uses:
-- `bernstein_kernel_tendsto`: `φ_n(x,p) → e^{-xp}` pointwise for `x,p ≥ 0`
-- Both `φ_n` and `e^{-xp}` are bounded by 1 on `[0,∞)`
-- Uniform mass bound `σ_n(ℝ) ≤ C`
-- The convergence is uniform on each compact `[0,R]`, and the tail
-  `σ_n((R,∞))` can be controlled using tightness of the compact set
-  of measures (from Prokhorov). -/
+The proof uses: (1) uniform convergence on `[0, R]` for any `R`, and
+(2) exponential tail decay: for `p ≥ R`, both `φ_n(x,p) ≤ e^{-xR+o(1)}` and
+`e^{-xp} ≤ e^{-xR}`, so `|φ_n - e^{-xp}| ≤ 2e^{-xR}` which is small for large `R`. -/
+private lemma kernel_uniform_conv (x : ℝ) (hx : 0 < x) (ε : ℝ) (hε : 0 < ε) :
+    ∃ N : ℕ, ∀ n, N ≤ n → ∀ p, 0 ≤ p →
+      |bernstein_kernel n x p - Real.exp (-(x * p))| < ε := by
+  sorry
+
+-- **Kernel approximation error → 0**: For measures `σ_n` supported on `[0,∞)`
+-- with uniformly bounded mass, the integral of the difference
+-- `φ_{n+2}(x,·) - e^{-x·}` against `σ_n` tends to zero.
+--
+-- For `x = 0` the integrand is identically 0. For `x > 0`, the convergence
+-- `φ_n(x,p) → e^{-xp}` is UNIFORM in `p ∈ [0,∞)` (both functions have exponential
+-- tail decay), so `|∫(φ_n - e^{-xp})dσ_n| ≤ sup|φ_n - e^{-xp}| · σ_n(ℝ) → 0`.
+set_option maxHeartbeats 3200000 in
 private lemma kernel_approx_error_tendsto
     (σ : ℕ → Measure ℝ) (φ : ℕ → ℕ) (hφ : StrictMono φ)
     (hfin : ∀ n, IsFiniteMeasure (σ n))
@@ -949,7 +1027,44 @@ private lemma kernel_approx_error_tendsto
     (x : ℝ) (hx : 0 ≤ x) :
     Tendsto (fun k => ∫ p, (bernstein_kernel (φ k + 2) x p -
         Real.exp (-(x * p))) ∂(σ (φ k))) atTop (nhds 0) := by
-  sorry
+  by_cases hx0 : x = 0
+  · -- x = 0: integrand = 0 since bernstein_kernel n 0 p = 1 = exp(0) for n ≥ 2
+    subst hx0
+    suffices h : ∀ k, ∫ p, (bernstein_kernel (φ k + 2) 0 p -
+        Real.exp (-(0 * p))) ∂(σ (φ k)) = 0 by
+      simp only [h]; exact tendsto_const_nhds
+    intro k; apply integral_eq_zero_of_ae; apply ae_of_all; intro p
+    simp only [bernstein_kernel, show ¬(φ k + 2 ≤ 1) from by omega, zero_mul,
+      zero_div, sub_zero, neg_zero, Real.exp_zero, ite_false]; simp [one_pow]
+  · -- x > 0: uniform convergence on [0,∞) + mass bound
+    have hx_pos : 0 < x := lt_of_le_of_ne hx (Ne.symm hx0)
+    rw [Metric.tendsto_atTop]; intro ε hε
+    have hmax_pos : 0 < max C 1 := lt_max_of_lt_right one_pos
+    obtain ⟨N, hN⟩ := kernel_uniform_conv x hx_pos
+      (ε / (2 * max C 1)) (div_pos hε (by positivity))
+    use N; intro k hk; rw [dist_zero_right]
+    haveI := hfin (φ k)
+    have hφk : N ≤ φ k + 2 := le_trans hk (le_trans (hφ.id_le k) (Nat.le_add_right _ _))
+    calc ‖∫ p, (bernstein_kernel (φ k + 2) x p - Real.exp (-(x * p))) ∂(σ (φ k))‖
+        ≤ ∫ p, ‖bernstein_kernel (φ k + 2) x p - Real.exp (-(x * p))‖ ∂(σ (φ k)) :=
+          norm_integral_le_integral_norm _
+      _ ≤ ∫ _, (ε / (2 * max C 1)) ∂(σ (φ k)) := by
+          apply integral_mono_of_nonneg
+            (ae_of_all _ fun p => norm_nonneg _) (integrable_const _)
+          rw [EventuallyLE, ae_iff]
+          exact measure_mono_null (fun p hp => by
+            simp only [Set.mem_setOf_eq, not_le, Real.norm_eq_abs] at hp
+            rw [Set.mem_Iio]; by_contra hge; push_neg at hge
+            exact absurd (le_of_lt (hN (φ k + 2) hφk p hge)) (not_le.mpr hp))
+            (hsupp (φ k))
+      _ = ε / (2 * max C 1) * ((σ (φ k)) Set.univ).toReal := by
+          simp [MeasureTheory.integral_const, smul_eq_mul, Measure.real, mul_comm]
+      _ ≤ ε / (2 * max C 1) * max C 1 := by
+          apply mul_le_mul_of_nonneg_left _ (le_of_lt (div_pos hε (by positivity)))
+          exact ENNReal.toReal_le_of_le_ofReal (le_of_lt hmax_pos)
+            (le_trans (hmass (φ k)) (ENNReal.ofReal_le_ofReal (le_max_left C 1)))
+      _ = ε / 2 := by field_simp
+      _ < ε := half_lt_self hε
 
 /-- The integral `∫ φ_{n+2}(x,p) dσ_n` converges to `∫ e^{-xp} dμ₀` along
 the subsequence. Decomposes as:
