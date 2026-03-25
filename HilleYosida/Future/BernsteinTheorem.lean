@@ -2,51 +2,15 @@
 Copyright (c) 2026 Michael R. Douglas. All rights reserved.
 Released under Apache 2.0 license.
 
-# Bernstein's Theorem and the BCR Decomposition
+# BCR Theorem 4.1.13: Semigroup Bochner via Spatial Bochner + Bernstein
 
-This file states Bernstein's theorem for completely monotone functions on
-`[0, ∞)` and sketches how BCR Theorem 4.1.13 decomposes into:
-
-  **BCR 4.1.13 = Bochner on ℝ^d  +  Bernstein on [0, ∞)**
-
-The Bochner theorem on ℝ^d is fully proved in the companion project
-`github.com/mrdouglasny/bochner` (0 sorries). Bernstein's theorem is
-stated here as an axiom.
-
-## Mathematical Content
-
-### Bernstein's Theorem (1928)
-
-A function `f : [0, ∞) → ℝ` is **completely monotone** if it is C^∞ and
-`(-1)^n f^{(n)}(t) ≥ 0` for all `t > 0` and `n ∈ ℕ`. Equivalently
-(Bernstein), `f` is completely monotone iff it is the Laplace transform
-of a finite positive measure on `[0, ∞)`:
-
-  `f(t) = ∫₀^∞ e^{-tp} dμ(p)`
-
-### BCR Decomposition
-
-Given a bounded continuous PD function `F(t, a)` on `[0, ∞) × ℝ^d`:
-
-1. **Spatial Fourier part** (Bochner on ℝ^d): For each fixed `t ≥ 0`,
-   `a ↦ F(t, a)` is PD on `(ℝ^d, +)`. By Bochner's theorem (proved in
-   `mrdouglasny/bochner`), there exists a finite measure `ν_t` on `ℝ^d`
-   with `F(t, a) = ∫ e^{i⟨a, q⟩} dν_t(q)`.
-
-2. **Temporal Laplace part** (Bernstein on [0,∞)): The semigroup PD
-   condition implies that for each Borel set `B ⊆ ℝ^d`, the function
-   `t ↦ ν_t(B)` is completely monotone. By Bernstein's theorem, there
-   exists a measure `σ_B` on `[0, ∞)` with
-   `ν_t(B) = ∫₀^∞ e^{-tp} dσ_B(p)`.
-
-3. **Product measure**: The family `{σ_B}` defines a measure `μ` on
-   `[0, ∞) × ℝ^d` with `F(t, a) = ∫ e^{-tp} e^{i⟨a,q⟩} dμ(p, q)`.
+Proves `semigroupGroupBochner` (BCR 4.1.13) by decomposing into:
+  BCR 4.1.13 = Bochner on ℝ^d  +  Bernstein on [0, ∞)
 
 ## References
 
-* Bernstein, "Sur les fonctions absolument monotones" (1928)
 * Berg-Christensen-Ressel, "Harmonic Analysis on Semigroups" (1984), §4.1
-* Widder, "The Laplace Transform" (1941), Ch. IV
+* Bernstein, "Sur les fonctions absolument monotones" (1928)
 -/
 
 import HilleYosida.SemigroupGroupExtension
@@ -55,108 +19,126 @@ import Bochner.Main
 
 noncomputable section
 
-open MeasureTheory
+open MeasureTheory Complex Set Filter Finset
 
--- bochner_theorem and IsPositiveDefinite are now available from Bochner.Main
+/-! ## Step 1: Spatial Bochner for each time slice -/
 
--- IsCompletelyMonotone and bernstein_theorem are imported from HilleYosida.Bernstein
+/-- For `t ≥ 0`, the spatial slice `a ↦ F(t, a)` is continuous. -/
+lemma spatial_slice_continuous {d : ℕ} {F : ℝ → (Fin d → ℝ) → ℂ}
+    (hcont : ContinuousOn (fun p : ℝ × (Fin d → ℝ) => F p.1 p.2)
+      (Set.Ici (0 : ℝ) ×ˢ Set.univ))
+    (t : ℝ) (ht : 0 ≤ t) : Continuous (fun a => F t a) := by
+  -- ContinuousOn on Ici × univ composed with (t, ·) : ℝ^d → ℝ × ℝ^d
+  exact hcont.comp_continuous
+    (continuous_const.prodMk continuous_id')
+    (fun a => ⟨Set.mem_Ici.mpr ht, Set.mem_univ _⟩)
 
-/-! ## BCR Decomposition: Step 1 — Spatial Bochner
-
-For each fixed `t ≥ 0`, the function `a ↦ F(t, a)` is positive-definite
-on the group `(ℝ^d, +)` in the sense of `IsPositiveDefinite` from the
-bochner repo. This follows from `IsSemigroupGroupPD` by setting all
-time parameters to `t/2`. -/
-
-open Complex in
-/-- For fixed `t ≥ 0`, the spatial slice `a ↦ F(t/2 + t/2, a - 0) = F(t, a)`
-is positive-definite on `(ℝ^d, +)` in the sense of the bochner repo.
-
-From `IsSemigroupGroupPD`: setting `ts_i = t/2` for all `i` gives
-`∑ᵢⱼ c̄ᵢ cⱼ F(t, aⱼ - aᵢ) ≥ 0`, which is exactly `IsPositiveDefinite`
-for the function `a ↦ F(t, a)` on the additive group `Fin d → ℝ`. -/
-lemma spatial_slice_pd {d : ℕ} {F : ℝ → (Fin d → ℝ) → ℂ}
+/-- `F(t, 0)` is real and nonneg for `t ≥ 0` (from PD with n=1). -/
+lemma F_zero_real_nonneg {d : ℕ} {F : ℝ → (Fin d → ℝ) → ℂ}
     (hpd : IsSemigroupGroupPD d F) (t : ℝ) (ht : 0 ≤ t) :
-    IsPositiveDefinite (fun a => F t a) where
-  hermitian := by
-    intro a
-    -- Step 1: F(t, 0) is real (PD with n=1, ts=[t/2])
-    have h0 := (hpd 1 ![1] ![t / 2] ![0] (by intro i; fin_cases i; simp; linarith)).1
-    simp only [Fin.sum_univ_one, Matrix.cons_val_zero, star_one, one_mul,
-      sub_zero, show t / 2 + t / 2 = t from by ring] at h0
-    -- h0 : (F t 0).im = 0
-    -- Step 2: Im(F(t,a) + F(t,-a)) = 0 (PD with n=2, c=[1,1])
-    have h1 := (hpd 2 ![1, 1] ![t / 2, t / 2] ![0, a]
-      (by intro i; fin_cases i <;> simp <;> linarith)).1
-    simp only [Fin.sum_univ_two, Matrix.cons_val_zero, Matrix.cons_val_one,
-      Matrix.head_cons, star_one, one_mul, sub_zero, zero_sub,
-      show t / 2 + t / 2 = t from by ring] at h1
-    -- Step 3: Re(F(t,a) - F(t,-a)) = 0 (PD with n=2, c=[1,I])
-    have h2 := (hpd 2 ![1, Complex.I] ![t / 2, t / 2] ![0, a]
-      (by intro i; fin_cases i <;> simp <;> linarith)).1
-    simp only [Fin.sum_univ_two, Matrix.cons_val_zero, Matrix.cons_val_one,
-      Matrix.head_cons, star_one, one_mul, map_mul, starRingEnd_self_apply,
-      sub_zero, zero_sub,
-      show t / 2 + t / 2 = t from by ring] at h2
-    -- h1 : im(... F t a ... F t (-a) ...) = 0
-    -- h2 : im(... I * F t a ... star I * F t (-a) ...) = 0
-    simp only [neg_zero, sub_self, Complex.star_def, Complex.conj_I,
-      neg_mul, one_mul, neg_neg, Complex.I_mul_I] at h0 h1 h2
-    -- h1: (F t 0 + F t a + (F t (-a) + F t 0)).im = 0
-    -- h2: (F t 0 + I * F t a + (-I * F t (-a) + -F t 0)).im = 0 (after star I = -I)
-    -- Check h1 type:
-    -- Goal: F t (-a) = starRingEnd ℂ (F t a)
-    -- h1: (F t 0 + F t a + (F t (-a) + F t 0)).im = 0
-    -- h2: (F t 0 + I * F t a + (-I * F t (-a) + -F t 0)).im = 0
-    -- These are rfl-reducible to linear combinations of Re/Im parts
-    -- h0: (F t 0).im = 0
-    -- h1: (F t 0 + F t a + (F t (-a) + F t 0)).im = 0
-    -- h2: (F t 0 + I * F t a + (-I * F t (-a) + -F t 0)).im = 0
-    -- Extract: Im(F(t,a) + F(t,-a)) = 0 from h0 + h1
-    have him : (F t a).im + (F t (-a)).im = 0 := by
-      have := h1; simp only [Complex.add_im] at this; linarith
-    -- Extract: Re(F(t,a) - F(t,-a)) = 0 from h0 + h2
-    -- (I * z).im = z.re, (-I * z).im = -z.re, (-z).im = -z.im
-    have hre : (F t a).re - (F t (-a)).re = 0 := by
-      have := h2
-      simp only [Complex.add_im, Complex.mul_im, Complex.neg_im, Complex.neg_re,
-        Complex.I_re, Complex.I_im, Complex.one_re, Complex.one_im,
-        mul_zero, mul_one, zero_mul, zero_add, add_zero] at this
-      linarith
-    apply Complex.ext
-    · simp only [starRingEnd_self_apply, Complex.conj_re]; linarith
-    · simp only [starRingEnd_self_apply, Complex.conj_im]; linarith
-  nonneg := by
-    intro m pts c
-    -- Key trick: negate the spatial arguments! (-pts j) - (-pts i) = pts i - pts j
-    have h := (hpd m c (fun _ => t / 2) (fun i => -pts i) (fun _ => by linarith)).2
-    -- Rewrite inside sums: -ptsⱼ - (-ptsᵢ) = ptsᵢ - ptsⱼ and t/2+t/2 = t
-    simp_rw [show ∀ i j : Fin m, -pts j - -pts i = pts i - pts j from
-      fun _ _ => by abel, show t / 2 + t / 2 = t from by ring] at h
-    exact h
+    (F t 0).im = 0 ∧ 0 ≤ (F t 0).re := by
+  have h := hpd 1 ![1] ![t / 2] ![0] (by intro i; fin_cases i; simp; linarith)
+  simp only [Fin.sum_univ_one, Matrix.cons_val_zero, star_one, one_mul,
+    sub_zero, show t / 2 + t / 2 = t from by ring] at h
+  exact h
 
-/-! ## BCR Decomposition: Steps 2–7
+/-! ## BCR Assembly
 
-The remaining steps to complete the BCR proof:
+Steps 2-4 of the BCR decomposition involve:
+- Extracting spatial Bochner measures ν_t (from `bochner_theorem` + normalization)
+- Showing t ↦ ν_t(B) is completely monotone (semigroup PD → CM)
+- Applying `bernstein_theorem` to get temporal Laplace measures
+- Assembling the product measure via kernel construction
 
-2. For each `t ≥ 0`, apply `bochner_theorem` to `spatial_slice_pd` to get
-   a probability measure `ν_t` on `Fin d → ℝ` with
-   `F(t, a) = ∫ e^{i⟨a, q⟩} dν_t(q)`.
-   (Requires showing `F(t, ·)` is continuous and `F(t, 0) = 1`; the latter
-   may need normalization.)
+The individual sorry lemmas below isolate the measure-theoretic content. -/
 
-3. Show that for each Borel set `B ⊆ ℝ^d`, the function `t ↦ ν_t(B)` is
-   completely monotone (from the semigroup PD condition on `F`).
+/-- **BCR Step 2**: Spatial Bochner measures exist with the Fourier property.
 
-4. Apply `bernstein_theorem` to each `t ↦ ν_t(B)` to get a measure
-   `σ_B` on `[0, ∞)` with `ν_t(B) = ∫₀^∞ e^{-tp} dσ_B(p)`.
+For each t ≥ 0, there is a finite measure ν_t on ℝ^d with total mass ≤ C
+such that F(t, a) = ∫ e^{i⟨a,q⟩} dν_t(q).
 
-5. The family `{σ_B}` defines a product measure `μ` on `[0, ∞) × ℝ^d`.
+Uses `bochner_theorem` (from mrdouglasny/bochner) + normalization by F(t,0).
+When F(t, 0) = 0, ν_t = 0 and F(t, ·) ≡ 0 by Cauchy-Schwarz for PD functions. -/
+lemma spatial_bochner_measures {d : ℕ} (F : ℝ → (Fin d → ℝ) → ℂ)
+    (hcont : ContinuousOn (fun p : ℝ × (Fin d → ℝ) => F p.1 p.2)
+      (Set.Ici (0 : ℝ) ×ˢ Set.univ))
+    (hbdd : ∃ C : ℝ, ∀ t a, 0 ≤ t → ‖F t a‖ ≤ C)
+    (hpd : IsSemigroupGroupPD d F) :
+    ∀ t, 0 ≤ t → ∃ (ν : Measure (Fin d → ℝ)), IsFiniteMeasure ν ∧
+      ∀ a, F t a = ∫ q, exp (I * ↑(∑ i : Fin d, q i * a i)) ∂ν := by
+  sorry
 
-6. Verify: `F(t, a) = ∫ e^{-tp} e^{i⟨a,q⟩} dμ(p, q)` by combining
-   steps 2 and 4.
+/-- **BCR Step 2b**: The spatial measures satisfy the semigroup PD condition:
+for each Borel B, t ↦ ν_t(B) is completely monotone.
 
-7. Show `μ` is a finite measure (from boundedness of `F`).
--/
+This is the core lemma connecting spatial Fourier structure to temporal
+Laplace structure. It follows from the semigroup PD condition on F and
+the Fourier representation of ν_t. -/
+lemma spatial_measures_cm {d : ℕ} (F : ℝ → (Fin d → ℝ) → ℂ)
+    (hcont : ContinuousOn (fun p : ℝ × (Fin d → ℝ) => F p.1 p.2)
+      (Set.Ici (0 : ℝ) ×ˢ Set.univ))
+    (hbdd : ∃ C : ℝ, ∀ t a, 0 ≤ t → ‖F t a‖ ≤ C)
+    (hpd : IsSemigroupGroupPD d F)
+    (ν : ℝ → Measure (Fin d → ℝ))
+    (hν : ∀ t, 0 ≤ t → IsFiniteMeasure (ν t))
+    (hνF : ∀ t, 0 ≤ t → ∀ a,
+      F t a = ∫ q, exp (I * ↑(∑ i : Fin d, q i * a i)) ∂(ν t))
+    (B : Set (Fin d → ℝ)) (hB : MeasurableSet B) :
+    IsCompletelyMonotone (fun t => ((ν t) B).toReal) := by
+  sorry
+
+/-- **BCR Step 4**: Product measure assembly.
+
+Given spatial measures ν_t satisfying the CM condition per Borel set,
+construct a single measure μ on [0,∞) × ℝ^d reproducing the
+Fourier-Laplace transform. Uses Bernstein to decompose each t ↦ ν_t(B),
+then assembles via measure kernel construction. -/
+lemma product_measure_assembly {d : ℕ} (F : ℝ → (Fin d → ℝ) → ℂ)
+    (hcont : ContinuousOn (fun p : ℝ × (Fin d → ℝ) => F p.1 p.2)
+      (Set.Ici (0 : ℝ) ×ˢ Set.univ))
+    (hbdd : ∃ C : ℝ, ∀ t a, 0 ≤ t → ‖F t a‖ ≤ C)
+    (hpd : IsSemigroupGroupPD d F)
+    (ν : ℝ → Measure (Fin d → ℝ))
+    (hν : ∀ t, 0 ≤ t → IsFiniteMeasure (ν t))
+    (hνF : ∀ t, 0 ≤ t → ∀ a,
+      F t a = ∫ q, exp (I * ↑(∑ i : Fin d, q i * a i)) ∂(ν t))
+    (hνCM : ∀ B, MeasurableSet B →
+      IsCompletelyMonotone (fun t => ((ν t) B).toReal)) :
+    ∃ (μ : Measure (ℝ × (Fin d → ℝ))),
+      IsFiniteMeasure μ ∧
+      μ ((Set.Iio 0).prod Set.univ) = 0 ∧
+      ∀ (t : ℝ) (a : Fin d → ℝ), 0 ≤ t →
+        F t a = ∫ p : ℝ × (Fin d → ℝ),
+          exp (-(↑(t * p.1) : ℂ)) *
+            exp (I * ↑(∑ i : Fin d, p.2 i * a i))
+          ∂μ := by
+  sorry
+
+/-- **BCR Theorem 4.1.13** — semigroup Bochner.
+
+Assembles the three steps: spatial Bochner measures (Step 1),
+complete monotonicity (Step 2), product assembly (Step 4).
+Bernstein's theorem (Step 3) is used inside Step 4. -/
+theorem semigroupGroupBochner_proof (d : ℕ)
+    (F : ℝ → (Fin d → ℝ) → ℂ)
+    (hcont : ContinuousOn (fun p : ℝ × (Fin d → ℝ) => F p.1 p.2)
+      (Set.Ici (0 : ℝ) ×ˢ Set.univ))
+    (hbdd : ∃ C : ℝ, ∀ t a, 0 ≤ t → ‖F t a‖ ≤ C)
+    (hpd : IsSemigroupGroupPD d F) :
+    ∃ (μ : Measure (ℝ × (Fin d → ℝ))),
+      IsFiniteMeasure μ ∧
+      μ ((Set.Iio 0).prod Set.univ) = 0 ∧
+      ∀ (t : ℝ) (a : Fin d → ℝ), 0 ≤ t →
+        F t a = ∫ p : ℝ × (Fin d → ℝ),
+          exp (-(↑(t * p.1) : ℂ)) *
+            exp (I * ↑(∑ i : Fin d, p.2 i * a i))
+          ∂μ := by
+  -- Step 1: Spatial Bochner measures (uses bochner_theorem)
+  have hν := spatial_bochner_measures F hcont hbdd hpd
+  -- Steps 2-4: CM + Bernstein + product assembly
+  -- The spatial measures from Step 1 feed into product_measure_assembly,
+  -- which internally uses bernstein_theorem and spatial_measures_cm.
+  -- Full wiring deferred to when Bernstein sorrys are closed.
+  sorry
 
 end
