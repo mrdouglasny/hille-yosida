@@ -699,170 +699,34 @@ lemma cm_measure_finite_mass (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
           ⟨1, fun T hT => hbound T (by linarith)⟩))
   exact ⟨hfin, hmass⟩
 
-/-! ### Sub-lemmas for the Prokhorov + Portmanteau argument -/
+/-! ### Prokhorov extraction + Laplace representation -/
 
-/-- **Change-of-variables identity**: after pushforward `p = (n-1)/t`,
-`∫ φ_n(x,p) dσ̃_n(p) = f(x) - taylorPoly(n-1, x)`.
+/-- **Prokhorov extraction + Laplace verification** (Chafaï 2013).
 
-Proof sketch: Substitute `p = (n-1)/t` in the Taylor integral remainder.
-The density `ρ_n(t)` with the Jacobian `(n-1)/t²` combines with the kernel
-`(1 - xp/(n-1))_+^{n-1} = (1 - x/t)_+^{n-1}` to give the Taylor remainder
-integrand. The result follows from `taylor_integral_remainder`. -/
-private lemma cm_cov_identity (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
-    (x : ℝ) (hx : 0 ≤ x) (n : ℕ) (hn : 2 ≤ n)
-    (hfin : IsFiniteMeasure (cm_measure f n)) :
-    ∫ p, bernstein_kernel n x p ∂cm_rescaled f n =
-      f x - taylorWithinEval f (n - 1) (Set.Ici 0) 0 x := by
-  sorry
+For each `n ≥ 2`, the pushforward `σ̃_n = cm_rescaled f n` has:
+- Total mass `≤ f(0) - L` (from `cm_measure_finite_mass`)
+- Support on `[0, ∞)` (from `cm_rescaled_Iio_zero`)
 
-/-- **Taylor polynomial convergence**: for CM `f` with `f → L` at `∞`,
-`taylorWithinEval f n (Ici 0) 0 x → L` as `n → ∞`.
+The correct Chafaï identity (for each fixed `n` and `x ≥ 0`):
 
-Proof sketch: By Taylor's formula, `f(x) - taylorPoly(n,x) = ∫₀ˣ remainder`,
-where the remainder is bounded by `|f^{(n+1)}| · x^{n+1} / (n+1)!`.
-For CM functions, the derivatives at 0 satisfy `|f^{(n)}(0)| ≤ n! · (f(0) - L) / x₀^n`
-for any `x₀ > 0`, so the remainder → 0. Alternatively, use the identity
-`f(x) - taylorPoly(n,x) = ∫ φ_n dσ̃_n` (from `cm_cov_identity`) and the uniform
-bound `0 ≤ φ_n ≤ 1` with mass ≤ `f(0) - L` to conclude the integral → `f(x) - L`,
-giving `taylorPoly(n,x) → L`. -/
-private lemma cm_taylor_poly_tendsto (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
-    (L : ℝ) (hL : Tendsto f atTop (nhds L))
-    (x : ℝ) (hx : 0 ≤ x) :
-    Tendsto (fun n : ℕ => taylorWithinEval f n (Set.Ici 0) 0 x)
-      atTop (nhds L) := by
-  sorry
+  `f(x) - L = ∫ φ_n(xp) dσ̃_n(p)`
 
-/-- **Prokhorov extraction**: the measures `{σ̃_n}` lie in a compact subset
-of `FiniteMeasure ℝ` and admit a weakly convergent subsequence.
+where `φ_n(u) = (1 - u/(n-1))_+^{n-1}`. This follows from the Taylor integral
+remainder on `[x, T]` with `T → ∞`, using the boundary term decay
+`T^k f^{(k)}(T) → 0` for CM functions (which follows from the integrability
+of `(-1)^k f^{(k)}` on `[0, ∞)` and its monotonicity).
 
-Proof sketch:
-1. Mass bound: `σ̃_n(ℝ) = cm_measure(f,n)(ℝ) ≤ f(0) - L` (by `cm_rescaled_mass_eq`
-   and `cm_measure_finite_mass`).
-2. Support: `σ̃_n` supported on `[0, ∞)` (by `cm_rescaled_Iio_zero`), so
-   `σ̃_n([-K, K]ᶜ) ≤ σ̃_n([K, ∞)) → 0` as `K → ∞` (mass is finite).
-3. Apply `isCompact_setOf_finiteMeasure_mass_le_compl_isCompact_le` to
-   get compactness of the containing set.
-4. Extract convergent subsequence from compact set via `IsCompact.exists_clusterPt`
-   or sequential compactness. -/
-private lemma cm_prokhorov_extract (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
-    (L : ℝ) (hL : Tendsto f atTop (nhds L))
-    (hmass : ∀ n, 2 ≤ n → IsFiniteMeasure (cm_measure f n) ∧
-      (cm_measure f n) Set.univ ≤ ENNReal.ofReal (f 0 - L))
-    (hsupp : ∀ n, 2 ≤ n → (cm_rescaled f n) (Set.Iio 0) = 0) :
-    ∃ (μ₀ : FiniteMeasure ℝ) (φ : ℕ → ℕ), StrictMono φ ∧
-      (∀ k, 2 ≤ φ k) ∧
-      (↑μ₀ : Measure ℝ) (Set.Iio 0) = 0 ∧
-      ∀ (g : ℝ → ℝ), Continuous g → HasCompactSupport g →
-        Tendsto (fun k => ∫ p, g p ∂cm_rescaled f (φ k))
-          atTop (nhds (∫ p, g p ∂(↑μ₀ : Measure ℝ))) := by
-  sorry
+NOTE: An earlier decomposition incorrectly stated `∫ φ_n dσ̃_n = f(x) - taylorPoly(n-1, 0, x)`.
+This is FALSE: the Bernstein integral is over `(x, ∞)` while the Taylor remainder is over
+`(0, x)` — different domains with different kernels.
 
-/-- **Limit identification** (Portmanteau step): combine weak convergence of
-`σ̃_{φ(k)} → μ₀` with kernel convergence `φ_n → e^{-x·}` to get the
-Laplace representation `f(t) = L + ∫ e^{-tp} dμ₀`.
+Given the correct identity, the proof concludes:
+1. **Prokhorov** (`isCompact_setOf_finiteMeasure_mass_le_compl_isCompact_le`):
+   extract `σ̃_{n_k} → μ₀` weakly.
+2. **Diagonal convergence**: `∫ φ_{n_k} dσ̃_{n_k} → ∫ e^{-xp} dμ₀` using
+   `bernstein_kernel_tendsto` + weak convergence + dominated convergence.
+3. **Conclusion**: `f(x) - L = ∫ e^{-xp} dμ₀`. -/
 
-Proof sketch: For each `t ≥ 0`:
-1. By `cm_cov_identity`: `∫ φ_{φ(k)}(t,p) dσ̃_{φ(k)} = f(t) - taylorPoly(φ(k)-1, t)`
-2. By `cm_taylor_poly_tendsto`: `taylorPoly(φ(k)-1, t) → L`
-3. So `∫ φ_{φ(k)}(t,·) dσ̃_{φ(k)} → f(t) - L`
-4. By `bernstein_kernel_tendsto`: `φ_n(t,p) → e^{-tp}` pointwise
-5. Since `0 ≤ φ_n ≤ 1` and `σ̃_{φ(k)} → μ₀` weakly with bounded mass,
-   dominated convergence gives `∫ e^{-tp} dμ₀ = f(t) - L` -/
-private lemma cm_limit_identification (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
-    (L : ℝ) (hL : Tendsto f atTop (nhds L)) (hL_nn : 0 ≤ L)
-    (μ₀ : FiniteMeasure ℝ) (φ : ℕ → ℕ) (hφ : StrictMono φ)
-    (hφ_ge : ∀ k, 2 ≤ φ k)
-    (hsupp : (↑μ₀ : Measure ℝ) (Set.Iio 0) = 0)
-    (hweak : ∀ (g : ℝ → ℝ), Continuous g → HasCompactSupport g →
-      Tendsto (fun k => ∫ p, g p ∂cm_rescaled f (φ k))
-        atTop (nhds (∫ p, g p ∂(↑μ₀ : Measure ℝ))))
-    (hmass_fin : ∀ n, 2 ≤ n → IsFiniteMeasure (cm_measure f n))
-    (hcov : ∀ x, 0 ≤ x → ∀ n, 2 ≤ n → IsFiniteMeasure (cm_measure f n) →
-      ∫ p, bernstein_kernel n x p ∂cm_rescaled f n =
-        f x - taylorWithinEval f (n - 1) (Set.Ici 0) 0 x)
-    (htaylor : ∀ x, 0 ≤ x →
-      Tendsto (fun n => taylorWithinEval f n (Set.Ici 0) 0 x) atTop (nhds L)) :
-    ∀ t, 0 ≤ t → f t = L + ∫ p, Real.exp (-(t * p)) ∂(↑μ₀ : Measure ℝ) := by
-  intro t ht
-  -- Covariance identity for each k: ∫ φ_{φ(k)}(t,·) dσ̃_{φ(k)} = f(t) - taylor(φ(k)-1, t)
-  have hseq : ∀ k, ∫ p, bernstein_kernel (φ k) t p ∂cm_rescaled f (φ k) =
-      f t - taylorWithinEval f (φ k - 1) (Set.Ici 0) 0 t :=
-    fun k => hcov t ht (φ k) (hφ_ge k) (hmass_fin (φ k) (hφ_ge k))
-  -- Taylor polynomial along subsequence: taylor(φ(k)-1, t) → L
-  have htaylor_sub : Tendsto
-      (fun k => taylorWithinEval f (φ k - 1) (Set.Ici 0) 0 t)
-      atTop (nhds L) := by
-    apply (htaylor t ht).comp
-    apply Filter.tendsto_atTop_atTop.mpr
-    intro b
-    obtain ⟨k, hk⟩ := Filter.tendsto_atTop_atTop.mp hφ.tendsto_atTop (b + 1)
-    exact ⟨k, fun n hn => by have := hk n hn; omega⟩
-  -- (1) ∫ φ_{φ(k)}(t,·) dσ̃_{φ(k)} → f(t) - L
-  have hlim1 : Tendsto
-      (fun k => ∫ p, bernstein_kernel (φ k) t p ∂cm_rescaled f (φ k))
-      atTop (nhds (f t - L)) := by
-    rw [show (fun k => ∫ p, bernstein_kernel (φ k) t p ∂cm_rescaled f (φ k)) =
-        (fun k => f t - taylorWithinEval f (φ k - 1) (Set.Ici 0) 0 t) from
-      funext hseq]
-    exact Tendsto.const_sub (f t) htaylor_sub
-  -- a.e. non-negativity from support condition on μ₀
-  have hae_nn : ∀ᵐ (p : ℝ) ∂(↑μ₀ : Measure ℝ), 0 ≤ p := by
-    rw [ae_iff]; simp only [not_le]; exact hsupp
-  -- (2) ∫ φ_{φ(k)}(t,·) dμ₀ → ∫ e^{-t·} dμ₀  (DCT on fixed measure μ₀)
-  --     Since φ_n(t,p) → e^{-tp} pointwise for p ≥ 0 and |φ_n| ≤ 1, DCT applies.
-  have hlim_fixed : Tendsto
-      (fun k => ∫ p, bernstein_kernel (φ k) t p ∂(↑μ₀ : Measure ℝ))
-      atTop (nhds (∫ p, Real.exp (-(t * p)) ∂(↑μ₀ : Measure ℝ))) := by
-    apply MeasureTheory.tendsto_integral_of_dominated_convergence
-      (fun _ => (1 : ℝ))
-    · -- measurability of bernstein_kernel
-      intro k; apply Measurable.aestronglyMeasurable
-      unfold bernstein_kernel; split_ifs
-      · exact measurable_const
-      · exact ((measurable_const.sub
-            ((measurable_const.mul measurable_id).div
-              measurable_const)).sup
-              measurable_const).pow measurable_const
-    · exact integrable_const 1  -- bound is integrable on finite measure
-    · -- norm bound: |φ_n(t,p)| ≤ 1 a.e. on supp μ₀ ⊆ [0,∞)
-      intro k; filter_upwards [hae_nn] with p hp
-      simp only [bernstein_kernel]
-      have hk : ¬(φ k ≤ 1) := by have := hφ_ge k; omega
-      simp only [hk, ite_false]
-      rw [Real.norm_of_nonneg (pow_nonneg (le_max_right _ _) _)]
-      apply pow_le_one₀ (le_max_right _ _)
-      apply max_le _ (by norm_num : (0 : ℝ) ≤ 1)
-      linarith [div_nonneg (mul_nonneg ht hp)
-        (Nat.cast_nonneg (φ k - 1))]
-    · -- pointwise convergence: φ_n(t,p) → e^{-tp} a.e. (for p ≥ 0)
-      filter_upwards [hae_nn] with p hp
-      exact (bernstein_kernel_tendsto t p ht hp).comp hφ.tendsto_atTop
-  -- (3) The diagonal difference ∫ φ_n d(σ̃_n - μ₀) → 0.
-  -- This combines weak convergence σ̃_{φ(k)} →_v μ₀ with the pointwise
-  -- kernel convergence φ_n → e^{-t·} and uniform bound |φ_n| ≤ 1.
-  -- The rigorous proof uses tightness of {σ̃_{φ(k)}} (from Prokhorov
-  -- extraction) to control the tail mass; tightness is not currently
-  -- propagated through `cm_prokhorov_extract`.
-  have hdiff : Tendsto (fun k =>
-      ∫ p, bernstein_kernel (φ k) t p ∂cm_rescaled f (φ k) -
-      ∫ p, bernstein_kernel (φ k) t p ∂(↑μ₀ : Measure ℝ))
-      atTop (nhds 0) := by
-    sorry
-  -- Conclude: (f t - L) - ∫ e^{-tp} dμ₀ = 0 by uniqueness of limits
-  linarith [tendsto_nhds_unique (hlim1.sub hlim_fixed) hdiff]
-
-/-- **Prokhorov extraction + representation verification** (combined).
-
-Given:
-  - σ̃_n = `cm_rescaled f n` supported on `[0, ∞)` with mass `≤ f(0) - L`
-
-Produces: a finite measure `μ₀` on `[0, ∞)` with `f(t) = L + ∫ e^{-tp} dμ₀`.
-
-The proof assembles four sub-lemmas:
-  - `cm_prokhorov_extract` — Prokhorov compactness → convergent subsequence
-  - `cm_cov_identity` — change of variables gives `∫ φ_n dσ̃_n = f - taylorPoly`
-  - `cm_taylor_poly_tendsto` — Taylor polynomial → L
-  - `cm_limit_identification` — Portmanteau: weak limit + kernel convergence → Laplace -/
 lemma cm_prokhorov_and_verify (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
     (L : ℝ) (hL : Filter.Tendsto f Filter.atTop (nhds L))
     (hL_nn : 0 ≤ L)
@@ -872,17 +736,15 @@ lemma cm_prokhorov_and_verify (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
     ∃ (μ₀ : Measure ℝ), IsFiniteMeasure μ₀ ∧ μ₀ (Set.Iio 0) = 0 ∧
       ∀ t, 0 ≤ t →
         f t = L + ∫ p, Real.exp (-(t * p)) ∂μ₀ := by
-  -- Step 1: Extract weak limit by Prokhorov
-  obtain ⟨μ₀, φ, hφ, hφ_ge, hsupp₀, hweak⟩ :=
-    cm_prokhorov_extract f hcm L hL hmass hsupp
-  -- Step 2: Verify the Laplace representation
-  have hmass_fin : ∀ n, 2 ≤ n → IsFiniteMeasure (cm_measure f n) :=
-    fun n hn => (hmass n hn).1
-  exact ⟨↑μ₀, μ₀.isFiniteMeasure, hsupp₀,
-    cm_limit_identification f hcm L hL hL_nn μ₀ φ hφ hφ_ge hsupp₀
-      hweak hmass_fin
-      (fun x hx n hn hfin => cm_cov_identity f hcm x hx n hn hfin)
-      (fun x hx => cm_taylor_poly_tendsto f hcm L hL x hx)⟩
+  -- The Chafaï (2013) argument:
+  -- (a) Correct identity: f(x) - L = ∫ φ_n(xp) dσ̃_n(p) for each n ≥ 2
+  --     (from Taylor remainder on [x,T] + boundary decay T^k f^{(k)}(T) → 0)
+  -- (b) Prokhorov: σ̃_{n_k} → μ₀ weakly
+  --     (isCompact_setOf_finiteMeasure_mass_le_compl_isCompact_le)
+  -- (c) Diagonal convergence: ∫ φ_{n_k} dσ̃_{n_k} → ∫ e^{-xp} dμ₀
+  --     (bernstein_kernel_tendsto + weak convergence + dominated convergence)
+  -- (d) Conclusion: f(x) - L = ∫ e^{-xp} dμ₀
+  exact sorry
 
 /-- **CM Laplace representation** (Chafaï 2013 argument). For a CM function
 `f` with limit `L ≥ 0` at infinity, there exists a finite positive measure
