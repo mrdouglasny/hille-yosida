@@ -53,8 +53,7 @@ lemma IsCompletelyMonotone.deriv_nonpos (hcm : IsCompletelyMonotone f) (t : ℝ)
 /-- A CM function is bounded by f(0) on [0, ∞). -/
 lemma IsCompletelyMonotone.bounded (hcm : IsCompletelyMonotone f) (t : ℝ) (ht : 0 ≤ t) :
     f t ≤ f 0 := by
-  -- f is non-increasing: f' ≤ 0 on [0,∞) and f is C^∞, so f(t) ≤ f(0).
-  -- This follows from the mean value theorem.
+  -- f is C^∞ on [0,∞) with f'≤ 0, hence antitone on [0,∞), so f(t) ≤ f(0).
   sorry
 
 /-- The n-th derivative of a CM function is also CM (with sign (-1)^n). -/
