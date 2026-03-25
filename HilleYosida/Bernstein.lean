@@ -143,6 +143,23 @@ lemma IsCompletelyMonotone.tendsto_atTop (hcm : IsCompletelyMonotone f) :
   exact (tendsto_atTop_ciInf hg_anti hg_bdd).congr'
     (Filter.eventually_atTop.mpr ⟨0, fun t ht => by simp [g, max_eq_left ht]⟩)
 
+/-! ## Set transfer for iterated derivatives -/
+
+/-- `iteratedDerivWithin` on `Icc x T` agrees with `iteratedDerivWithin` on `Ici 0`
+at interior points, since both equal `iteratedDeriv n f t` when `0 < t`. -/
+lemma iteratedDerivWithin_Icc_eq_Ici {n : ℕ}
+    (hcm : IsCompletelyMonotone f)
+    {x T t : ℝ} (hx : 0 ≤ x) (hxT : x < T) (ht : t ∈ Set.Ioo x T) :
+    iteratedDerivWithin n f (Set.Icc x T) t =
+      iteratedDerivWithin n f (Set.Ici 0) t := by
+  have ht_pos : 0 < t := lt_of_le_of_lt hx ht.1
+  have hcda : ContDiffAt ℝ (↑n : WithTop ℕ∞) f t :=
+    (hcm.1.of_le le_top).contDiffAt (Ici_mem_nhds ht_pos)
+  rw [iteratedDerivWithin_eq_iteratedDeriv (uniqueDiffOn_Icc hxT) hcda
+        (Set.Ioo_subset_Icc_self ht),
+      ← iteratedDerivWithin_eq_iteratedDeriv (uniqueDiffOn_Ici 0) hcda
+        (Set.mem_Ici.mpr (le_of_lt ht_pos))]
+
 /-! ## Bernstein's Theorem -/
 
 /-- For a CM function `f` on `[0,∞)`, the n=1 Taylor integral remainder gives
