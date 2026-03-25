@@ -344,6 +344,33 @@ lemma IsCompletelyMonotone.integral_Ioi_neg_deriv
       (Filter.Tendsto.sub tendsto_const_nhds hL)
   exact tendsto_nhds_unique htend htend2
 
+/-- **Packaging step**: if `f(x) = L + ∫ e^{-xp} dμ₀` with `μ₀` supported on `[0,∞)`,
+then `μ = μ₀ + L·δ₀` gives `f(x) = ∫ e^{-xp} dμ` with `μ` finite and supported on `[0,∞)`. -/
+lemma bernstein_packaging {f : ℝ → ℝ} {L : ℝ} (hL : 0 ≤ L)
+    {μ₀ : Measure ℝ} [IsFiniteMeasure μ₀] (hsupp₀ : μ₀ (Set.Iio 0) = 0)
+    (hrep : ∀ t, 0 ≤ t → f t = L + ∫ p, Real.exp (-(t * p)) ∂μ₀) :
+    ∃ (μ : Measure ℝ), IsFiniteMeasure μ ∧ μ (Set.Iio 0) = 0 ∧
+      ∀ t, 0 ≤ t → f t = ∫ p, Real.exp (-(t * p)) ∂μ := by
+  set μ := μ₀ + (ENNReal.ofReal L) • Measure.dirac (0 : ℝ)
+  haveI : IsFiniteMeasure μ := by
+    constructor
+    simp only [μ, Measure.add_apply, Measure.smul_apply, smul_eq_mul,
+      Measure.dirac_apply, Set.indicator_univ, Pi.one_apply, mul_one]
+    exact ENNReal.add_lt_top.mpr ⟨measure_lt_top _ _, ENNReal.ofReal_lt_top⟩
+  refine ⟨μ, inferInstance, ?_, ?_⟩
+  · simp only [μ, Measure.add_apply, Measure.smul_apply, smul_eq_mul,
+      Measure.dirac_apply, Set.indicator, Set.mem_Iio, lt_irrefl,
+      ↓reduceIte, mul_zero, hsupp₀, add_zero]
+  · intro t ht
+    rw [hrep t ht]
+    -- L + ∫ dμ₀ = ∫ d(μ₀ + L·δ₀) via integral_add_measure + integral_dirac
+    have h1 : Integrable (fun p => Real.exp (-(t * p))) μ₀ := sorry
+    have h2 : Integrable (fun p => Real.exp (-(t * p)))
+        ((ENNReal.ofReal L) • Measure.dirac (0 : ℝ)) := sorry
+    -- ∫ e^{-tp} d(μ₀ + L·δ₀) = ∫ e^{-tp} dμ₀ + L·e^0 = ∫ dμ₀ + L
+    -- (integral_add_measure + integral_smul_measure + integral_dirac)
+    sorry
+
 /-- **Bernstein's theorem** (1928). Every completely monotone function on `[0, ∞)` is
 the Laplace transform of a finite positive measure on `[0, ∞)`.
 
