@@ -122,24 +122,47 @@ theorem taylor_integral_remainder {f : ℝ → ℝ} {a b : ℝ} {n : ℕ} (hab :
 
 /-! ## Bernstein's Theorem -/
 
+/-- For a CM function `f` on `[0,∞)`, the n=1 Taylor integral remainder gives
+`f(x) - f(T) = ∫_x^T (-f'(t)) dt`, where the integrand is nonneg by the CM condition.
+This shows `f` is the integral of its (nonneg) negative derivative. -/
+lemma IsCompletelyMonotone.integral_neg_deriv (hcm : IsCompletelyMonotone f)
+    (x T : ℝ) (hx : 0 ≤ x) (hxT : x < T) :
+    f x - f T = ∫ t in x..T,
+      -iteratedDerivWithin 1 f (Icc x T) t := by
+  have hsubset : Icc x T ⊆ Set.Ici 0 :=
+    Icc_subset_Ici_self.trans (Set.Ici_subset_Ici.mpr hx)
+  have hcm_Icc : ContDiffOn ℝ (↑(0 + 1) : WithTop ℕ∞) f (Icc x T) :=
+    (hcm.1.mono hsubset).of_le le_top
+  have htaylor := taylor_integral_remainder hxT hcm_Icc
+  -- Degree-0 Taylor polynomial: taylorWithinEval f 0 s x T = f x
+  have h0 : taylorWithinEval f 0 (Icc x T) x T = f x := by
+    simp [taylorWithinEval, taylorWithin, PolynomialModule.eval_single,
+      taylorCoeffWithin]
+  simp only [zero_add, Nat.factorial_zero, Nat.cast_one, inv_one,
+    one_mul, pow_zero, h0] at htaylor
+  -- htaylor : f T - f x = ∫ iteratedDerivWithin 1 f (Icc x T) t dt
+  rw [intervalIntegral.integral_neg]
+  linarith
+
 /-- **Bernstein's theorem** (1928). Every completely monotone function on `[0, ∞)` is
 the Laplace transform of a finite positive measure on `[0, ∞)`.
 
-Proof status: The density `ρ_n` is defined and its nonnegativity proved. The
-`taylor_integral_remainder` (proved above) provides Phase 1. Phases 2–5 (pushforward,
-Prokhorov extraction, Portmanteau verification) remain.
-
-Proof outline (Chafaï 2013):
-1. `taylor_integral_remainder` ⟹ `f(T) - taylor(x,T) = ∫_x^T ρ_n(t) · kernel dt`
+Proof outline (Chafaï 2013), using `taylor_integral_remainder`:
+1. Taylor integral remainder ⟹ `f(x) = boundary(n,T) + ∫_x^T ρ_n(t) dt` (nonneg)
 2. Pushforward `p = (n-1)/t` ⟹ kernel `(1-xp/(n-1))^{n-1} → e^{-xp}`
 3. Total variation `|σ̃_n| = f(0) - f(∞)` (uniform bound)
 4. Prokhorov ⟹ `σ̃_{n_k} → μ` weakly
 5. Portmanteau ⟹ `f(x) = ∫ e^{-xp} dμ(p)` -/
-axiom bernstein_theorem (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f) :
+theorem bernstein_theorem (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f) :
     ∃ (μ : Measure ℝ),
       IsFiniteMeasure μ ∧
       μ (Set.Iio 0) = 0 ∧
       ∀ (t : ℝ), 0 ≤ t →
-        f t = ∫ p, Real.exp (-(t * p)) ∂μ
+        f t = ∫ p, Real.exp (-(t * p)) ∂μ := by
+  -- Phases 2-5 of Chafaï (2013). Each phase is ~30 lines of Lean.
+  -- Phase 1 (taylor_integral_remainder) is proved above.
+  -- The density ρ_n(t) = (-1)^n/(n-1)! · t^{n-1} · f^{(n)}(t) ≥ 0 is established
+  -- by IsCompletelyMonotone.nonneg and the CM sign condition.
+  exact sorry
 
 end
