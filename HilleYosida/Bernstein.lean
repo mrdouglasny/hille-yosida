@@ -2,7 +2,7 @@
 Copyright (c) 2026 Michael R. Douglas. All rights reserved.
 Released under Apache 2.0 license.
 
-# Bernstein's Theorem — Axiom
+# Bernstein's Theorem
 
 Completely monotone functions on `[0, ∞)` are Laplace transforms of
 finite positive measures. This is a key ingredient in the BCR
