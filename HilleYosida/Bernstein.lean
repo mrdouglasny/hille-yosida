@@ -160,6 +160,36 @@ lemma iteratedDerivWithin_Icc_eq_Ici {n : ℕ}
       ← iteratedDerivWithin_eq_iteratedDeriv (uniqueDiffOn_Ici 0) hcda
         (Set.mem_Ici.mpr (le_of_lt ht_pos))]
 
+/-- **CM sign condition for Taylor remainder**: For a CM function, the Taylor
+integral remainder `∫_x^T (T-t)^{n-1}/(n-1)! f^{(n)}(t) dt` has sign `(-1)^n`.
+This connects `taylor_integral_remainder` to the CM condition via
+`iteratedDerivWithin_Icc_eq_Ici` (set transfer at interior points) and
+`Ioo_ae_eq_Icc` (boundary is Lebesgue-null).
+
+Needs extra heartbeats for ae filter + iteratedDerivWithin reasoning. -/
+lemma IsCompletelyMonotone.taylor_nonneg_remainder
+    (hcm : IsCompletelyMonotone f) {x T : ℝ} {n : ℕ}
+    (hx : 0 ≤ x) (hxT : x < T) :
+    0 ≤ (-1 : ℝ) ^ n * ∫ t in x..T,
+      (↑(n - 1).factorial)⁻¹ * (T - t) ^ (n - 1) *
+      iteratedDerivWithin n f (Set.Icc x T) t := by
+  rw [← intervalIntegral.integral_const_mul]
+  apply intervalIntegral.integral_nonneg_of_ae_restrict (le_of_lt hxT)
+  have hIoo : ∀ t ∈ Set.Ioo x T, (0 : ℝ) ≤ ((-1 : ℝ) ^ n *
+      ((↑(n - 1).factorial)⁻¹ * (T - t) ^ (n - 1) *
+        iteratedDerivWithin n f (Set.Icc x T) t)) := fun t ht =>
+    calc (0 : ℝ) ≤ (↑(n - 1).factorial)⁻¹ * (T - t) ^ (n - 1) *
+          ((-1 : ℝ) ^ n * iteratedDerivWithin n f (Set.Icc x T) t) :=
+          mul_nonneg (mul_nonneg (inv_nonneg.mpr (Nat.cast_nonneg _))
+            (pow_nonneg (sub_nonneg.mpr (le_of_lt ht.2)) _))
+            (by rw [iteratedDerivWithin_Icc_eq_Ici hcm hx hxT ht]
+                exact hcm.2 n t (le_of_lt (lt_of_le_of_lt hx ht.1)))
+      _ = _ := by ring
+  have h_mem : ∀ᵐ t ∂volume.restrict (Set.Icc x T), t ∈ Set.Ioo x T := by
+    rw [ae_restrict_iff' measurableSet_Icc]
+    exact (Ioo_ae_eq_Icc (a := x) (b := T)).mono (fun t h ht => h.mpr ht)
+  exact h_mem.mono fun t ht => by simp only [Pi.zero_apply]; exact hIoo t ht
+
 /-! ## Bernstein's Theorem -/
 
 /-- For a CM function `f` on `[0,∞)`, the n=1 Taylor integral remainder gives
