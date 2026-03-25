@@ -14,13 +14,14 @@ Verified correct by Gemini (2026-03-23).
 
 import Mathlib.MeasureTheory.Integral.Bochner.Basic
 import Mathlib.MeasureTheory.Measure.Lebesgue.Basic
+import Mathlib.MeasureTheory.Integral.IntervalIntegral.FundThmCalculus
 import Mathlib.Analysis.Calculus.IteratedDeriv.Defs
 import Mathlib.Analysis.Calculus.IteratedDeriv.Lemmas
 import Mathlib.Analysis.Calculus.Taylor
 
 noncomputable section
 
-open MeasureTheory
+open MeasureTheory Set intervalIntegral
 
 /-- A function `f : ℝ → ℝ` is completely monotone on `[0, ∞)` if it is
 C^∞ on `[0, ∞)` and `(-1)^n f^{(n)}(t) ≥ 0` for all `n ∈ ℕ, t ≥ 0`.
@@ -77,6 +78,48 @@ lemma IsCompletelyMonotone.deriv_cm (hcm : IsCompletelyMonotone f) :
     have := hcm.2 (n + 1) t ht
     simp only [pow_succ] at this ⊢
     linarith
+
+/-! ## Taylor integral remainder -/
+
+/-- **Taylor integral remainder** on `[a, b]` (sorry-free). The error of the n-th
+Taylor polynomial centered at `a` equals `∫_a^b (b-t)^n/n! · f^{(n+1)}(t) dt`.
+
+This is proved via FTC applied to `t ↦ taylorWithinEval f n s t b`, whose derivative
+is `(n!)⁻¹(b-t)^n · f^{(n+1)}(t)` by `hasDerivWithinAt_taylorWithinEval_at_Icc`,
+and whose value at `t=b` is `f(b)` by `taylorWithinEval_self`. -/
+theorem taylor_integral_remainder {f : ℝ → ℝ} {a b : ℝ} {n : ℕ} (hab : a < b)
+    (hf : ContDiffOn ℝ (↑(n + 1) : WithTop ℕ∞) f (Icc a b)) :
+    f b - taylorWithinEval f n (Icc a b) a b =
+      ∫ t in a..b, (↑n.factorial)⁻¹ * (b - t) ^ n *
+        iteratedDerivWithin (n + 1) f (Icc a b) t := by
+  set s := Icc a b
+  have hab' := le_of_lt hab
+  have hle : (↑n : WithTop ℕ∞) ≤ ↑(n + 1) :=
+    WithTop.coe_le_coe.mpr (ENat.coe_le_coe.mpr (by omega))
+  have hlt : (↑n : WithTop ℕ∞) < ↑(n + 1) :=
+    WithTop.coe_lt_coe.mpr (ENat.coe_lt_coe.mpr (by omega))
+  have huniq := uniqueDiffOn_Icc hab
+  have hf_n : ContDiffOn ℝ (↑n : WithTop ℕ∞) f s := hf.of_le hle
+  have hdiff : DifferentiableOn ℝ (iteratedDerivWithin n f s) s :=
+    hf.differentiableOn_iteratedDerivWithin hlt huniq
+  have hderiv : ∀ t ∈ Ioo a b, HasDerivAt (fun y => taylorWithinEval f n s y b)
+      (((↑n.factorial)⁻¹ * (b - t) ^ n) •
+        iteratedDerivWithin (n + 1) f s t) t := by
+    intro t ht
+    exact (hasDerivWithinAt_taylorWithinEval_at_Icc b hab
+      (Ioo_subset_Icc_self ht) hf_n hdiff).hasDerivAt (Icc_mem_nhds ht.1 ht.2)
+  have hcont : ContinuousOn (fun t => taylorWithinEval f n s t b) s :=
+    continuousOn_taylorWithinEval huniq hf_n
+  have hint : IntervalIntegrable (fun t => ((↑n.factorial)⁻¹ * (b - t) ^ n) •
+      iteratedDerivWithin (n + 1) f s t) volume a b := by
+    apply ContinuousOn.intervalIntegrable
+    rw [uIcc_of_le hab']
+    exact (continuousOn_const.mul
+      ((continuousOn_const.sub continuousOn_id).pow n)).smul
+      (hf.continuousOn_iteratedDerivWithin le_rfl huniq)
+  have hftc := integral_eq_sub_of_hasDerivAt_of_le hab' hcont hderiv hint
+  simp only [taylorWithinEval_self, smul_eq_mul] at hftc
+  linarith
 
 /-! ## Bernstein's Theorem -/
 

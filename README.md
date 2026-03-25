@@ -24,7 +24,7 @@ See the [proof outline](docs/proof-outline.md) for an informal summary of the pr
 |------|----------|--------|
 | [`StronglyContinuousSemigroup.lean`][SC] | [C₀-semigroups, generators, resolvent, Hille-Yosida](summary/HilleYosida/StronglyContinuousSemigroup.md) | **Fully proved** (0 axioms) |
 | [`SemigroupGroupExtension.lean`][SGE] | [BCR Theorem 4.1.13, group extension](summary/HilleYosida/SemigroupGroupExtension.md) | Proved modulo 3 axioms |
-| [`Bernstein.lean`][B] | Completely monotone functions, Bernstein's theorem | 1 axiom |
+| [`Bernstein.lean`][B] | [Completely monotone functions, Bernstein's theorem](summary/HilleYosida/Bernstein.md) | 2 sorries |
 | [`FourierPD.lean`][FPD] | Fourier PD quadratic form | 1 axiom |
 
 [SC]: HilleYosida/StronglyContinuousSemigroup.lean
