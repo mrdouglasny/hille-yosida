@@ -15,6 +15,7 @@ Verified correct by Gemini (2026-03-23).
 import Mathlib.MeasureTheory.Integral.Bochner.Basic
 import Mathlib.MeasureTheory.Measure.Lebesgue.Basic
 import Mathlib.Analysis.Calculus.IteratedDeriv.Defs
+import Mathlib.Analysis.Calculus.Taylor
 
 noncomputable section
 
