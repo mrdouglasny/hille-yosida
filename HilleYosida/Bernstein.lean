@@ -490,14 +490,121 @@ lemma cm_rescaled_mass_eq (f : ℝ → ℝ) (n : ℕ) :
   rw [Measure.map_apply (cm_rescaling_measurable n) MeasurableSet.univ,
     Set.preimage_univ]
 
+set_option maxHeartbeats 3200000 in
+/-- **IBP identity** for the CM density:
+`∫₀ᵀ ρ_{m+2}(t) dt = B_{m+2}(T) + ∫₀ᵀ ρ_{m+1}(t) dt`
+where `B_{m+2}(T) = (-1)^{m+2} T^{m+1}/(m+1)! · f^{(m+1)}(T)`.
+
+The proof uses the FTC on the product `F(t) = t^{m+1} · c · f^{(m+1)}(t)` where
+`c = (-1)^{m+2}/(m+1)!`. The derivative `F'` decomposes as
+`cm_density f (m+2) - cm_density f (m+1)` by the factorial identity
+`(m+1)·(-1)^{m+2}/(m+1)! = -(-1)^{m+1}/m!`. -/
+private lemma cm_density_ibp_identity (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
+    (m : ℕ) (T : ℝ) (hT : 0 < T) :
+    ∫ t in (0 : ℝ)..T, cm_density f (m + 2) t =
+    (-1 : ℝ) ^ (m + 2) * T ^ (m + 1) / ↑(m + 1).factorial *
+      iteratedDerivWithin (m + 1) f (Set.Ici 0) T +
+    ∫ t in (0 : ℝ)..T, cm_density f (m + 1) t := by
+  set g := iteratedDerivWithin (m + 1) f (Set.Ici 0)
+  set g' := iteratedDerivWithin (m + 2) f (Set.Ici 0)
+  set c : ℝ := (-1) ^ (m + 2) / ↑(m + 1).factorial
+  set F := fun t : ℝ => t ^ (m + 1) * (c * g t)
+  have hg_cont : ContinuousOn g (Set.Ici 0) :=
+    hcm.1.continuousOn_iteratedDerivWithin le_top (uniqueDiffOn_Ici 0)
+  have hg_deriv : ∀ t, 0 < t → HasDerivAt g (g' t) t := by
+    intro t ht
+    have hmem : Set.Ici (0 : ℝ) ∈ nhds t := Ici_mem_nhds ht
+    have hda := (hcm.1.differentiableOn_iteratedDerivWithin
+      (show (↑(m + 1) : WithTop ℕ∞) < ⊤ from WithTop.coe_lt_top _)
+      (uniqueDiffOn_Ici 0)).hasDerivAt hmem
+    show HasDerivAt g (g' t) t; convert hda using 1; show g' t = deriv g t
+    simp only [g, g']
+    rw [show m + 2 = (m + 1) + 1 from by omega, iteratedDerivWithin_succ,
+      derivWithin_of_mem_nhds hmem]
+  have huIcc : Set.uIcc (0 : ℝ) T = Set.Icc 0 T := Set.uIcc_of_le (le_of_lt hT)
+  have hF_cont : ContinuousOn F (Set.Icc 0 T) :=
+    ((continuous_pow _).continuousOn).mul
+      (continuousOn_const.mul (hg_cont.mono Set.Icc_subset_Ici_self))
+  have hF_deriv : ∀ t ∈ Set.Ioo 0 T, HasDerivAt F
+      (↑(m + 1) * t ^ m * (c * g t) + t ^ (m + 1) * (c * g' t)) t :=
+    fun t ht => (hasDerivAt_pow (m + 1) t).mul ((hg_deriv t ht.1).const_mul c)
+  have hcm_int : ∀ k, k ≠ 0 → IntervalIntegrable (fun t => cm_density f k t)
+      MeasureTheory.volume 0 T := by
+    intro k hk; apply ContinuousOn.intervalIntegrable; rw [huIcc]
+    apply ContinuousOn.mono _ Set.Icc_subset_Ici_self
+    change ContinuousOn (fun t => cm_density f k t) (Set.Ici 0)
+    have : (fun t => cm_density f k t) = fun t =>
+        (-1 : ℝ) ^ k / ↑(k - 1).factorial * t ^ (k - 1) *
+          iteratedDerivWithin k f (Set.Ici 0) t := funext fun t => by
+      simp [cm_density, hk]
+    rw [this]
+    exact (continuousOn_const.mul (continuous_pow _).continuousOn).mul
+      (hcm.1.continuousOn_iteratedDerivWithin le_top (uniqueDiffOn_Ici 0))
+  have hF'_eq : ∀ t, ↑(m + 1) * t ^ m * (c * g t) + t ^ (m + 1) * (c * g' t) =
+      cm_density f (m + 2) t - cm_density f (m + 1) t := by
+    intro t
+    simp only [cm_density, show m + 2 ≠ 0 from by omega, show m + 1 ≠ 0 from by omega,
+      ite_false, show m + 2 - 1 = m + 1 from by omega,
+      show m + 1 - 1 = m from by omega, g, g', c]
+    have : ((m + 1).factorial : ℝ) = ((m + 1 : ℕ) : ℝ) * ↑m.factorial := by
+      rw [Nat.factorial_succ]; push_cast; ring
+    rw [this]
+    have : (m.factorial : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr (Nat.factorial_ne_zero _)
+    have : ((m : ℝ) + 1) ≠ 0 := by positivity
+    have : (-1 : ℝ) ^ (m + 2) = (-1) ^ (m + 1) * (-1) := pow_succ (-1) (m + 1)
+    rw [this]; field_simp; ring
+  have hF'_int : IntervalIntegrable
+      (fun t => ↑(m + 1) * t ^ m * (c * g t) + t ^ (m + 1) * (c * g' t))
+      MeasureTheory.volume 0 T :=
+    ((hcm_int _ (by omega)).sub (hcm_int _ (by omega))).congr
+      fun t _ => (hF'_eq t).symm
+  have hftc := intervalIntegral.integral_eq_sub_of_hasDerivAt_of_le
+    (le_of_lt hT) hF_cont hF_deriv hF'_int
+  have hstep1 : ∫ t in (0 : ℝ)..T,
+      (cm_density f (m + 2) t - cm_density f (m + 1) t) = F T - F 0 := by
+    rw [← hftc]
+    exact intervalIntegral.integral_congr_ae
+      (Filter.Eventually.of_forall fun t _ => (hF'_eq t).symm)
+  have hF0 : F 0 = 0 := by simp [F, zero_pow (show m + 1 ≠ 0 from by omega)]
+  rw [hF0, sub_zero] at hstep1
+  rw [intervalIntegral.integral_sub (hcm_int _ (by omega))
+    (hcm_int _ (by omega))] at hstep1
+  suffices hgoal : (-1 : ℝ) ^ (m + 2) * T ^ (m + 1) / ↑(m + 1).factorial *
+      g T = F T by linarith
+  simp only [F, c]; ring
+
+set_option maxHeartbeats 3200000 in
+-- IBP step: boundary term ≤ 0 by CM sign condition
+private lemma cm_density_ibp_step (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
+    (k : ℕ) (hk : 2 ≤ k) (T : ℝ) (hT : 0 < T) :
+    ∫ t in (0 : ℝ)..T, cm_density f k t ≤
+    ∫ t in (0 : ℝ)..T, cm_density f (k - 1) t := by
+  obtain ⟨m, rfl⟩ : ∃ m, k = m + 2 := ⟨k - 2, by omega⟩
+  simp only [show m + 2 - 1 = m + 1 from by omega]
+  have hibp := cm_density_ibp_identity f hcm m T hT
+  set B := (-1 : ℝ) ^ (m + 2) * T ^ (m + 1) / ↑(m + 1).factorial *
+    iteratedDerivWithin (m + 1) f (Set.Ici 0) T
+  have hB : B ≤ 0 := by
+    have h_neg : (-1 : ℝ) ^ (m + 2) *
+        iteratedDerivWithin (m + 1) f (Set.Ici 0) T ≤ 0 := by
+      have : (-1 : ℝ) ^ (m + 2) = (-1) ^ (m + 1) * (-1) :=
+        pow_succ (-1) (m + 1)
+      rw [this]; nlinarith [hcm.2 (m + 1) T (le_of_lt hT)]
+    suffices B = T ^ (m + 1) / ↑(m + 1).factorial *
+        ((-1 : ℝ) ^ (m + 2) *
+          iteratedDerivWithin (m + 1) f (Set.Ici 0) T) by
+      rw [this]
+      exact mul_nonpos_of_nonneg_of_nonpos
+        (div_nonneg (pow_nonneg (le_of_lt hT) _) (Nat.cast_nonneg _)) h_neg
+    simp only [B]; ring
+  linarith
+
 /-- **Total mass bound**: `cm_measure f n` is a finite measure with total mass
 `≤ f(0) - L` for CM functions with `f(t) → L`.
 
-By Taylor's formula with integral remainder at `x = 0`:
-  `f(0) - f(T) = Σ_{k=1}^{n-1} (boundary terms at T) + ∫₀ᵀ ρ_n(t) dt`
-where each boundary term `(-1)^k f^{(k)}(T) T^k / k!` is nonneg (CM sign)
-and tends to 0 as `T → ∞` (since `f^{(k)}(T) → 0` for CM functions).
-Taking `T → ∞`: `∫₀^∞ ρ_n(t) dt ≤ f(0) - L`. -/
+By IBP recursion, `∫₀ᵀ ρ_k = B_k(T) + ∫₀ᵀ ρ_{k-1}` where each boundary term
+`B_k(T) = (-1)^k T^{k-1}/(k-1)! · f^{(k-1)}(T) ≤ 0` by the CM sign condition.
+Iterating down to `k = 1`: `∫₀ᵀ ρ_n ≤ ∫₀ᵀ ρ_1 = f(0) - f(T) ≤ f(0) - L`. -/
 lemma cm_measure_finite_mass (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
     (n : ℕ) (hn : 2 ≤ n) (L : ℝ)
     (hL : Filter.Tendsto f Filter.atTop (nhds L)) :
@@ -514,7 +621,51 @@ lemma cm_measure_finite_mass (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
   -- (each IBP step adds a nonpositive boundary term by CM sign condition)
   have hbound : ∀ T, 0 < T →
       ∫ t in (0 : ℝ)..T, cm_density f n t ≤ f 0 - L := by
-    sorry -- IBP recursion: I_k = B_k + I_{k-1}, B_k ≤ 0, I_1 = f(0)-f(T)
+    -- Base case: ∫₀ᵀ ρ₁ = f(0) - f(T)
+    have base : ∀ T, 0 < T →
+        ∫ t in (0 : ℝ)..T, cm_density f 1 t = f 0 - f T := by
+      intro T hT
+      have h1 : ∫ t in (0 : ℝ)..T, cm_density f 1 t =
+          ∫ t in (0 : ℝ)..T, -iteratedDerivWithin 1 f (Set.Ici 0) t :=
+        intervalIntegral.integral_congr_ae
+          (Filter.Eventually.of_forall fun t _ => cm_density_one t)
+      rw [h1, ← hcm.integral_neg_deriv_Ici T hT, hcm.integral_mass T hT]
+    -- Induction: for j ≥ 1, ∫₀ᵀ ρ_j ≤ f(0) - f(T)
+    have density_le : ∀ j, 1 ≤ j → ∀ T, 0 < T →
+        ∫ t in (0 : ℝ)..T, cm_density f j t ≤ f 0 - f T := by
+      intro j hj
+      induction j with
+      | zero => omega
+      | succ p ih =>
+        intro T hT
+        by_cases hp : p = 0
+        · subst hp; exact le_of_eq (base T hT)
+        · calc ∫ t in (0 : ℝ)..T, cm_density f (p + 1) t
+              ≤ ∫ t in (0 : ℝ)..T, cm_density f p t := by
+                simpa using cm_density_ibp_step f hcm (p + 1) (by omega) T hT
+            _ ≤ f 0 - f T := ih (Nat.one_le_iff_ne_zero.mpr hp) T hT
+    -- L ≤ f(T) for T > 0 (antitone + limit)
+    intro T hT
+    have hfT : L ≤ f T := by
+      have htop : (⊤ : WithTop ℕ∞) ≠ 0 := Ne.symm (ne_of_beq_false rfl)
+      set g₀ := fun t : ℝ => f (max t 0)
+      have hg_anti : Antitone g₀ := fun a b hab =>
+        (antitoneOn_of_deriv_nonpos (convex_Ici 0) hcm.1.continuousOn
+          ((hcm.1.differentiableOn htop).mono interior_subset)
+          (fun x hx => by
+            rw [interior_Ici] at hx
+            have h1 := hcm.deriv_nonpos x (le_of_lt hx)
+            rwa [iteratedDerivWithin_one,
+              derivWithin_of_mem_nhds (Ici_mem_nhds hx)] at h1))
+          (Set.mem_Ici.mpr (le_max_right _ _))
+          (Set.mem_Ici.mpr (le_max_right _ _))
+          (max_le_max_right 0 hab)
+      have := hg_anti.le_of_tendsto
+        (hL.congr' (Filter.eventually_atTop.mpr
+          ⟨0, fun t ht => by simp [g₀, max_eq_left ht]⟩)) T
+      simp only [g₀, max_eq_left (le_of_lt hT)] at this
+      exact this
+    linarith [density_le n (by omega : 1 ≤ n) T hT]
   -- cm_density integrable on (0,∞) from bounded interval integrals
   have hint : IntegrableOn (cm_density f n) (Set.Ioi 0) := by
     apply integrableOn_Ioi_of_intervalIntegral_norm_bounded (f 0 - L) 0
@@ -632,7 +783,73 @@ private lemma cm_limit_identification (f : ℝ → ℝ) (hcm : IsCompletelyMonot
     (htaylor : ∀ x, 0 ≤ x →
       Tendsto (fun n => taylorWithinEval f n (Set.Ici 0) 0 x) atTop (nhds L)) :
     ∀ t, 0 ≤ t → f t = L + ∫ p, Real.exp (-(t * p)) ∂(↑μ₀ : Measure ℝ) := by
-  sorry
+  intro t ht
+  -- Covariance identity for each k: ∫ φ_{φ(k)}(t,·) dσ̃_{φ(k)} = f(t) - taylor(φ(k)-1, t)
+  have hseq : ∀ k, ∫ p, bernstein_kernel (φ k) t p ∂cm_rescaled f (φ k) =
+      f t - taylorWithinEval f (φ k - 1) (Set.Ici 0) 0 t :=
+    fun k => hcov t ht (φ k) (hφ_ge k) (hmass_fin (φ k) (hφ_ge k))
+  -- Taylor polynomial along subsequence: taylor(φ(k)-1, t) → L
+  have htaylor_sub : Tendsto
+      (fun k => taylorWithinEval f (φ k - 1) (Set.Ici 0) 0 t)
+      atTop (nhds L) := by
+    apply (htaylor t ht).comp
+    apply Filter.tendsto_atTop_atTop.mpr
+    intro b
+    obtain ⟨k, hk⟩ := Filter.tendsto_atTop_atTop.mp hφ.tendsto_atTop (b + 1)
+    exact ⟨k, fun n hn => by have := hk n hn; omega⟩
+  -- (1) ∫ φ_{φ(k)}(t,·) dσ̃_{φ(k)} → f(t) - L
+  have hlim1 : Tendsto
+      (fun k => ∫ p, bernstein_kernel (φ k) t p ∂cm_rescaled f (φ k))
+      atTop (nhds (f t - L)) := by
+    rw [show (fun k => ∫ p, bernstein_kernel (φ k) t p ∂cm_rescaled f (φ k)) =
+        (fun k => f t - taylorWithinEval f (φ k - 1) (Set.Ici 0) 0 t) from
+      funext hseq]
+    exact Tendsto.const_sub (f t) htaylor_sub
+  -- a.e. non-negativity from support condition on μ₀
+  have hae_nn : ∀ᵐ (p : ℝ) ∂(↑μ₀ : Measure ℝ), 0 ≤ p := by
+    rw [ae_iff]; simp only [not_le]; exact hsupp
+  -- (2) ∫ φ_{φ(k)}(t,·) dμ₀ → ∫ e^{-t·} dμ₀  (DCT on fixed measure μ₀)
+  --     Since φ_n(t,p) → e^{-tp} pointwise for p ≥ 0 and |φ_n| ≤ 1, DCT applies.
+  have hlim_fixed : Tendsto
+      (fun k => ∫ p, bernstein_kernel (φ k) t p ∂(↑μ₀ : Measure ℝ))
+      atTop (nhds (∫ p, Real.exp (-(t * p)) ∂(↑μ₀ : Measure ℝ))) := by
+    apply MeasureTheory.tendsto_integral_of_dominated_convergence
+      (fun _ => (1 : ℝ))
+    · -- measurability of bernstein_kernel
+      intro k; apply Measurable.aestronglyMeasurable
+      unfold bernstein_kernel; split_ifs
+      · exact measurable_const
+      · exact ((measurable_const.sub
+            ((measurable_const.mul measurable_id).div
+              measurable_const)).sup
+              measurable_const).pow measurable_const
+    · exact integrable_const 1  -- bound is integrable on finite measure
+    · -- norm bound: |φ_n(t,p)| ≤ 1 a.e. on supp μ₀ ⊆ [0,∞)
+      intro k; filter_upwards [hae_nn] with p hp
+      simp only [bernstein_kernel]
+      have hk : ¬(φ k ≤ 1) := by have := hφ_ge k; omega
+      simp only [hk, ite_false]
+      rw [Real.norm_of_nonneg (pow_nonneg (le_max_right _ _) _)]
+      apply pow_le_one₀ (le_max_right _ _)
+      apply max_le _ (by norm_num : (0 : ℝ) ≤ 1)
+      linarith [div_nonneg (mul_nonneg ht hp)
+        (Nat.cast_nonneg (φ k - 1))]
+    · -- pointwise convergence: φ_n(t,p) → e^{-tp} a.e. (for p ≥ 0)
+      filter_upwards [hae_nn] with p hp
+      exact (bernstein_kernel_tendsto t p ht hp).comp hφ.tendsto_atTop
+  -- (3) The diagonal difference ∫ φ_n d(σ̃_n - μ₀) → 0.
+  -- This combines weak convergence σ̃_{φ(k)} →_v μ₀ with the pointwise
+  -- kernel convergence φ_n → e^{-t·} and uniform bound |φ_n| ≤ 1.
+  -- The rigorous proof uses tightness of {σ̃_{φ(k)}} (from Prokhorov
+  -- extraction) to control the tail mass; tightness is not currently
+  -- propagated through `cm_prokhorov_extract`.
+  have hdiff : Tendsto (fun k =>
+      ∫ p, bernstein_kernel (φ k) t p ∂cm_rescaled f (φ k) -
+      ∫ p, bernstein_kernel (φ k) t p ∂(↑μ₀ : Measure ℝ))
+      atTop (nhds 0) := by
+    sorry
+  -- Conclude: (f t - L) - ∫ e^{-tp} dμ₀ = 0 by uniqueness of limits
+  linarith [tendsto_nhds_unique (hlim1.sub hlim_fixed) hdiff]
 
 /-- **Prokhorov extraction + representation verification** (combined).
 
