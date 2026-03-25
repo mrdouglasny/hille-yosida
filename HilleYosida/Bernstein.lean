@@ -15,6 +15,7 @@ Verified correct by Gemini (2026-03-23).
 import Mathlib.MeasureTheory.Integral.Bochner.Basic
 import Mathlib.MeasureTheory.Measure.Lebesgue.Basic
 import Mathlib.Analysis.Calculus.IteratedDeriv.Defs
+import Mathlib.Analysis.Calculus.IteratedDeriv.Lemmas
 import Mathlib.Analysis.Calculus.Taylor
 
 noncomputable section
@@ -66,7 +67,16 @@ lemma IsCompletelyMonotone.bounded (hcm : IsCompletelyMonotone f) (t : ℝ) (ht 
 /-- The n-th derivative of a CM function is also CM (with sign (-1)^n). -/
 lemma IsCompletelyMonotone.deriv_cm (hcm : IsCompletelyMonotone f) :
     IsCompletelyMonotone (fun t => -iteratedDerivWithin 1 f (Set.Ici 0) t) := by
-  sorry
+  refine ⟨?_, fun n t ht => ?_⟩
+  · -- Smoothness: -f' is C^ω on [0,∞) when f is C^ω
+    -- Needs analytic-level derivWithin preservation (not yet in Mathlib for WithTop ℕ∞)
+    sorry
+  · -- Sign condition: (-1)^n D^n(-f') = (-1)^{n+1} D^{n+1}f ≥ 0 by CM
+    rw [iteratedDerivWithin_fun_neg, iteratedDerivWithin_one,
+      ← iteratedDerivWithin_succ']
+    have := hcm.2 (n + 1) t ht
+    simp only [pow_succ] at this ⊢
+    linarith
 
 /-! ## Bernstein's Theorem -/
 
