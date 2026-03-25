@@ -995,8 +995,26 @@ private lemma finite_measure_subseq_limit
         = (↑((ν n).normalize) : Measure ℝ) _ := by rw [show π n = (ν n).normalize from rfl]
       _ ≤ (↑(ν n) : Measure ℝ) _ := normalize_le _ (hν_ne n) (hν_mass n) _
       _ ≤ ENNReal.ofReal ε.toReal := by
-          -- ↑(ν n)(K^c) ≤ (σ_n + δ_{-1})(K^c) ≤ σ_n(Ioi R) ≤ ε
-          sorry -- measure algebra: complement bound from h_iio + hd + hR
+          -- ↑(ν n)(K^c) = (σ_n + δ_{-1})(K^c) ≤ σ_n(Ioi R) ≤ ε
+          show (σ n + Measure.dirac (-1 : ℝ)) (Set.Icc (-1) (max R 0))ᶜ ≤ _
+          have h_iio : σ n (Set.Iio (-1)) = 0 :=
+            le_antisymm (le_trans (measure_mono (Set.Iio_subset_Iio (by norm_num : (-1:ℝ) ≤ 0)))
+              (le_of_eq (hsupp n))) (zero_le _)
+          have hd : Measure.dirac (-1 : ℝ) (Set.Icc (-1) (max R 0))ᶜ = 0 := by
+            rw [Measure.dirac_apply]
+            simp [Set.indicator, show (-1:ℝ) ∈ Set.Icc (-1) (max R 0) from
+              ⟨le_refl _, by linarith [le_max_right R 0]⟩]
+          simp only [Measure.add_apply, hd, add_zero]
+          calc σ n (Set.Icc (-1) (max R 0))ᶜ
+              ≤ σ n (Set.Iio (-1)) + σ n (Set.Ioi (max R 0)) :=
+                le_trans (measure_mono (fun t => by
+                  simp only [Set.mem_compl_iff, Set.mem_Icc, not_and_or, not_le,
+                    Set.mem_union, Set.mem_Iio, Set.mem_Ioi]; tauto))
+                  (measure_union_le _ _)
+            _ = σ n (Set.Ioi (max R 0)) := by rw [h_iio, zero_add]
+            _ ≤ σ n (Set.Ioi R) :=
+                measure_mono (Set.Ioi_subset_Ioi (le_max_left _ _))
+            _ ≤ _ := hR n
       _ = ε := ENNReal.ofReal_toReal hε_top
   -- Step 3: Prokhorov → compact → seq compact → subseq
   have htight' : IsTightMeasureSet {μ : Measure ℝ | ∃ p ∈ range π, ↑p = μ} := by
