@@ -787,11 +787,27 @@ private lemma chafai_identity (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
     (n : ℕ) (hn : 2 ≤ n) (x : ℝ) (hx : 0 ≤ x)
     (L : ℝ) (hL : Filter.Tendsto f Filter.atTop (nhds L)) :
     f x - L = ∫ p, bernstein_kernel n x p ∂(cm_rescaled f n) := by
-  -- Step 1: Unfold cm_rescaled as pushforward
-  -- Step 2: Convert to weighted Lebesgue integral via withDensity
-  -- Step 3: Apply chafai_kernel_density_eq
-  -- Step 4: Apply chafai_repeated_ibp
-  sorry -- Assembly of steps 1-4 (~20 lines)
+  have hn0 : n ≠ 0 := by omega
+  -- Step 1: Pushforward integral formula
+  have step1 : ∫ p, bernstein_kernel n x p ∂(cm_rescaled f n) =
+      ∫ t, bernstein_kernel n x (((n : ℝ) - 1) / t) ∂(cm_measure f n) := by
+    unfold cm_rescaled
+    exact integral_map_of_stronglyMeasurable (cm_rescaling_measurable n)
+      (show Measurable (bernstein_kernel n x) by
+        unfold bernstein_kernel; split_ifs
+        · exact measurable_const
+        · fun_prop).stronglyMeasurable
+  -- Step 2: WithDensity integral = weighted integral on Ioi 0
+  -- (integral_withDensity_eq_integral_toReal_smul + ofReal/toReal cancellation)
+  have step2 : ∫ t, bernstein_kernel n x (((n : ℝ) - 1) / t) ∂(cm_measure f n) =
+      ∫ t in Set.Ioi 0,
+        bernstein_kernel n x (((n : ℝ) - 1) / t) * cm_density f n t := by
+    sorry
+  -- Step 3: Kernel-density simplification
+  have step3 := chafai_kernel_density_eq f hcm n hn x hx
+  -- Step 4: Repeated IBP
+  have step4 := chafai_repeated_ibp f hcm n (by omega) x hx L hL
+  linarith
 
 /-- **Subsequential weak limit extraction** for finite measures.
 
