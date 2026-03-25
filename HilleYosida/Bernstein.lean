@@ -424,17 +424,28 @@ theorem bernstein_theorem (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f) :
   -- Step 4: The Taylor remainder has definite sign (taylor_nonneg_remainder)
   -- Step 5: f(x) - f(T) = ∫ (-f') dt on each [x,T] (integral_neg_deriv)
   -- ═══════════════════════════════════════════════════════════════
-  -- Remaining: Prokhorov extraction + Portmanteau verification
+  -- Step 6: Prokhorov + Portmanteau → μ₀ with f = L + ∫ e^{-xp} dμ₀
   -- ═══════════════════════════════════════════════════════════════
-  -- For each n ≥ 2, the pushforward σ̃_n = map((n-1)/·, cm_measure f n)
-  -- has total mass f(0) - L and kernel (1-xp/(n-1))^{n-1} → e^{-xp}.
-  -- By Prokhorov (isCompact_closure_of_isTightMeasureSet):
-  --   extract σ̃_{n_k} → μ₀ weakly.
-  -- By Portmanteau (tendsto_of_forall_isClosed_limsup_le) +
-  --   uniform convergence of kernels:
-  --   f(x) = L + ∫ e^{-xp} dμ₀(p).
-  -- Set μ = μ₀ + L · Measure.dirac 0.
-  -- Then f(x) = ∫ e^{-xp} dμ(p) with μ finite and supported on [0,∞).
-  exact sorry
+  -- This is the Chafaï (2013) argument:
+  -- (a) For each n ≥ 2, define σ̃_n = Measure.map ((n-1)/·) (cm_measure f n)
+  --     [pushforward of density ρ_n under p = (n-1)/t]
+  -- (b) Show: σ̃_n([0,∞)) ≤ f(0) - L (uniform mass bound from taylor identity)
+  -- (c) Show: {σ̃_n} tight on [0,∞) (mass bound + support control)
+  -- (d) Prokhorov (isCompact_setOf_finiteMeasure_mass_le_compl_isCompact_le):
+  --     extract σ̃_{n_k} → μ₀ weakly
+  -- (e) Portmanteau (tendsto_of_forall_isClosed_limsup_le) + uniform
+  --     convergence (1-xp/(n-1))^{n-1} → e^{-xp} on compacts:
+  --     f(x) = L + ∫ e^{-xp} dμ₀(p)
+  -- This gives the hypotheses needed for bernstein_packaging.
+  have ⟨μ₀, hfin₀, hsupp₀, hrep⟩ :
+      ∃ (μ₀ : Measure ℝ), IsFiniteMeasure μ₀ ∧ μ₀ (Set.Iio 0) = 0 ∧
+        ∀ t, 0 ≤ t → f t = L + ∫ p, Real.exp (-(t * p)) ∂μ₀ := by
+    -- The core measure-theoretic extraction.
+    -- Uses: cm_measure, cm_density_nonneg, taylor_integral_remainder,
+    --   taylor_nonneg_remainder, isCompact_setOf_finiteMeasure_mass_le_compl_isCompact_le,
+    --   tendsto_of_forall_isClosed_limsup_le
+    exact sorry
+  -- Step 7: Package μ = μ₀ + L·δ₀
+  exact @bernstein_packaging f L hL_nonneg μ₀ hfin₀ hsupp₀ hrep
 
 end
