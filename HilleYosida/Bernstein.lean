@@ -19,10 +19,12 @@ import Mathlib.Analysis.Calculus.IteratedDeriv.Defs
 import Mathlib.Analysis.Calculus.IteratedDeriv.Lemmas
 import Mathlib.Analysis.Calculus.Taylor
 import Mathlib.MeasureTheory.Integral.IntegralEqImproper
+import Mathlib.MeasureTheory.Measure.Prokhorov
+import Mathlib.Analysis.SpecialFunctions.Complex.LogBounds
 
 noncomputable section
 
-open MeasureTheory Set intervalIntegral
+open MeasureTheory Set intervalIntegral Filter
 
 /-- A function `f : ℝ → ℝ` is completely monotone on `[0, ∞)` if it is
 C^∞ on `[0, ∞)` and `(-1)^n f^{(n)}(t) ≥ 0` for all `n ∈ ℕ, t ≥ 0`.
@@ -399,6 +401,45 @@ lemma bernstein_packaging {f : ℝ → ℝ} {L : ℝ} (hL : 0 ≤ L)
 
 /-! ## Rescaled measures and Prokhorov extraction -/
 
+/-- The Bernstein kernel: `φ_n(x,p) = max(1 - xp/(n-1), 0)^{n-1}` for `n ≥ 2`.
+After the change of variable `p = (n-1)/t`, the Taylor integral kernel on `[0, T]`
+becomes `φ_n(x, p) = max(1 - xp/(n-1), 0)^{n-1}`, which converges pointwise
+to `e^{-xp}` as `n → ∞` (the classical `(1-x/n)^n → e^{-x}` limit). -/
+def bernstein_kernel (n : ℕ) (x p : ℝ) : ℝ :=
+  if n ≤ 1 then 0
+  else (max (1 - x * p / (↑(n - 1) : ℝ)) 0) ^ (n - 1)
+
+/-- **Pointwise convergence of the Bernstein kernel** to the Laplace kernel:
+`φ_n(x,p) → e^{-xp}` as `n → ∞`, for `x, p ≥ 0`.
+
+Proof: For large `n`, `1 - xp/(n-1) > 0`, so the `max` is inactive and the kernel
+equals `(1 + (-xp)/(n-1))^{n-1}`. This converges to `e^{-xp}` by
+`Real.tendsto_one_add_div_pow_exp` (the Mathlib proof of `(1+t/n)^n → eᵗ`). -/
+lemma bernstein_kernel_tendsto (x p : ℝ) (_hx : 0 ≤ x) (_hp : 0 ≤ p) :
+    Tendsto (fun n : ℕ => bernstein_kernel n x p)
+      atTop (nhds (Real.exp (-(x * p)))) := by
+  set g := fun n : ℕ => (1 + (-(x * p)) / (↑n : ℝ)) ^ n with hg_def
+  have hg_tendsto : Tendsto g atTop (nhds (Real.exp (-(x * p)))) :=
+    Real.tendsto_one_add_div_pow_exp (-(x * p))
+  have hshift : Tendsto (fun n : ℕ => g (n - 1)) atTop (nhds (Real.exp (-(x * p)))) :=
+    hg_tendsto.comp (tendsto_atTop_atTop.mpr (fun b => ⟨b + 1, fun n hn => by omega⟩))
+  apply Tendsto.congr' _ hshift
+  rw [eventuallyEq_iff_exists_mem]
+  refine ⟨{n : ℕ | n ≥ Nat.ceil (x * p) + 2}, mem_atTop _, ?_⟩
+  intro n hn
+  simp only [Set.mem_setOf_eq] at hn
+  simp only [bernstein_kernel, hg_def]
+  have hn1 : ¬(n ≤ 1) := by omega
+  simp only [hn1, ite_false]
+  have hn1_pos : (0 : ℝ) < ↑(n - 1) := Nat.cast_pos.mpr (by omega)
+  have hn1_ge : x * p ≤ ↑(n - 1) := by
+    calc x * p ≤ ↑(Nat.ceil (x * p)) := Nat.le_ceil _
+    _ ≤ ↑(n - 1) := by exact_mod_cast (by omega : Nat.ceil (x * p) ≤ n - 1)
+  congr 1
+  rw [max_eq_left]
+  · ring
+  · rw [sub_nonneg]; exact div_le_one_of_le₀ hn1_ge hn1_pos.le
+
 /-- The rescaled measure σ̃_n: pushforward of `cm_measure f n` under the map
 `t ↦ (n-1)/t`, which sends `(0, ∞)` to `(0, ∞)`. After this change of
 variable, the Taylor integral kernel becomes `(1 - xp/(n-1))_+^{n-1}`,
@@ -462,7 +503,13 @@ lemma cm_measure_finite_mass (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
     (hL : Filter.Tendsto f Filter.atTop (nhds L)) :
     IsFiniteMeasure (cm_measure f n) ∧
     (cm_measure f n) Set.univ ≤ ENNReal.ofReal (f 0 - L) := by
-  exact sorry
+  -- IBP recursion: ∫_0^T ρ_n ≤ f(0) - f(T) ≤ f(0) - L
+  have hbound : ∀ T, 0 < T →
+      ∫ t in (0 : ℝ)..T, cm_density f n t ≤ f 0 - L := by
+    sorry -- IBP recursion (~20 lines)
+  have hmass : (cm_measure f n) Set.univ ≤ ENNReal.ofReal (f 0 - L) := by
+    sorry -- monotone convergence from hbound (~15 lines)
+  exact ⟨⟨lt_of_le_of_lt hmass ENNReal.ofReal_lt_top⟩, hmass⟩
 
 /-- **Prokhorov extraction + representation verification** (combined).
 
