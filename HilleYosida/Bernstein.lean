@@ -290,9 +290,10 @@ lemma IsCompletelyMonotone.tendsto_total_mass
       IsCompletelyMonotone.integral_mass hcm T hT))
     (Filter.Tendsto.sub tendsto_const_nhds hL)
 
+set_option maxHeartbeats 800000 in
 /-- `-f'` is integrable on `(0, ∞)` for CM functions (total mass = `f(0) - L`).
 Uses `integrableOn_Ioi_of_intervalIntegral_norm_tendsto` with the norm bound
-from `tendsto_total_mass`. -/
+from `tendsto_total_mass`. Extra heartbeats for ae norm computation. -/
 lemma IsCompletelyMonotone.neg_deriv_integrableOn
     (hcm : IsCompletelyMonotone f) {L : ℝ}
     (hL : Filter.Tendsto f Filter.atTop (nhds L)) :
@@ -300,9 +301,29 @@ lemma IsCompletelyMonotone.neg_deriv_integrableOn
       (Set.Ioi 0) := by
   apply integrableOn_Ioi_of_intervalIntegral_norm_tendsto (f 0 - L) 0
       (l := Filter.atTop) (b := id)
-  · intro T; sorry -- continuity of derivWithin on Ioc
+  · -- IntegrableOn on each Ioc 0 T (continuous on Ici 0 → integrable on compact Icc)
+    intro T
+    exact ((hcm.1.continuousOn_iteratedDerivWithin le_top
+      (uniqueDiffOn_Ici 0)).neg.mono Icc_subset_Ici_self).integrableOn_compact
+        isCompact_Icc |>.mono_set Ioc_subset_Icc_self
   · exact Filter.tendsto_id
-  · sorry -- ∫ ‖g‖ = ∫ g → f(0) - L (g ≥ 0 by CM)
+  · -- ∫ ‖g‖ → f(0) - L: since g ≥ 0 by CM, ‖g‖ = g, so ∫ ‖g‖ = f(0) - f(T)
+    have hnorm : ∀ᶠ T in Filter.atTop, (∫ t in (0 : ℝ)..id T,
+        ‖(fun t => -iteratedDerivWithin 1 f (Set.Ici 0) t) t‖) =
+        f 0 - f T := by
+      filter_upwards [Filter.eventually_gt_atTop 0] with T hT
+      simp only [id]
+      have : (∫ t in (0 : ℝ)..T,
+          ‖(fun t => -iteratedDerivWithin 1 f (Set.Ici 0) t) t‖) =
+          ∫ t in (0 : ℝ)..T, -iteratedDerivWithin 1 f (Set.Ici 0) t :=
+        intervalIntegral.integral_congr_ae (ae_of_all _ fun t ht => by
+          rw [uIoc_of_le (le_of_lt hT)] at ht
+          simp only [Real.norm_eq_abs]
+          rw [abs_of_nonneg (by linarith [hcm.deriv_nonpos t (le_of_lt ht.1)])])
+      rw [this, ← IsCompletelyMonotone.integral_neg_deriv_Ici hcm T hT,
+          IsCompletelyMonotone.integral_mass hcm T hT]
+    exact Filter.Tendsto.congr' (Filter.EventuallyEq.symm hnorm)
+      (Filter.Tendsto.sub tendsto_const_nhds hL)
 
 /-- The improper integral `∫₀^∞ (-f') dt = f(0) - L` for CM functions. -/
 lemma IsCompletelyMonotone.integral_Ioi_neg_deriv
