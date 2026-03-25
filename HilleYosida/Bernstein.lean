@@ -18,6 +18,7 @@ import Mathlib.MeasureTheory.Integral.IntervalIntegral.FundThmCalculus
 import Mathlib.Analysis.Calculus.IteratedDeriv.Defs
 import Mathlib.Analysis.Calculus.IteratedDeriv.Lemmas
 import Mathlib.Analysis.Calculus.Taylor
+import Mathlib.MeasureTheory.Integral.IntegralEqImproper
 
 noncomputable section
 
@@ -288,6 +289,39 @@ lemma IsCompletelyMonotone.tendsto_total_mass
     ((Filter.eventually_gt_atTop 0).mono fun T hT =>
       IsCompletelyMonotone.integral_mass hcm T hT))
     (Filter.Tendsto.sub tendsto_const_nhds hL)
+
+/-- `-f'` is integrable on `(0, ∞)` for CM functions (total mass = `f(0) - L`).
+Uses `integrableOn_Ioi_of_intervalIntegral_norm_tendsto` with the norm bound
+from `tendsto_total_mass`. -/
+lemma IsCompletelyMonotone.neg_deriv_integrableOn
+    (hcm : IsCompletelyMonotone f) {L : ℝ}
+    (hL : Filter.Tendsto f Filter.atTop (nhds L)) :
+    IntegrableOn (fun t => -iteratedDerivWithin 1 f (Set.Ici 0) t)
+      (Set.Ioi 0) := by
+  apply integrableOn_Ioi_of_intervalIntegral_norm_tendsto (f 0 - L) 0
+      (l := Filter.atTop) (b := id)
+  · intro T; sorry -- continuity of derivWithin on Ioc
+  · exact Filter.tendsto_id
+  · sorry -- ∫ ‖g‖ = ∫ g → f(0) - L (g ≥ 0 by CM)
+
+/-- The improper integral `∫₀^∞ (-f') dt = f(0) - L` for CM functions. -/
+lemma IsCompletelyMonotone.integral_Ioi_neg_deriv
+    (hcm : IsCompletelyMonotone f) {L : ℝ}
+    (hL : Filter.Tendsto f Filter.atTop (nhds L))
+    (hint : IntegrableOn (fun t => -iteratedDerivWithin 1 f (Set.Ici 0) t)
+      (Set.Ioi 0)) :
+    ∫ t in Set.Ioi 0, -iteratedDerivWithin 1 f (Set.Ici 0) t =
+      f 0 - L := by
+  have htend := intervalIntegral_tendsto_integral_Ioi 0 hint Filter.tendsto_id
+  have htend2 : Filter.Tendsto (fun T => ∫ t in (0 : ℝ)..T,
+      -iteratedDerivWithin 1 f (Set.Ici 0) t) Filter.atTop
+        (nhds (f 0 - L)) :=
+    Filter.Tendsto.congr'
+      ((Filter.eventually_gt_atTop 0).mono fun T hT =>
+        ((IsCompletelyMonotone.integral_neg_deriv_Ici hcm T hT).symm.trans
+          (IsCompletelyMonotone.integral_mass hcm T hT)).symm)
+      (Filter.Tendsto.sub tendsto_const_nhds hL)
+  exact tendsto_nhds_unique htend htend2
 
 /-- **Bernstein's theorem** (1928). Every completely monotone function on `[0, ∞)` is
 the Laplace transform of a finite positive measure on `[0, ∞)`.
