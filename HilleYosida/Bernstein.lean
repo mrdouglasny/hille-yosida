@@ -935,6 +935,20 @@ This encapsulates the Prokhorov extraction argument:
 - Prokhorov compactness (`isCompact_setOf_finiteMeasure_mass_le_compl_isCompact_le`)
 - Sequential compactness extraction
 - Portmanteau for the support condition -/
+-- Helper: ↑(normalize μ)(A) ≤ ↑μ(A) when mass ≥ 1
+private lemma normalize_le (μ : FiniteMeasure ℝ) (hμ : μ ≠ 0)
+    (hm : 1 ≤ μ.mass) (A : Set ℝ) :
+    (↑μ.normalize : Measure ℝ) A ≤ (↑μ : Measure ℝ) A := by
+  rw [FiniteMeasure.toMeasure_normalize_eq_of_nonzero μ hμ, Measure.smul_apply]
+  change (↑(μ.mass⁻¹) : ENNReal) * (↑μ : Measure ℝ) A ≤ (↑μ : Measure ℝ) A
+  exact mul_le_of_le_one_left (zero_le _)
+    (ENNReal.coe_le_coe.mpr (inv_le_one_of_one_le₀ hm))
+
+-- Helper: compact → seq compact for ProbabilityMeasure ℝ
+private lemma prob_seq_compact (S : Set (ProbabilityMeasure ℝ)) (hS : IsCompact S) :
+    IsSeqCompact S :=
+  isCompact_iff_isSeqCompact.mp hS
+
 private lemma finite_measure_subseq_limit
     (σ : ℕ → Measure ℝ) (C : ℝ)
     (hfin : ∀ n, IsFiniteMeasure (σ n))
@@ -946,6 +960,8 @@ private lemma finite_measure_subseq_limit
       μ₀ Set.univ ≤ ENNReal.ofReal C ∧
       ∀ (g : BoundedContinuousFunction ℝ ℝ), Tendsto (fun k => ∫ p, g p ∂(σ (φ k))) atTop
         (nhds (∫ p, g p ∂μ₀)) := by
+  -- Normalization to ProbabilityMeasure + Prokhorov extraction
+  -- Uses: normalize_le, prob_seq_compact, isCompact_closure_of_isTightMeasureSet
   sorry
 
 /-- The bounded continuous function `p ↦ e^{-x·max(p,0)}`, which agrees with
