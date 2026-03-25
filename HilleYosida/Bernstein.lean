@@ -711,7 +711,7 @@ private lemma cm_rescaled_isFiniteMeasure (f : ℝ → ℝ) (n : ℕ)
     rw [Measure.map_apply (cm_rescaling_measurable n) MeasurableSet.univ, Set.preimage_univ]
     exact IsFiniteMeasure.measure_univ_lt_top
 
-/-- **Chafaï identity**: For a CM function `f` with `f(t) → L` and `n ≥ 2, x ≥ 0`:
+/-! **Chafaï identity**: For a CM function `f` with `f(t) → L` and `n ≥ 2, x ≥ 0`:
 
   `f(x) - L = ∫ φ_n(x,p) dσ̃_n(p)`
 
@@ -724,12 +724,74 @@ The change of variables `p = (n-1)/t` transforms the RHS to
   `∫ φ_n(x,p) dσ̃_n|_{[(n-1)/T,∞)}(p)`.
 As `T → ∞`: `f(T) → L`, `B_n(T) → 0` (boundary decay for CM functions:
 `T^k f^{(k)}(T) → 0` from integrability + monotonicity of `(-1)^k f^{(k)}`),
-and the integration domain fills `[0, ∞)`. -/
+and the integration domain fills `[0, ∞)`.
+
+The change of variables is proved in `chafai_kernel_density_eq` (sorry-free).
+The boundary decay integral is in `chafai_repeated_ibp` (sorry).
+
+The kernel-density simplification needs extra heartbeats for field_simp. -/
+set_option maxHeartbeats 3200000 in
+private lemma chafai_kernel_density_eq (f : ℝ → ℝ) (_hcm : IsCompletelyMonotone f)
+    (n : ℕ) (hn : 2 ≤ n) (x : ℝ) (hx : 0 ≤ x) :
+    ∫ t in Set.Ioi 0, bernstein_kernel n x (((n : ℝ) - 1) / t) *
+      cm_density f n t =
+    ∫ t in Set.Ioi x, (-1 : ℝ) ^ n / ↑(n - 1).factorial *
+      (t - x) ^ (n - 1) * iteratedDerivWithin n f (Set.Ici 0) t := by
+  have hn0 : n ≠ 0 := by omega
+  have hn1 : ¬(n ≤ 1) := by omega
+  have hne : ((n : ℝ) - 1) ≠ 0 := by
+    have : (2 : ℝ) ≤ (n : ℝ) := by exact_mod_cast hn
+    linarith
+  have hsubset : Set.Ioi x ⊆ Set.Ioi 0 := Set.Ioi_subset_Ioi hx
+  have hvanish : ∀ t ∈ Set.Ioi 0 \ Set.Ioi x,
+      bernstein_kernel n x (((n : ℝ) - 1) / t) * cm_density f n t = 0 := by
+    intro t ht
+    simp only [Set.mem_diff, Set.mem_Ioi, not_lt] at ht
+    simp only [bernstein_kernel, hn1, ite_false]
+    have hcast : (↑(n - 1) : ℝ) = ↑n - 1 := by
+      rw [Nat.cast_sub (by omega : 1 ≤ n)]; simp
+    have : x * (((n : ℝ) - 1) / t) / ↑(n - 1) = x / t := by
+      rw [hcast]; field_simp [hne, ne_of_gt ht.1]
+    rw [this, max_eq_right (by rw [sub_nonpos, le_div_iff₀ ht.1]; linarith)]
+    rw [zero_pow (by omega : n - 1 ≠ 0), zero_mul]
+  rw [setIntegral_eq_of_subset_of_forall_diff_eq_zero
+    measurableSet_Ioi hsubset hvanish]
+  apply setIntegral_congr_fun measurableSet_Ioi
+  intro t ht; simp only [Set.mem_Ioi] at ht
+  have ht_pos : 0 < t := lt_of_le_of_lt hx ht
+  have hcast : (↑(n - 1) : ℝ) = ↑n - 1 := by
+    rw [Nat.cast_sub (by omega : 1 ≤ n)]; simp
+  simp only [bernstein_kernel, hn1, ite_false]
+  have hrw : x * (((n : ℝ) - 1) / t) / ↑(n - 1) = x / t := by
+    rw [hcast]; field_simp [hne, ne_of_gt ht_pos]
+  rw [hrw, max_eq_left (by rw [sub_nonneg, div_le_one₀ ht_pos]; linarith)]
+  simp only [cm_density, hn0, ite_false]
+  have key : (1 - x / t) ^ (n - 1) * t ^ (n - 1) = (t - x) ^ (n - 1) := by
+    rw [← mul_pow]; congr 1; field_simp [ne_of_gt ht_pos]
+  calc (1 - x / t) ^ (n - 1) * ((-1 : ℝ) ^ n / ↑(n - 1).factorial *
+      t ^ (n - 1) * iteratedDerivWithin n f (Set.Ici 0) t)
+      = (-1 : ℝ) ^ n / ↑(n - 1).factorial *
+        ((1 - x / t) ^ (n - 1) * t ^ (n - 1)) *
+        iteratedDerivWithin n f (Set.Ici 0) t := by ring
+    _ = _ := by rw [key]
+
+private lemma chafai_repeated_ibp (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
+    (n : ℕ) (hn : 1 ≤ n) (x : ℝ) (hx : 0 ≤ x)
+    (L : ℝ) (hL : Filter.Tendsto f Filter.atTop (nhds L)) :
+    ∫ t in Set.Ioi x, (-1 : ℝ) ^ n / ↑(n - 1).factorial *
+      (t - x) ^ (n - 1) * iteratedDerivWithin n f (Set.Ici 0) t =
+      f x - L := by
+  sorry -- Repeated IBP + boundary decay (~30 lines)
+
 private lemma chafai_identity (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
     (n : ℕ) (hn : 2 ≤ n) (x : ℝ) (hx : 0 ≤ x)
     (L : ℝ) (hL : Filter.Tendsto f Filter.atTop (nhds L)) :
     f x - L = ∫ p, bernstein_kernel n x p ∂(cm_rescaled f n) := by
-  sorry
+  -- Step 1: Unfold cm_rescaled as pushforward
+  -- Step 2: Convert to weighted Lebesgue integral via withDensity
+  -- Step 3: Apply chafai_kernel_density_eq
+  -- Step 4: Apply chafai_repeated_ibp
+  sorry -- Assembly of steps 1-4 (~20 lines)
 
 /-- **Subsequential weak limit extraction** for finite measures.
 
