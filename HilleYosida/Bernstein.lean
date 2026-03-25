@@ -40,9 +40,7 @@ def IsCompletelyMonotone (f : ℝ → ℝ) : Prop :=
 /-- A CM function is nonneg (n=0 case). -/
 lemma IsCompletelyMonotone.nonneg (hcm : IsCompletelyMonotone f) (t : ℝ) (ht : 0 ≤ t) :
     0 ≤ f t := by
-  have := hcm.2 0 t ht
-  simp [iteratedDerivWithin_zero] at this
-  exact this
+  simpa [iteratedDerivWithin_zero] using hcm.2 0 t ht
 
 /-- A CM function is non-increasing on [0, ∞) (n=1 case gives f' ≤ 0). -/
 lemma IsCompletelyMonotone.deriv_nonpos (hcm : IsCompletelyMonotone f) (t : ℝ) (ht : 0 ≤ t) :
@@ -54,8 +52,16 @@ lemma IsCompletelyMonotone.deriv_nonpos (hcm : IsCompletelyMonotone f) (t : ℝ)
 /-- A CM function is bounded by f(0) on [0, ∞). -/
 lemma IsCompletelyMonotone.bounded (hcm : IsCompletelyMonotone f) (t : ℝ) (ht : 0 ≤ t) :
     f t ≤ f 0 := by
-  -- f is C^∞ on [0,∞) with f'≤ 0, hence antitone on [0,∞), so f(t) ≤ f(0).
-  sorry
+  have htop : (⊤ : WithTop ℕ∞) ≠ 0 := Ne.symm (ne_of_beq_false rfl)
+  have hanti : AntitoneOn f (Set.Ici 0) :=
+    antitoneOn_of_deriv_nonpos (convex_Ici 0) hcm.1.continuousOn
+      ((hcm.1.differentiableOn htop).mono interior_subset)
+      (fun x hx => by
+        rw [interior_Ici] at hx
+        have h1 := hcm.deriv_nonpos x (le_of_lt hx)
+        rwa [iteratedDerivWithin_one,
+          derivWithin_of_mem_nhds (Ici_mem_nhds hx)] at h1)
+  exact hanti (Set.mem_Ici.mpr le_rfl) (Set.mem_Ici.mpr ht) ht
 
 /-- The n-th derivative of a CM function is also CM (with sign (-1)^n). -/
 lemma IsCompletelyMonotone.deriv_cm (hcm : IsCompletelyMonotone f) :
@@ -90,15 +96,18 @@ theorem bernstein_theorem (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f) :
     simp only [ρ]
     split_ifs with hn
     · exact le_refl 0
-    · -- (-1)^n * f^{(n)}(t) ≥ 0 by CM, and t^{n-1}/(n-1)! ≥ 0
-      apply mul_nonneg (mul_nonneg _ _) _
-      · apply div_nonneg
-        · exact sorry -- (-1)^n factor handled via CM
-        · exact Nat.cast_nonneg _
-      · exact pow_nonneg ht _
-      · -- (-1)^n * iteratedDerivWithin n f ... t has correct sign
-        -- This is a restatement of the CM condition
-        exact sorry
+    · -- Regroup: (-1)^n/(n-1)! · t^{n-1} · f^{(n)}(t)
+      --        = (t^{n-1} / (n-1)!) · ((-1)^n · f^{(n)}(t))
+      have hcm_sign := hcm.2 n t ht
+      have hfact_pos : (0 : ℝ) < ↑(Nat.factorial (n - 1)) :=
+        Nat.cast_pos.mpr (Nat.factorial_pos _)
+      have hrw : (-1 : ℝ) ^ n / ↑(Nat.factorial (n - 1)) * t ^ (n - 1) *
+        iteratedDerivWithin n f (Set.Ici 0) t =
+        t ^ (n - 1) / ↑(Nat.factorial (n - 1)) *
+        ((-1 : ℝ) ^ n * iteratedDerivWithin n f (Set.Ici 0) t) := by
+        field_simp
+      rw [hrw]
+      exact mul_nonneg (div_nonneg (pow_nonneg ht _) (le_of_lt hfact_pos)) hcm_sign
   -- Phase 2-5: Taylor remainder → pushforward → Prokhorov → verify
   -- Each phase is ~30 lines of Lean. The full proof follows Chafaï (2013).
   exact sorry

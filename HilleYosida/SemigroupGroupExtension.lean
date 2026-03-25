@@ -219,7 +219,7 @@ theorem semigroupGroupBochnerExtension (d : ℕ)
     have hG_eq : ∀ i j, G (ts j - ts i) (as j - as i) =
         ∫ p, star (χ i p) * χ j p ∂μ := by
       intro i j
-      show ∫ p, exp (Complex.I * ↑((ts j - ts i) * p.1)) *
+      change ∫ p, exp (Complex.I * ↑((ts j - ts i) * p.1)) *
         exp (Complex.I * ↑(∑ k, p.2 k * (as j - as i) k)) ∂μ =
         ∫ p, star (χ i p) * χ j p ∂μ
       congr 1; ext p; simp only [χ]
