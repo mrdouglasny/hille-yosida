@@ -1167,7 +1167,24 @@ private lemma kernel_uniform_conv (x : ℝ) (hx : 0 < x) (ε : ℝ) (hε : 0 < �
       |bernstein_kernel n x p - Real.exp (-(x * p))| < ε := by
   have hkernel_le : ∀ n, 2 ≤ n → ∀ p, 0 ≤ p →
       bernstein_kernel n x p ≤ Real.exp (-(x * p)) := by
-    sorry -- (1-u/n)^n ≤ e^{-u} for 0 ≤ u ≤ n
+    intro n hn p hp
+    simp only [bernstein_kernel, show ¬(n ≤ 1) from by omega, ite_false]
+    by_cases h : 1 - x * p / ↑(n - 1) ≤ 0
+    · simp only [max_eq_right h]
+      rw [zero_pow (by omega : n - 1 ≠ 0)]
+      exact le_of_lt (Real.exp_pos _)
+    · push_neg at h; rw [max_eq_left h.le]
+      have hle : 1 - x * p / ↑(n - 1) ≤ Real.exp (-(x * p / ↑(n - 1))) := by
+        linarith [Real.add_one_le_exp (-(x * p / ↑(n - 1)))]
+      calc (1 - x * p / ↑(n - 1)) ^ (n - 1)
+          ≤ (Real.exp (-(x * p / ↑(n - 1)))) ^ (n - 1) := by
+            apply pow_le_pow_left₀ h.le hle
+        _ = Real.exp (↑(n - 1) * -(x * p / ↑(n - 1))) := by
+            rw [← Real.exp_nat_mul]
+        _ = Real.exp (-(x * p)) := by
+            congr 1
+            have : (↑(n - 1) : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr (by omega)
+            field_simp
   have hkernel_nn : ∀ n p, 0 ≤ bernstein_kernel n x p := by
     intro n p; simp [bernstein_kernel]; split_ifs <;> positivity
   have htail : Tendsto (fun R => Real.exp (-(x * R))) atTop (nhds 0) := by
