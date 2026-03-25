@@ -406,10 +406,36 @@ Show total mass ≤ f(0) - L (from `taylor_integral_remainder`), tightness, then
 a weak limit via Prokhorov (`isCompact_setOf_finiteMeasure_mass_le_compl_isCompact_le`).
 Verify the representation via Portmanteau (`tendsto_of_forall_isClosed_limsup_le`) +
 uniform convergence of kernels `(1-xp/(n-1))^{n-1} → e^{-xp}` on compacts. -/
-axiom cm_laplace_representation (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
+theorem cm_laplace_representation (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
     (L : ℝ) (hL : Filter.Tendsto f Filter.atTop (nhds L)) (hL_nn : 0 ≤ L) :
     ∃ (μ₀ : Measure ℝ), IsFiniteMeasure μ₀ ∧ μ₀ (Set.Iio 0) = 0 ∧
-      ∀ t, 0 ≤ t → f t = L + ∫ p, Real.exp (-(t * p)) ∂μ₀
+      ∀ t, 0 ≤ t → f t = L + ∫ p, Real.exp (-(t * p)) ∂μ₀ := by
+  /-
+  Proof (Chafaï 2013): For each n ≥ 2, the pushforward
+    σ̃_n := Measure.map ((n-1)/·) (cm_measure f n)
+  is a finite measure on [0,∞) with total mass ≤ f(0) - L
+  (from taylor_integral_remainder + boundary term decay for CM functions).
+
+  The kernel after pushforward is φ_n(xp) = (1 - xp/(n-1))_+^{n-1} → e^{-xp}
+  uniformly on compacts.
+
+  Prokhorov step (Mathlib: isCompact_setOf_finiteMeasure_mass_le_compl_isCompact_le):
+    The set {σ̃_n} has bounded mass and satisfies the tightness condition
+    σ̃_n(Icc(-K)(K)^c) → 0 as K → ∞ uniformly in n (since σ̃_n supported on [0,∞)
+    with bounded mass). By Prokhorov, this set has compact closure.
+
+  Sequential compactness (Mathlib: IsCompact.isSeqCompact):
+    Extract σ̃_{n_k} → μ₀ weakly (FiniteMeasure ℝ is first-countable via
+    the Lévy-Prokhorov metric).
+
+  Portmanteau (Mathlib: tendsto_of_forall_isClosed_limsup_le):
+    For each x ≥ 0: ∫ φ_{n_k}(xp) dσ̃_{n_k}(p) → ∫ e^{-xp} dμ₀(p)
+    using uniform convergence φ_n → e^{-·} + dominated convergence
+    (φ_n ≤ 1 on support, measures have bounded mass).
+
+  This gives f(x) = L + ∫ e^{-xp} dμ₀(p).
+  -/
+  exact sorry
 
 /-- **Bernstein's theorem** (1928). Every completely monotone function on `[0, ∞)` is
 the Laplace transform of a finite positive measure on `[0, ∞)`.
