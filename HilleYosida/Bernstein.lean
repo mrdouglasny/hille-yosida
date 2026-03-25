@@ -258,6 +258,24 @@ lemma cm_density_one (t : ℝ) :
     cm_density f 1 t = -iteratedDerivWithin 1 f (Set.Ici 0) t := by
   simp [cm_density]
 
+/-- The interval integral of `-f'` with the T-dependent set `Icc 0 T` equals the
+integral with the fixed set `Ici 0` (both agree a.e. by set transfer at interior points). -/
+lemma IsCompletelyMonotone.integral_neg_deriv_Ici
+    (hcm : IsCompletelyMonotone f) (T : ℝ) (hT : 0 < T) :
+    ∫ t in (0 : ℝ)..T, -iteratedDerivWithin 1 f (Icc 0 T) t =
+    ∫ t in (0 : ℝ)..T, -iteratedDerivWithin 1 f (Set.Ici 0) t := by
+  apply intervalIntegral.integral_congr_ae
+  apply ae_of_all volume
+  intro t ht
+  rw [uIoc_of_le (le_of_lt hT)] at ht
+  have ht_pos : 0 < t := ht.1
+  have hcda : ContDiffAt ℝ (↑1 : WithTop ℕ∞) f t :=
+    (hcm.1.of_le le_top).contDiffAt (Ici_mem_nhds ht_pos)
+  simp only [iteratedDerivWithin_eq_iteratedDeriv (uniqueDiffOn_Icc hT) hcda
+      (Ioc_subset_Icc_self ht),
+    iteratedDerivWithin_eq_iteratedDeriv (uniqueDiffOn_Ici 0) hcda
+      (Set.mem_Ici.mpr (le_of_lt ht_pos))]
+
 /-- The total mass `∫₀ᵀ (-f') dt → f(0) - L` as `T → ∞`, where `L = lim f(t)`.
 This is the key uniform bound for the tightness argument in Bernstein's theorem. -/
 lemma IsCompletelyMonotone.tendsto_total_mass
