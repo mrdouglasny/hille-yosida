@@ -1025,7 +1025,12 @@ private lemma finite_measure_subseq_limit
       ((frequently_atTop.mpr fun n =>
         ⟨n, le_refl n, subset_closure (mem_range.mpr ⟨n, rfl⟩)⟩))
   -- Step 4: Recover σ convergence from π convergence
-  -- Set μ₀ = underlying measure of limit, restricted appropriately
+  -- For g supported on [0,∞): ∫ g dσ_{φ(k)} = ∫ g dν_{φ(k)} - g(-1)
+  -- = mass(ν_{φ(k)}) * ∫ g dπ_{φ(k)} - g(-1)
+  -- → mass₀ * ∫ g dπ₀ - g(-1) (if mass converges along subsequence)
+  -- Mass convergence: mass(ν_{φ(k)}) ∈ [1, C+1] (bounded), extract sub-subsequence.
+  -- Use tendsto_normalize_iff_tendsto to convert back.
+  -- For BoundedContinuousFunction g: ∫ g dσ_n = ∫ g dν_n - g(-1) always holds.
   sorry
 
 /-- The bounded continuous function `p ↦ e^{-x·max(p,0)}`, which agrees with
