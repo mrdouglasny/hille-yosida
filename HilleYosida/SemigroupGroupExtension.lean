@@ -242,12 +242,13 @@ theorem semigroupGroupBochnerExtension (d : ℕ)
       rw [Finset.sum_sub_distrib]
       ring
     simp_rw [hG_eq]
-    exact pd_quadratic_form_of_measure μ c χ (fun j => by
-      -- χ j is integrable: bounded by 1 on finite measure
+    exact pd_quadratic_form_of_measure μ c χ (fun i j => by
+      -- star(χ i) * χ j is integrable: bounded by 1 on finite measure
       apply (integrable_const (1 : ℂ)).mono
       · exact (Continuous.aestronglyMeasurable (by fun_prop))
       · exact ae_of_all μ (fun p => by
-          dsimp [χ]; rw [norm_mul, norm_exp_I, norm_exp_I, mul_one]; simp))
+          simp only [χ, norm_mul, norm_star, norm_exp_I, mul_one, norm_one,
+            le_refl]))
 
 /-! ## Connection to QFT: Analytic Continuation to Unitary Group
 
