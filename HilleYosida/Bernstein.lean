@@ -221,6 +221,19 @@ lemma IsCompletelyMonotone.integral_mass (hcm : IsCompletelyMonotone f)
       -iteratedDerivWithin 1 f (Icc 0 T) t = f 0 - f T := by
   linarith [IsCompletelyMonotone.integral_neg_deriv hcm 0 T le_rfl hT]
 
+/-- The total mass `∫₀ᵀ (-f') dt → f(0) - L` as `T → ∞`, where `L = lim f(t)`.
+This is the key uniform bound for the tightness argument in Bernstein's theorem. -/
+lemma IsCompletelyMonotone.tendsto_total_mass
+    (hcm : IsCompletelyMonotone f) {L : ℝ}
+    (hL : Filter.Tendsto f Filter.atTop (nhds L)) :
+    Filter.Tendsto (fun T => ∫ t in (0 : ℝ)..T,
+      -iteratedDerivWithin 1 f (Icc 0 T) t) Filter.atTop
+        (nhds (f 0 - L)) :=
+  Filter.Tendsto.congr' (Filter.EventuallyEq.symm
+    ((Filter.eventually_gt_atTop 0).mono fun T hT =>
+      IsCompletelyMonotone.integral_mass hcm T hT))
+    (Filter.Tendsto.sub tendsto_const_nhds hL)
+
 /-- **Bernstein's theorem** (1928). Every completely monotone function on `[0, ∞)` is
 the Laplace transform of a finite positive measure on `[0, ∞)`.
 
@@ -236,28 +249,25 @@ theorem bernstein_theorem (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f) :
       μ (Set.Iio 0) = 0 ∧
       ∀ (t : ℝ), 0 ≤ t →
         f t = ∫ p, Real.exp (-(t * p)) ∂μ := by
-  /-
-  Proof outline (Chafaï 2013):
-  Phase 1: taylor_integral_remainder (PROVED above, sorry-free)
-  Phase 2: For each n, define σ_n with density ρ_n on [0,∞).
-           Use taylor_integral_remainder to get:
-           f(x) = boundary(n,T) + ∫_x^T ρ_n(t)·(T-t)^{n-1}/(n-1)! dt
-  Phase 3: Pushforward σ̃_n = map((n-1)/·, σ_n).
-           Total mass |σ̃_n| = f(0) - f(∞) (uniform bound).
-  Phase 4: Prokhorov (isCompact_closure_of_isTightMeasureSet) gives
-           σ̃_{n_k} → μ weakly.
-  Phase 5: Portmanteau + uniform φ_n → e^{-x} gives f(x) = ∫ e^{-xp} dμ(p).
-
-  Key Mathlib infrastructure available:
-  - MeasureTheory.Measure.Prokhorov (isCompact_closure_of_isTightMeasureSet)
-  - MeasureTheory.Measure.Portmanteau
-  - MeasureTheory.Measure.Tight (IsTightMeasureSet)
-  -/
-  -- Step 1: f has a limit at infinity (antitone + bounded below ⟹ convergent)
-  -- Step 2: Construct approximating measures from taylor_integral_remainder
-  -- Step 3: Extract weak limit via Prokhorov
-  -- Step 4: Verify Laplace representation via Portmanteau
-  -- Each step is ~30-40 lines. Total ~150 lines remaining.
+  -- Step 1: f has a limit L ≥ 0 at infinity
+  obtain ⟨L, hL_tendsto, hL_nonneg⟩ := IsCompletelyMonotone.tendsto_atTop hcm
+  -- Step 2: For each n, density ρ_n(t) = (-1)^n/(n-1)! · t^{n-1} · f^{(n)}(t) ≥ 0
+  -- and defines a measure σ_n on [0,∞) with total mass f(0) - L.
+  -- The Taylor integral remainder (proved) gives:
+  --   f(T) - taylorPoly(x,T) = ∫_x^T ρ_n(t,T) dt
+  -- The sign condition (taylor_nonneg_remainder, proved) ensures nonnegativity.
+  -- Step 3: Pushforward σ̃_n = map((n-1)/·, σ_n) has kernel
+  --   (1-xp/(n-1))^{n-1} → e^{-xp} uniformly on compacts.
+  -- Step 4: {σ̃_n} is tight (total mass = f(0) - L, uniformly bounded).
+  --   By Prokhorov (isCompact_closure_of_isTightMeasureSet):
+  --   ∃ subsequence σ̃_{n_k} → μ₀ weakly.
+  -- Step 5: By Portmanteau (tendsto_of_forall_isClosed_limsup_le) +
+  --   uniform convergence of kernels (1-xp/(n-1))^{n-1} → e^{-xp}:
+  --   f(x) = L + ∫ e^{-xp} dμ₀(p)
+  -- Step 6: Set μ = μ₀ + L · Measure.dirac 0.
+  --   Then f(x) = ∫ e^{-xp} dμ(p) (using e^{-x·0} = 1).
+  -- Steps 2-6 require ~100 lines of measure theory using Mathlib's
+  -- Prokhorov, Portmanteau, and Measure.withDensity/map infrastructure.
   exact sorry
 
 end
