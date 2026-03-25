@@ -852,6 +852,11 @@ private lemma boundary_term_decay (f : ℝ → ℝ) (hcm : IsCompletelyMonotone 
   -- h ≥ 0 antitone, t^{k-1}h(t) integrable ⟹ T^k h(T) → 0 via
   -- T^k h(T) ≤ 2^k ∫_{T/2}^T s^{k-1} h(s) ds → 0
   have hkey : Tendsto (fun T => (T - x) ^ k * h T) atTop (nhds 0) := by
+    -- h ≥ 0 antitone on [0,∞), cm_density f k = t^{k-1}h(t)/(k-1)! integrable on (0,∞)
+    -- Squeeze: 0 ≤ (T-x)^k h(T) ≤ T^k h(T) = 2^k(T/2)^k h(T)
+    -- For antitone h: (T/2)^{k-1} h(T) ≤ t^{k-1} h(t) on [T/2,T]
+    -- So (T/2)^k h(T) ≤ ∫_{T/2}^T t^{k-1} h(t) dt = (k-1)! ∫_{T/2}^T cm_density
+    -- ≤ (k-1)! ∫_{Ioi(T/2)} cm_density → 0 (tail of integrable function)
     sorry
   have heq : ∀ T, (-1 : ℝ) ^ (k + 1) / ↑k.factorial * (T - x) ^ k *
       iteratedDerivWithin k f (Ici 0) T =
@@ -861,6 +866,8 @@ private lemma boundary_term_decay (f : ℝ → ℝ) (hcm : IsCompletelyMonotone 
   rw [show (0 : ℝ) = -(1 / ↑k.factorial) * 0 from by ring]
   exact hkey.const_mul _
 
+set_option maxHeartbeats 12800000 in
+-- domination by cm_density + integrableOn_Ioi_of_intervalIntegral_norm_bounded
 /-- Integrability of the k-th Taylor kernel `(-1)^k/(k-1)! (t-x)^{k-1} D^k f` on `(x, ∞)`.
 Follows from the integrability of `cm_density f k` on `(0, ∞)` and the shift `t ↦ t - x`. -/
 private lemma ibp_kernel_integrableOn (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
@@ -870,7 +877,95 @@ private lemma ibp_kernel_integrableOn (f : ℝ → ℝ) (hcm : IsCompletelyMonot
       iteratedDerivWithin k f (Set.Ici 0) t) (Set.Ioi x) := by
   -- Dominated by cm_density f k on Ioi x ⊆ Ioi 0:
   -- (t-x)^{k-1} ≤ t^{k-1} for t ≥ x ≥ 0, cm_density integrable.
-  sorry
+  have hk0 : k ≠ 0 := by omega
+  have hcont_density : ContinuousOn (cm_density f k) (Ici 0) := by
+    unfold cm_density; simp only [hk0, ↓reduceIte]
+    exact ((continuousOn_const.mul
+      ((continuousOn_pow _).mono fun _ _ => trivial)).mul
+      (hcm.1.continuousOn_iteratedDerivWithin le_top (uniqueDiffOn_Ici 0)))
+  -- ∫₀ᵀ cm_density f j ≤ f(0) - f(T) for j ≥ 1
+  have density_le : ∀ j, 1 ≤ j → ∀ T, 0 < T →
+      ∫ t in (0 : ℝ)..T, cm_density f j t ≤ f 0 - f T := by
+    intro j hj; induction j with
+    | zero => omega
+    | succ p ih =>
+      intro T hT; by_cases hp : p = 0
+      · subst hp
+        rw [intervalIntegral.integral_congr_ae
+          (Filter.Eventually.of_forall fun t _ => cm_density_one t),
+          ← hcm.integral_neg_deriv_Ici T hT, hcm.integral_mass T hT]
+      · calc ∫ t in (0 : ℝ)..T, cm_density f (p + 1) t
+            ≤ ∫ t in (0 : ℝ)..T, cm_density f p t := by
+              simpa using cm_density_ibp_step f hcm (p + 1) (by omega) T hT
+          _ ≤ f 0 - f T := ih (Nat.one_le_iff_ne_zero.mpr hp) T hT
+  -- f(T) ≥ L
+  have hfT_ge_L : ∀ T, 0 < T → L ≤ f T := by
+    intro T hT
+    set g₀ := fun t : ℝ => f (max t 0)
+    have hg_anti : Antitone g₀ := fun a b hab =>
+      (antitoneOn_of_deriv_nonpos (convex_Ici 0) hcm.1.continuousOn
+        ((hcm.1.differentiableOn (Ne.symm (ne_of_beq_false rfl))).mono interior_subset)
+        (fun y hy => by
+          rw [interior_Ici] at hy
+          have h1 := hcm.deriv_nonpos y (le_of_lt hy)
+          rwa [iteratedDerivWithin_one,
+            derivWithin_of_mem_nhds (Ici_mem_nhds hy)] at h1))
+        (mem_Ici.mpr (le_max_right _ _)) (mem_Ici.mpr (le_max_right _ _))
+        (max_le_max_right 0 hab)
+    have := hg_anti.le_of_tendsto
+      (hL.congr' (Filter.eventually_atTop.mpr
+        ⟨0, fun t ht => by simp [g₀, max_eq_left ht]⟩)) T
+    simp only [g₀, max_eq_left (le_of_lt hT)] at this; exact this
+  -- cm_density integrable on (0, ∞)
+  have hint_density : IntegrableOn (cm_density f k) (Ioi 0) := by
+    apply integrableOn_Ioi_of_intervalIntegral_norm_bounded (f 0 - L) 0
+      (l := Filter.atTop) (b := id)
+    · intro T
+      exact (hcont_density.mono Icc_subset_Ici_self).integrableOn_compact isCompact_Icc
+        |>.mono_set Ioc_subset_Icc_self
+    · exact Filter.tendsto_id
+    · filter_upwards [Filter.eventually_gt_atTop 0] with T hT; simp only [id]
+      calc ∫ t in (0 : ℝ)..T, ‖cm_density f k t‖
+          = ∫ t in (0 : ℝ)..T, cm_density f k t := by
+            apply intervalIntegral.integral_congr_ae; apply ae_of_all
+            intro t ht; rw [uIoc_of_le (le_of_lt hT)] at ht
+            rw [Real.norm_eq_abs, abs_of_nonneg (cm_density_nonneg hcm k t ht.1)]
+        _ ≤ f 0 - L := by linarith [density_le k hk T hT, hfT_ge_L T hT]
+  -- Domination: |integrand| ≤ cm_density f k on Ioi x ⊆ Ioi 0
+  apply Integrable.mono' (hint_density.mono_set (Ioi_subset_Ioi hx))
+  · apply (ContinuousOn.aestronglyMeasurable _ measurableSet_Ioi)
+    exact ((continuousOn_const.mul
+      ((continuousOn_id.sub continuousOn_const).pow _)).mul
+      ((hcm.1.continuousOn_iteratedDerivWithin le_top (uniqueDiffOn_Ici 0)).mono
+        (fun t ht => mem_Ici.mpr (le_of_lt (lt_of_le_of_lt hx ht)))))
+  · rw [ae_restrict_iff' measurableSet_Ioi]; apply ae_of_all; intro t ht
+    simp only [Ioi, mem_setOf_eq] at ht
+    have ht0 : 0 < t := lt_of_le_of_lt hx ht
+    have htx : 0 ≤ t - x := by linarith
+    have htx_le : t - x ≤ t := by linarith
+    simp only [cm_density, hk0, ↓reduceIte]
+    have hcm_sign : 0 ≤ (-1 : ℝ) ^ k * iteratedDerivWithin k f (Ici 0) t :=
+      hcm.2 k t (le_of_lt ht0)
+    have hfact : (0 : ℝ) < ↑(k - 1).factorial := Nat.cast_pos.mpr (Nat.factorial_pos _)
+    have hval_nn : 0 ≤ (-1 : ℝ) ^ k / ↑(k - 1).factorial * (t - x) ^ (k - 1) *
+        iteratedDerivWithin k f (Ici 0) t := by
+      calc (-1 : ℝ) ^ k / ↑(k - 1).factorial * (t - x) ^ (k - 1) *
+            iteratedDerivWithin k f (Ici 0) t
+          = (t - x) ^ (k - 1) / ↑(k - 1).factorial *
+            ((-1 : ℝ) ^ k * iteratedDerivWithin k f (Ici 0) t) := by field_simp
+        _ ≥ 0 := mul_nonneg (div_nonneg (pow_nonneg htx _) hfact.le) hcm_sign
+    rw [Real.norm_eq_abs, abs_of_nonneg hval_nn]
+    calc (-1 : ℝ) ^ k / ↑(k - 1).factorial * (t - x) ^ (k - 1) *
+          iteratedDerivWithin k f (Ici 0) t
+        = (1 / ↑(k - 1).factorial) * (t - x) ^ (k - 1) *
+          ((-1 : ℝ) ^ k * iteratedDerivWithin k f (Ici 0) t) := by field_simp
+      _ ≤ (1 / ↑(k - 1).factorial) * t ^ (k - 1) *
+          ((-1 : ℝ) ^ k * iteratedDerivWithin k f (Ici 0) t) := by
+          exact mul_le_mul_of_nonneg_right
+            (mul_le_mul_of_nonneg_left (pow_le_pow_left₀ htx htx_le _) (by positivity))
+            hcm_sign
+      _ = (-1 : ℝ) ^ k / ↑(k - 1).factorial * t ^ (k - 1) *
+          iteratedDerivWithin k f (Ici 0) t := by field_simp
 
 set_option maxHeartbeats 6400000 in
 private lemma chafai_repeated_ibp (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
@@ -1091,16 +1186,18 @@ private lemma finite_measure_subseq_limit
     (isCompact_iff_isSeqCompact.mp hcpt).subseq_of_frequently_in
       ((frequently_atTop.mpr fun n =>
         ⟨n, le_refl n, subset_closure (mem_range.mpr ⟨n, rfl⟩)⟩))
-  -- Step 4: Recover σ convergence from π convergence
-  -- For g supported on [0,∞): ∫ g dσ_{φ(k)} = ∫ g dν_{φ(k)} - g(-1)
-  -- = mass(ν_{φ(k)}) * ∫ g dπ_{φ(k)} - g(-1)
-  -- → mass₀ * ∫ g dπ₀ - g(-1) (if mass converges along subsequence)
-  -- Mass convergence: mass(ν_{φ(k)}) ∈ [1, C+1] (bounded), extract sub-subsequence.
-  -- Use tendsto_normalize_iff_tendsto to convert back.
-  -- For BoundedContinuousFunction g: ∫ g dσ_n = ∫ g dν_n - g(-1) always holds.
-  -- Recover σ convergence from π convergence via mass rescaling.
-  -- ∫ g dσ_{φ(k)} = mass(ν_{φ(k)}) · ∫ g dπ_{φ(k)} - g(-1), extract
-  -- convergent sub-subsequence for masses in [1, C+1].
+  -- Step 4: Recover σ convergence from π convergence via mass rescaling.
+  -- Key idea: ∫ g dσ_{φ(k)} = ∫ g dν_{φ(k)} - g(-1)
+  --   = mass(ν_{φ(k)}) · ∫ g dπ_{φ(k)} - g(-1).
+  -- Mass convergence: mass(ν_{φ(k)}) ∈ [1, C+1] bounded, so by
+  -- Bolzano-Weierstrass extract sub-subsequence ψ with mass(ν_{φ(ψ(k))}) → m₀.
+  -- Then ∫ g dσ_{φ(ψ(k))} → m₀ · ∫ g dπ₀ - g(-1) =: ∫ g dμ₀.
+  -- Define μ₀ via Riesz: ∫ g dμ₀ = m₀ · ∫ g dπ₀ - g(-1).
+  -- Alternatively, use FiniteMeasure.tendsto_normalize_iff_tendsto
+  -- to convert π convergence → ν convergence (as FiniteMeasure), then
+  -- subtract δ_{-1} to recover σ convergence.
+  -- Properties: μ₀(Iio 0) = 0 from Portmanteau (Iio 0 open, supp on [0,∞)),
+  -- μ₀(univ) ≤ C from mass bound, IsFiniteMeasure from mass bound.
   sorry
 
 /-- The bounded continuous function `p ↦ e^{-x·max(p,0)}`, which agrees with
@@ -1156,6 +1253,8 @@ private lemma tendsto_exp_integral
     (integral_exp_bcf_eq hsupp_μ x hx).symm
   rw [h2]; exact (hweak (exp_bcf x hx)).congr (fun k => (h1 k).symm)
 
+set_option maxHeartbeats 6400000 in
+-- quantitative bound on Bernstein kernel approximation error
 /-- **Uniform convergence of the Bernstein kernel** on `[0, ∞)` for fixed `x > 0`:
 For any `ε > 0`, eventually in `n`, `|φ_n(x,p) - e^{-xp}| < ε` for ALL `p ≥ 0`.
 
@@ -1198,7 +1297,71 @@ private lemma kernel_uniform_conv (x : ℝ) (hx : 0 < x) (ε : ℝ) (hε : 0 < �
       abs_of_pos (Real.exp_pos _)] at h1
   have hunif : ∃ N : ℕ, ∀ n, N ≤ n → ∀ p, 0 ≤ p → p ≤ R →
       |bernstein_kernel n x p - Real.exp (-(x * p))| < ε / 2 := by
-    sorry -- |(1-u/n)^n - e^{-u}| ≤ u²/n uniform on [0, R]
+    -- Quantitative bound: |(1-u/m)^m - e^{-u}| ≤ u²/(m-u) via log(1-t) ≥ -t-t²/(1-t)
+    set C := x * R
+    have hR_pos : 0 < R := lt_of_lt_of_le one_pos (le_max_right R₀ 1)
+    have hC_pos : 0 < C := mul_pos hx hR_pos
+    obtain ⟨N₀, hN₀⟩ := exists_nat_gt (C + 2 + 2 * C ^ 2 / ε)
+    refine ⟨N₀, fun n hn p hp hpR => ?_⟩
+    have hn_gt : (↑n : ℝ) > C + 2 + 2 * C ^ 2 / ε :=
+      lt_of_lt_of_le hN₀ (Nat.cast_le.mpr hn)
+    have haux : 0 ≤ 2 * C ^ 2 / ε := div_nonneg (by positivity) hε.le
+    have hn_ge2 : 2 ≤ n := by exact_mod_cast (show (2 : ℝ) < ↑n by linarith [hC_pos]).le
+    have hle := hkernel_le n hn_ge2 p hp
+    rw [abs_of_nonpos (by linarith), neg_sub]
+    set m := n - 1
+    have hm_pos : (0 : ℝ) < ↑m := Nat.cast_pos.mpr (by omega)
+    have hm_eq : (↑m : ℝ) = ↑n - 1 := by
+      rw [Nat.cast_sub (show 1 ≤ n by omega)]; simp
+    have hxp_nn : 0 ≤ x * p := mul_nonneg hx.le hp
+    have hxp_le_C : x * p ≤ C := mul_le_mul_of_nonneg_left hpR hx.le
+    have hm_gt_C : C < ↑m := by linarith
+    set u := x * p / ↑m with hu_def
+    have hu_nn : 0 ≤ u := div_nonneg hxp_nn hm_pos.le
+    have hu_lt_1 : u < 1 := by rw [div_lt_one hm_pos]; linarith
+    have h1u : 0 < 1 - u := by linarith
+    have hkernel_eq : bernstein_kernel n x p = (1 - u) ^ m := by
+      simp only [bernstein_kernel, show ¬(n ≤ 1) from by omega, ite_false]
+      congr 1; exact max_eq_left (by linarith)
+    rw [hkernel_eq]
+    set b := ↑m * u ^ 2 / (1 - u) with hb_def
+    have hb_nn : 0 ≤ b :=
+      div_nonneg (mul_nonneg (Nat.cast_nonneg m) (sq_nonneg u)) h1u.le
+    have hmu : ↑m * u = x * p := by simp only [hu_def]; field_simp
+    -- Lower bound: (1-u)^m ≥ exp(-xp - b) via log(1-u) ≥ -u - u²/(1-u)
+    have hpow_ge : (1 - u) ^ m ≥ Real.exp (-(x * p) - b) := by
+      have heq : (1 - u) ^ m = Real.exp (↑m * Real.log (1 - u)) := by
+        rw [← Real.rpow_natCast (1 - u) m, Real.rpow_def_of_pos h1u, mul_comm]
+      rw [heq]; gcongr
+      rw [show -(x * p) - b = ↑m * (-u - u ^ 2 / (1 - u)) from by
+        rw [← hmu, hb_def]; ring]
+      apply mul_le_mul_of_nonneg_left _ (Nat.cast_nonneg m)
+      have habs : |u| < 1 := by rwa [abs_of_nonneg hu_nn]
+      have hlog := Real.abs_log_sub_add_sum_range_le habs 1
+      simp only [Finset.sum_range_one, Nat.cast_zero, zero_add, div_one, pow_one] at hlog
+      rw [abs_of_nonneg hu_nn, show u ^ (1 + 1) = u ^ 2 from by ring] at hlog
+      linarith [(abs_le.mp hlog).1]
+    -- Chain: exp(-xp) - (1-u)^m ≤ exp(-xp) - exp(-xp-b) ≤ b
+    have hstep : Real.exp (-(x * p)) - (1 - u) ^ m ≤ b := by
+      suffices h : Real.exp (-(x * p)) - Real.exp (-(x * p) - b) ≤ b from by linarith
+      have : Real.exp (-(x * p) - b) = Real.exp (-(x * p)) * Real.exp (-b) := by
+        rw [← Real.exp_add]; ring_nf
+      rw [this]; nlinarith [Real.exp_pos (-(x * p)), Real.exp_pos (-b),
+        Real.exp_le_one_iff.mpr (neg_nonpos.mpr hxp_nn), Real.add_one_le_exp (-b)]
+    -- b = (xp)²/(m-xp) ≤ C²/(m-C) < ε/2
+    have hb_eq : b = (x * p) ^ 2 / (↑m - x * p) := by
+      simp only [hb_def, hu_def]; field_simp
+    have hm_gt_C' : 0 < ↑m - C := by linarith
+    have hb_le : b ≤ C ^ 2 / (↑m - C) := by
+      rw [hb_eq]
+      exact div_le_div₀ (sq_nonneg C) (sq_le_sq' (by linarith) hxp_le_C)
+        hm_gt_C' (by linarith)
+    have hfinal : C ^ 2 / (↑m - C) < ε / 2 := by
+      rw [div_lt_div_iff₀ hm_gt_C' (by positivity : (0:ℝ) < 2)]
+      have h1 : ↑m - C > 2 * C ^ 2 / ε := by linarith [hm_eq]
+      have h2 : ε * (↑m - C) > ε * (2 * C ^ 2 / ε) := mul_lt_mul_of_pos_left h1 hε
+      rw [mul_div_cancel₀ _ (ne_of_gt hε)] at h2; linarith
+    linarith
   obtain ⟨N₁, hN₁⟩ := hunif
   refine ⟨max N₁ 2, fun n hn p hp => ?_⟩
   have hn2 : 2 ≤ n := le_trans (le_max_right N₁ 2) hn
@@ -1371,7 +1534,11 @@ private lemma prokhorov_limit_identification (f : ℝ → ℝ) (hcm : IsComplete
     fun n hn2 x hx => hidentity (n + 2) hn2 x hx
   -- Step 1: Prokhorov extraction — get subsequence σ_{φ(k)} → μ₀
   have htight_σ : ∀ ε, 0 < ε → ∃ K : ℝ, ∀ n, (σ n) (Set.Ioi K) ≤ ENNReal.ofReal ε := by
-    -- Markov: σ_n(Ioi K) ≤ (1/K) · first moment, uniformly bounded.
+    -- From hidentity: f(x) - L = ∫ kernel dσ_n and kernel ≤ exp(-xp):
+    -- For p ≥ K: 1 - kernel(n,x₀,p) ≥ 1 - exp(-x₀K) (using kernel ≤ exp(-xp)).
+    -- So (1-exp(-x₀K))·σ_n(Ioi K) ≤ ∫(1-kernel)dσ_n = σ_n(ℝ)-(f(x₀)-L) ≤ f(0)-f(x₀).
+    -- Given ε > 0: choose x₀ > 0 with f(0)-f(x₀) < ε/2 (continuity at 0),
+    -- then K with 1-exp(-x₀K) > 1/2. Result: σ_n(Ioi K) ≤ ε for all n.
     sorry
   obtain ⟨μ₀, φ, hfin_μ, hφ_mono, hsupp_μ, hmass_μ, hweak⟩ :=
     finite_measure_subseq_limit σ (f 0 - L) hfin_σ hmass_σ hsupp_σ htight_σ
