@@ -1171,7 +1171,8 @@ private lemma kernel_uniform_conv (x : ℝ) (hx : 0 < x) (ε : ℝ) (hε : 0 < �
   have hkernel_nn : ∀ n p, 0 ≤ bernstein_kernel n x p := by
     intro n p; simp [bernstein_kernel]; split_ifs <;> positivity
   have htail : Tendsto (fun R => Real.exp (-(x * R))) atTop (nhds 0) := by
-    sorry
+    apply Filter.Tendsto.comp Real.tendsto_exp_neg_atTop_nhds_zero
+    exact Filter.tendsto_id.const_mul_atTop hx
   obtain ⟨R₀, hR₀⟩ := Metric.tendsto_atTop.mp htail (ε / 2) (half_pos hε)
   set R := max R₀ 1
   have hR_tail : Real.exp (-(x * R)) < ε / 2 := by
