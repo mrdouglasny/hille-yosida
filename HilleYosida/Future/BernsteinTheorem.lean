@@ -270,9 +270,46 @@ lemma spatial_bochner_measures {d : ℕ} (F : ℝ → (Fin d → ℝ) → ℂ)
     --
     -- Remaining: type-level plumbing connecting charFun (inner product on
     -- EuclideanSpace) to our exp(I * ∑ q_i a_i) formulation.
-    -- Uses: integral_smul_measure, integral_map, PiLp.inner_apply, mul_comm.
-    -- The mathematical content is fully proved above.
-    sorry
+    calc
+      F t 0 * ∫ x : EuclideanSpace ℝ (Fin d), exp (↑(inner ℝ x (toE a)) * I) ∂↑μ_prob
+          = ((F t 0).re : ℂ) *
+              ∫ x : EuclideanSpace ℝ (Fin d), exp (I * ↑(∑ i : Fin d, (fromE x) i * a i)) ∂↑μ_prob := by
+            rw [h0_eq]
+            congr 1
+            apply integral_congr_ae
+            filter_upwards with x
+            have hsum :
+                ∑ i : Fin d, ((inner ℝ (x i) (a i) : ℝ) : ℂ) =
+                  ∑ i : Fin d, ((a i : ℂ) * (x i : ℂ)) := by
+              apply Finset.sum_congr rfl
+              intro i hi
+              have hreal : inner ℝ (x i) (a i) = a i * x i := by
+                exact RCLike.inner_apply (x i) (a i)
+              simpa using congrArg (fun r : ℝ => (r : ℂ)) hreal
+            have hexp :
+                (∑ i : Fin d, ((inner ℝ (x i) (a i) : ℝ) : ℂ)) * I =
+                  I * ∑ i : Fin d, ((x i : ℂ) * (a i : ℂ)) := by
+              rw [hsum]
+              simp [mul_comm]
+            simpa [toE, fromE, PiLp.inner_apply] using congrArg Complex.exp hexp
+      _ = ((F t 0).re : ℂ) *
+            ∫ q : Fin d → ℝ, exp (I * ↑(∑ i : Fin d, q i * a i)) ∂μ_base := by
+            congr 1
+            symm
+            simpa [μ_base, fromE] using
+              (integral_map_equiv
+                ((MeasurableEquiv.toLp 2 (Fin d → ℝ)).symm)
+                (μ := (↑μ_prob : Measure (EuclideanSpace ℝ (Fin d))))
+                (f := fun q : Fin d → ℝ => exp (I * ↑(∑ i : Fin d, q i * a i))))
+      _ = ∫ q : Fin d → ℝ, exp (I * ↑(∑ i : Fin d, q i * a i)) ∂ν_val := by
+            symm
+            rw [show ν_val = ENNReal.ofReal (F t 0).re • μ_base from rfl, integral_smul_measure,
+              ENNReal.toReal_ofReal (le_of_lt h0_re_pos)]
+            change ((F t 0).re : ℂ) *
+                ∫ x : Fin d → ℝ, exp (I * ↑(∑ i : Fin d, x i * a i)) ∂μ_base =
+              ((F t 0).re : ℂ) *
+                ∫ q : Fin d → ℝ, exp (I * ↑(∑ i : Fin d, q i * a i)) ∂μ_base
+            rfl
 
 /-! ## Step 2: Temporal decomposition via BCR d=0
 
