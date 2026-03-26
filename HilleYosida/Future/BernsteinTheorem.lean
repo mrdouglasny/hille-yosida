@@ -320,20 +320,109 @@ Note: we use `IsSemigroupPD` (not `IsCompletelyMonotone`!) to avoid
 the smoothness-at-zero issue. `semigroup_pd_laplace` handles this
 via the mollifier + Prokhorov extraction. -/
 
+/-- Auxiliary: for any nonneg measurable function `g` with
+`g(q) = |∑ₖ dₖ e^{i⟨aₖ,q⟩}|²`, the function `t ↦ ∫ g dν_t`
+is semigroup-PD.
+
+The proof uses the "n × m product index" trick: apply `hpd`
+with n·m test points, where the coefficients factor as cᵢ · dₖ
+and the times/spatial vectors are (tᵢ, aₖ). The resulting double
+sum factors into `∑ᵢⱼ c̄ᵢ cⱼ · ∫ |∑ₖ dₖ e^{i⟨aₖ,q⟩}|² dν_{tᵢ+tⱼ}`,
+and the PD condition gives nonnegativity. -/
+private lemma trig_poly_integral_pd {d : ℕ} (F : ℝ → (Fin d → ℝ) → ℂ)
+    (hpd : IsSemigroupGroupPD d F)
+    (ν : ℝ → Measure (Fin d → ℝ))
+    (hν : ∀ t, 0 ≤ t → IsFiniteMeasure (ν t))
+    (hνF : ∀ t, 0 ≤ t → ∀ a,
+      F t a = ∫ q, exp (I * ↑(∑ i : Fin d, q i * a i)) ∂(ν t))
+    (n : ℕ) (c : Fin n → ℂ) (ts : Fin n → ℝ) (hts : ∀ i, 0 ≤ ts i)
+    (m : ℕ) (dd : Fin m → ℂ) (as : Fin m → (Fin d → ℝ)) :
+    0 ≤ (∑ i : Fin n, ∑ j : Fin n,
+      star (c i) * c j *
+        ↑(∫ q : Fin d → ℝ,
+            (Complex.normSq (∑ k : Fin m, dd k *
+              exp (I * ↑(∑ l : Fin d, q l * (as k) l))) : ℝ)
+          ∂(ν (ts i + ts j)))).re := by
+  sorry
+
+/-- Approximation of indicator functions by nonneg trigonometric
+polynomial integrals.
+
+For any finite measure `μ` on `ℝ^d` and measurable `B`,
+the integrals `∫ |∑ dₖ e^{i⟨aₖ,q⟩}|² dμ` can approximate `μ(B)`
+(from above and below, via Fejér kernel convolution on compact
+exhaustions + dominated convergence). This, combined with the PD
+property of `trig_poly_integral_pd`, transfers PD to `t ↦ ν_t(B)`.
+
+Standard result in Fourier analysis; the formalization requires:
+- Stone-Weierstrass on compact subsets of ℝ^d (trig polys separate points)
+- Dominated convergence on compact exhaustions K_n ↑ ℝ^d
+- Inner regularity of finite Borel measures on ℝ^d -/
+private lemma indicator_approx_by_trig_polys {d : ℕ}
+    (ν : Measure (Fin d → ℝ)) [IsFiniteMeasure ν]
+    (B : Set (Fin d → ℝ)) (hB : MeasurableSet B)
+    (ε : ℝ) (hε : 0 < ε) :
+    ∃ (m : ℕ) (dd : Fin m → ℂ) (as : Fin m → (Fin d → ℝ)),
+      |∫ q : Fin d → ℝ,
+          (Complex.normSq (∑ k : Fin m, dd k *
+            exp (I * ↑(∑ l : Fin d, q l * (as k) l))) : ℝ)
+        ∂ν - (ν B).toReal| < ε := by
+  sorry
+
 /-- For each Borel B, the function t ↦ ν_t(B) is semigroup-PD.
 
-Axiomatized: requires approximating Borel indicator functions 1_B
-via positive combinations of Fourier characters (Fejér kernels),
-which needs substantial convolution/approximation machinery not
-yet in Mathlib. Standard result in Fourier analysis on measures. -/
-axiom spatial_measures_pd {d : ℕ} (F : ℝ → (Fin d → ℝ) → ℂ)
+Uses the "n × m product index" trick: any nonneg trigonometric
+polynomial `g = |∑ dₖ e^{i⟨aₖ,·⟩}|²` has semigroup-PD integrals
+(`trig_poly_integral_pd`), and such functions approximate `1_B`
+in L¹(ν_t) (`indicator_approx_by_trig_polys`), so the PD
+condition passes to the limit. -/
+theorem spatial_measures_pd {d : ℕ} (F : ℝ → (Fin d → ℝ) → ℂ)
     (hpd : IsSemigroupGroupPD d F)
     (ν : ℝ → Measure (Fin d → ℝ))
     (hν : ∀ t, 0 ≤ t → IsFiniteMeasure (ν t))
     (hνF : ∀ t, 0 ≤ t → ∀ a,
       F t a = ∫ q, exp (I * ↑(∑ i : Fin d, q i * a i)) ∂(ν t))
     (B : Set (Fin d → ℝ)) (hB : MeasurableSet B) :
-    IsSemigroupPD (fun t => ((ν t) B).toReal)
+    IsSemigroupPD (fun t => ((ν t) B).toReal) := by
+  intro n c ts hts
+  -- Goal: 0 ≤ Re(∑ᵢⱼ c̄ᵢ cⱼ (ν(tᵢ+tⱼ))(B).toReal)
+  -- Strategy: approximate (ν_t B).toReal by ∫ |trig poly|² dν_t,
+  -- use trig_poly_integral_pd, and pass to the limit.
+  --
+  -- The PD sum S = ∑ᵢⱼ c̄ᵢ cⱼ r_{ij} where r_{ij} ∈ ℝ.
+  -- For each ε > 0 and each (i,j), approximate r_{ij} = ν_{tᵢ+tⱼ}(B)
+  -- by ∫ |trig poly|² dν_{tᵢ+tⱼ} to within ε.
+  -- The PD sum with trig poly integrals is ≥ 0 by trig_poly_integral_pd.
+  -- Sending ε → 0, the limit (= original sum) is ≥ 0.
+  by_contra h_neg
+  push_neg at h_neg
+  -- S < 0. Pick ε small enough that the approximation stays negative.
+  set S := (∑ i : Fin n, ∑ j : Fin n,
+    star (c i) * c j * (((ν (ts i + ts j)) B).toReal : ℂ)).re with hS_def
+  -- We have S < 0
+  -- Bound: |S - S_approx| ≤ ∑ᵢⱼ |c̄ᵢ cⱼ| · ε
+  -- So for ε < |S| / (∑ᵢⱼ |c̄ᵢ cⱼ|), S_approx < 0.
+  -- But S_approx ≥ 0 by trig_poly_integral_pd. Contradiction.
+  set M := ∑ i : Fin n, ∑ j : Fin n, Complex.abs (star (c i) * c j)
+  -- Pick ε = |S| / (M + 1) > 0
+  have hS_neg : S < 0 := h_neg
+  set ε := (-S) / (M + 1) with hε_def
+  have hε_pos : 0 < ε := by
+    apply div_pos (neg_pos.mpr hS_neg)
+    positivity
+  -- For each time tᵢ + tⱼ, get approximating trig poly
+  -- (We need a single trig poly that works for all relevant measures
+  -- ν_{tᵢ+tⱼ}. Use the max approximation error.)
+  -- Actually, we just need: for each (i,j), ∃ trig poly with
+  -- |∫ |poly|² dν_{tᵢ+tⱼ} - ν_{tᵢ+tⱼ}(B)| < ε.
+  -- Then the total error in S is ≤ M · ε < |S|, contradiction.
+  -- For simplicity, use a SINGLE trig poly for ALL (i,j) pairs.
+  -- (This is possible by taking a common refinement / max of all
+  -- approximation requirements.)
+  --
+  -- Actually, it's easier to use a SEPARATE approximation for each
+  -- (i,j) pair and bound the total error.
+  sorry
 
 /-! ## Step 3: Product measure assembly
 
@@ -346,12 +435,64 @@ Fourier-Laplace transform. -/
 and their temporal Laplace decompositions into a single product
 measure μ on [0,∞) × ℝ^d.
 
-Axiomatized: requires constructing a transition kernel from a
-consistent family of measures (via `semigroup_pd_laplace` applied
-to each t ↦ ν_t(B)) and applying uniqueness of the Laplace
-transform to guarantee countable additivity on the product space.
-Uses Mathlib's measure kernel API + Fubini-Tonelli. -/
-axiom product_measure_assembly {d : ℕ} (F : ℝ → (Fin d → ℝ) → ℂ)
+## Proof sketch (converting from axiom to sorry)
+
+**Goal:** From the spatial Bochner measures `ν_t` and the semigroup-PD
+property of `t ↦ ν_t(B)`, construct a single measure `μ` on
+`[0,∞) × ℝ^d` such that `F(t,a) = ∫ e^{-tp} e^{i⟨a,q⟩} dμ(p,q)`.
+
+### Step A: Temporal Laplace decomposition of ν_t(B)
+
+For each Borel `B ⊆ ℝ^d`, `t ↦ (ν_t B).toReal` is semigroup-PD by
+`hνPD`. To apply `semigroup_pd_laplace`, we additionally need:
+
+1. **Continuity** of `t ↦ (ν_t B).toReal` on `[0,∞)`:
+   This follows from the continuity of `F` (via `hcont`) and the
+   Fourier uniqueness theorem: `ν_t` is the unique measure with
+   Fourier transform `a ↦ F(t,a)`, so continuity of `F` in `t`
+   implies weak continuity of `t ↦ ν_t`, hence continuity of
+   `t ↦ ν_t(B)` for continuity sets `B`. Extension to all Borel
+   sets uses regularity of finite measures.
+
+2. **Boundedness** of `t ↦ (ν_t B).toReal`:
+   Since `(ν_t B).toReal ≤ (ν_t univ).toReal` and
+   `ν_t(univ) = (F t 0).re` (Fourier at `a=0`) and `‖F t 0‖ ≤ C`,
+   we get the uniform bound `(ν_t B).toReal ≤ C`.
+
+Given these, `semigroup_pd_laplace` yields for each Borel `B`:
+a finite measure `σ_B` on `ℝ` with `σ_B(Iio 0) = 0` and
+`(ν_t B).toReal = ∫ e^{-tp} dσ_B(p)` for `t ≥ 0`.
+
+### Step B: The family B ↦ σ_B is a measure kernel
+
+The map `B ↦ σ_B` defines a transition kernel from `ℝ` to
+`Fin d → ℝ` (for each `p ∈ ℝ`, we need a measure on `Fin d → ℝ`).
+
+More precisely, for fixed `A ⊆ ℝ` Borel, the map `B ↦ σ_B(A)` is
+countably additive (follows from: Laplace transforms of disjoint
+union = sum of Laplace transforms, by uniqueness of Laplace
+transforms). This gives a product set function
+`μ(A × B) := σ_B(A)` on measurable rectangles, which extends to
+a measure by Carathéodory.
+
+### Step C: Fourier-Laplace verification
+
+By construction and Fubini:
+```
+∫∫ e^{-tp} e^{i⟨a,q⟩} dμ(p,q) = ∫_q ∫_p e^{-tp} dσ_{dq}(p) · e^{i⟨a,q⟩}
+                                  = ∫_q (ν_t)(dq) · e^{i⟨a,q⟩}
+                                  = F(t,a)
+```
+
+### Dependencies not yet in Mathlib
+
+- Weak continuity of measures from Fourier transform continuity
+- Carathéodory extension from consistent product set functions
+- Fubini for transition kernels
+
+These are standard results in measure theory but require substantial
+formalization infrastructure not yet available. -/
+theorem product_measure_assembly {d : ℕ} (F : ℝ → (Fin d → ℝ) → ℂ)
     (hcont : ContinuousOn (fun p : ℝ × (Fin d → ℝ) => F p.1 p.2)
       (Ici (0 : ℝ) ×ˢ univ))
     (hbdd : ∃ C : ℝ, ∀ t a, 0 ≤ t → ‖F t a‖ ≤ C)
@@ -369,7 +510,12 @@ axiom product_measure_assembly {d : ℕ} (F : ℝ → (Fin d → ℝ) → ℂ)
         F t a = ∫ p : ℝ × (Fin d → ℝ),
           exp (-(↑(t * p.1) : ℂ)) *
             exp (I * ↑(∑ i : Fin d, p.2 i * a i))
-          ∂μ
+          ∂μ := by
+  -- Step A: For each Borel B, apply semigroup_pd_laplace to t ↦ ν_t(B).
+  -- Requires continuity and boundedness (see proof sketch above).
+  -- Step B: Assemble B ↦ σ_B into a product measure via Carathéodory.
+  -- Step C: Verify the Fourier-Laplace representation via Fubini.
+  sorry
 
 /-! ## Main theorem -/
 
