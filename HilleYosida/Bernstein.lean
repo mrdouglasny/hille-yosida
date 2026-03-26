@@ -1611,11 +1611,29 @@ private lemma prokhorov_limit_identification (f : ℝ → ℝ) (hcm : IsComplete
       -- ∫ kernel ≤ mass - (1-exp(-x₀K))·σ(Ioi K).toReal
       -- ↔ (1-exp(-x₀K))·σ(Ioi K).toReal ≤ mass - ∫ kernel = f(0)-f(x₀)
       rw [h_diff]
-      -- Need: (1-exp) · σ(Ioi K) ≤ σ(univ) - ∫ kernel
-      -- This is: ∫ kernel ≤ σ(univ) - (1-exp)·σ(Ioi K)
-      -- = σ(univ) - σ(Ioi K) + exp·σ(Ioi K) [since σ supported on [0,∞)]
-      -- This integral upper bound needs set decomposition + ae comparison.
-      sorry
+      -- ∫ kernel ≤ σ(Iic K) + exp(-x₀K)·σ(Ioi K) = σ(univ) - (1-exp(-x₀K))·σ(Ioi K)
+      have hmeas : (σ n Set.univ).toReal = (σ n (Set.Iic K)).toReal + (σ n (Set.Ioi K)).toReal := by
+        rw [← Set.Iic_union_Ioi,
+          measure_union (Set.Iic_disjoint_Ioi le_rfl) measurableSet_Ioi,
+          ENNReal.toReal_add (measure_ne_top _ _) (measure_ne_top _ _)]
+      set c := Real.exp (-(x₀ * K))
+      set g := fun p : ℝ => Set.indicator (Set.Iic K) (fun _ => (1:ℝ)) p +
+        Set.indicator (Set.Ioi K) (fun _ => c) p
+      have hg_val : ∫ p, g p ∂(σ n) =
+          (σ n (Set.Iic K)).toReal + c * (σ n (Set.Ioi K)).toReal := by
+        simp only [g]
+        rw [integral_add ((integrable_const (1:ℝ)).indicator measurableSet_Iic)
+          ((integrable_const c).indicator measurableSet_Ioi),
+          integral_indicator_const _ measurableSet_Iic,
+          integral_indicator_const _ measurableSet_Ioi,
+          Measure.real, Measure.real, smul_eq_mul, smul_eq_mul, mul_one, mul_comm]
+      have hle : ∫ p, bernstein_kernel (n+2) x₀ p ∂(σ n) ≤ ∫ p, g p ∂(σ n) := by
+        apply integral_mono_ae
+          (sorry : Integrable (bernstein_kernel (n+2) x₀) (σ n))
+          ((integrable_const (1:ℝ)).indicator measurableSet_Iic |>.add
+            ((integrable_const c).indicator measurableSet_Ioi))
+          (sorry : bernstein_kernel (n+2) x₀ ≤ᶠ[MeasureTheory.ae (σ n)] g)
+      linarith
     -- Choose x₀ > 0 with f(0)-f(x₀) < ε/2 (continuity at 0)
     have hx₀ : ∃ x₀ : ℝ, 0 < x₀ ∧ f 0 - f x₀ < ε / 2 := by
       have hcont : ContinuousWithinAt f (Set.Ici 0) 0 :=
