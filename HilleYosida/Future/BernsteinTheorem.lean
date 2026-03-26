@@ -347,20 +347,155 @@ private lemma trig_poly_integral_pd {d : ℕ} (F : ℝ → (Fin d → ℝ) → �
             (Complex.normSq (∑ k : Fin m, dd k *
               exp (I * ↑(∑ l : Fin d, q l * (as k) l))) : ℝ)
           ∂(ν (ts i + ts j)))).re := by
-  -- The proof uses the "n × m product index" trick.
-  -- Apply hpd with n·m test points indexed by (i,k) ∈ Fin n × Fin m,
-  -- with c'_{(i,k)} = cᵢ · ddₖ, ts'_{(i,k)} = tsᵢ, as'_{(i,k)} = asₖ.
-  --
-  -- The PD quadruple sum factors as:
-  -- ∑_{(i,k),(j,l)} c̄ᵢd̄ₖ cⱼdₗ F(tᵢ+tⱼ, aₗ-aₖ)
-  -- = ∑ᵢⱼ c̄ᵢcⱼ (∑ₖₗ d̄ₖdₗ F(tᵢ+tⱼ, aₗ-aₖ))
-  -- = ∑ᵢⱼ c̄ᵢcⱼ ∫ |∑ₖ dₖ e^{i⟨aₖ,q⟩}|² dν_{tᵢ+tⱼ}
-  --
-  -- The last equality uses:
-  -- (a) hνF to substitute F(t,a) = ∫ e^{i⟨a,q⟩} dν_t
-  -- (b) linearity of integral to pull ∑ₖₗ inside
-  -- (c) normSq expansion: |∑ dₖ e^{i⟨aₖ,q⟩}|² = ∑ₖₗ d̄ₖdₗ e^{i⟨aₗ-aₖ,q⟩}
-  sorry
+  -- Step 1: Apply IsSemigroupGroupPD with n·m product test points
+  let e := finProdFinEquiv (m := n) (n := m)
+  let c' : Fin (n * m) → ℂ := fun p => c (e.symm p).1 * dd (e.symm p).2
+  let ts' : Fin (n * m) → ℝ := fun p => ts (e.symm p).1
+  let as' : Fin (n * m) → (Fin d → ℝ) := fun p => as (e.symm p).2
+  have hts' : ∀ p, 0 ≤ ts' p := fun p => hts _
+  have hPD := (hpd (n * m) c' ts' as' hts').2
+  -- Helper: ‖exp(I * ↑r)‖ = 1
+  have norm_exp_I : ∀ r : ℝ, ‖exp (I * ↑r)‖ = 1 := fun r => by
+    rw [mul_comm]; exact Complex.norm_exp_ofReal_mul_I r
+  -- Step 2: Key inner equality (complex-valued):
+  -- ↑(∫ normSq(...) dν_t) = ∑_k ∑_l star(dd k) * dd l * F(t, as l - as k)
+  have inner_eq : ∀ (t : ℝ) (ht : 0 ≤ t),
+      (↑(∫ q : Fin d → ℝ,
+          (Complex.normSq (∑ k : Fin m, dd k *
+            exp (I * ↑(∑ r : Fin d, q r * (as k) r))) : ℝ)
+        ∂(ν t)) : ℂ) =
+      ∑ k : Fin m, ∑ l : Fin m,
+        star (dd k) * dd l * F t (as l - as k) := by
+    intro t ht
+    haveI : IsFiniteMeasure (ν t) := hν t ht
+    simp_rw [hνF t ht]
+    have hint : ∀ k l, Integrable (fun q : Fin d → ℝ =>
+        star (dd k) * dd l *
+          exp (I * ↑(∑ r : Fin d, q r * (as l - as k) r))) (ν t) := by
+      intro k l
+      apply Integrable.const_mul
+      apply (integrable_const (1 : ℂ)).mono
+      · exact Continuous.aestronglyMeasurable (by fun_prop)
+      · exact ae_of_all _ (fun q => by
+          rw [norm_one]; exact le_of_eq (norm_exp_I _))
+    -- Pull sums outside integrals
+    have pull_sums : ∑ k : Fin m, ∑ l : Fin m,
+        star (dd k) * dd l *
+          ∫ q, exp (I * ↑(∑ r : Fin d, q r * (as l - as k) r)) ∂(ν t) =
+      ∫ q, ∑ k : Fin m, ∑ l : Fin m,
+        star (dd k) * dd l *
+          exp (I * ↑(∑ r : Fin d, q r * (as l - as k) r)) ∂(ν t) := by
+      symm
+      rw [integral_finset_sum _ (fun k _ =>
+        integrable_finset_sum _ (fun l _ => hint k l))]
+      apply Finset.sum_congr rfl; intro k _
+      rw [integral_finset_sum _ (fun l _ => hint k l)]
+      apply Finset.sum_congr rfl; intro l _
+      exact integral_const_mul _ _
+    rw [pull_sums]
+    -- Pointwise normSq expansion
+    have pointwise : ∀ q : Fin d → ℝ,
+        ∑ k : Fin m, ∑ l : Fin m,
+          star (dd k) * dd l *
+            exp (I * ↑(∑ r : Fin d, q r * (as l - as k) r)) =
+        ↑(Complex.normSq (∑ k : Fin m, dd k *
+            exp (I * ↑(∑ r : Fin d, q r * (as k) r)))) := by
+      intro q
+      rw [Complex.normSq_eq_conj_mul_self]
+      simp only [map_sum, map_mul]
+      rw [Finset.sum_mul]
+      apply Finset.sum_congr rfl; intro k _
+      rw [Finset.mul_sum]
+      apply Finset.sum_congr rfl; intro l _
+      have hce : ∀ (s : ℝ), (starRingEnd ℂ) (cexp (I * ↑s)) =
+          cexp (-(I * ↑s)) := by
+        intro s
+        rw [← Complex.exp_conj, map_mul, Complex.conj_I,
+            Complex.conj_ofReal, neg_mul]
+      have hcomb :
+          (starRingEnd ℂ) (cexp (I * ↑(∑ r : Fin d, q r * (as k) r))) *
+            cexp (I * ↑(∑ r : Fin d, q r * (as l) r)) =
+          cexp (I * ↑(∑ r : Fin d, q r * (as l - as k) r)) := by
+        rw [hce, ← Complex.exp_add]
+        congr 1; push_cast
+        simp only [Pi.sub_apply, Complex.ofReal_sub]
+        simp_rw [mul_sub]
+        rw [Finset.sum_sub_distrib]
+        ring
+      simp only [star_def]
+      rw [show (starRingEnd ℂ) (dd k) *
+            (starRingEnd ℂ) (cexp (I * ↑(∑ r : Fin d, q r * (as k) r))) *
+            (dd l * cexp (I * ↑(∑ r : Fin d, q r * (as l) r))) =
+          (starRingEnd ℂ) (dd k) * dd l *
+            ((starRingEnd ℂ) (cexp (I * ↑(∑ r : Fin d, q r * (as k) r))) *
+              cexp (I * ↑(∑ r : Fin d, q r * (as l) r)))
+        from by ring]
+      rw [hcomb]
+    conv_rhs =>
+      arg 2; ext q; rw [pointwise q]
+    exact (integral_ofReal).symm
+  -- Step 3: Assemble: target.re = PD_sum.re ≥ 0
+  suffices h_eq_re :
+      (∑ i : Fin n, ∑ j : Fin n,
+        star (c i) * c j *
+          ↑(∫ q : Fin d → ℝ,
+              (Complex.normSq (∑ k : Fin m, dd k *
+                exp (I * ↑(∑ l : Fin d, q l * (as k) l))) : ℝ)
+            ∂(ν (ts i + ts j)))).re =
+      (∑ p : Fin (n * m), ∑ q : Fin (n * m),
+        star (c' p) * c' q *
+          F (ts' p + ts' q) (as' q - as' p)).re by
+    rw [h_eq_re]; exact hPD
+  -- Substitute inner_eq into each summand
+  have h_lhs : ∑ i : Fin n, ∑ j : Fin n,
+      star (c i) * c j *
+        ↑(∫ q : Fin d → ℝ,
+            (Complex.normSq (∑ k : Fin m, dd k *
+              exp (I * ↑(∑ l : Fin d, q l * (as k) l))) : ℝ)
+          ∂(ν (ts i + ts j))) =
+    ∑ i : Fin n, ∑ j : Fin n,
+      star (c i) * c j *
+        (∑ k : Fin m, ∑ l : Fin m,
+          star (dd k) * dd l * F (ts i + ts j) (as l - as k)) := by
+    apply Finset.sum_congr rfl; intro i _
+    apply Finset.sum_congr rfl; intro j _
+    rw [inner_eq _ (add_nonneg (hts i) (hts j))]
+  -- Factor as quadruple sum and swap k,j indices
+  have h_factor : ∑ i : Fin n, ∑ j : Fin n,
+      star (c i) * c j *
+        (∑ k : Fin m, ∑ l : Fin m,
+          star (dd k) * dd l * F (ts i + ts j) (as l - as k)) =
+    ∑ i : Fin n, ∑ k : Fin m, ∑ j : Fin n, ∑ l : Fin m,
+      star (c i) * star (dd k) * (c j * dd l) *
+        F (ts i + ts j) (as l - as k) := by
+    apply Finset.sum_congr rfl; intro i _
+    rw [show ∑ j : Fin n,
+          star (c i) * c j *
+            (∑ k : Fin m, ∑ l : Fin m,
+              star (dd k) * dd l * F (ts i + ts j) (as l - as k)) =
+        ∑ j : Fin n, ∑ k : Fin m, ∑ l : Fin m,
+          star (c i) * star (dd k) * (c j * dd l) *
+            F (ts i + ts j) (as l - as k) from by
+      apply Finset.sum_congr rfl; intro j _
+      simp_rw [Finset.mul_sum]; ring]
+    rw [Finset.sum_comm]
+  -- Reindex quadruple sum to PD sum via finProdFinEquiv
+  have h_reindex : ∑ i : Fin n, ∑ k : Fin m,
+      ∑ j : Fin n, ∑ l : Fin m,
+        star (c i) * star (dd k) * (c j * dd l) *
+          F (ts i + ts j) (as l - as k) =
+    ∑ p : Fin (n * m), ∑ q : Fin (n * m),
+      star (c' p) * c' q *
+        F (ts' p + ts' q) (as' q - as' p) := by
+    rw [← Fintype.sum_prod_type']
+    rw [← e.sum_comp]
+    congr 1; ext p
+    rw [← Fintype.sum_prod_type']
+    rw [← e.sum_comp]
+    congr 1; ext q
+    simp only [c', ts', as', star_mul, e.symm_apply_apply]
+    ring
+  rw [h_lhs, h_factor, h_reindex]
 
 /-- Nonneg trigonometric polynomial integrals approximate μ(B).
 
