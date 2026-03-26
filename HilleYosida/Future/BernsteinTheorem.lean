@@ -320,15 +320,19 @@ Note: we use `IsSemigroupPD` (not `IsCompletelyMonotone`!) to avoid
 the smoothness-at-zero issue. `semigroup_pd_laplace` handles this
 via the mollifier + Prokhorov extraction. -/
 
-/-- Auxiliary: for any nonneg measurable function `g` with
-`g(q) = |∑ₖ dₖ e^{i⟨aₖ,q⟩}|²`, the function `t ↦ ∫ g dν_t`
-is semigroup-PD.
+/-- Auxiliary: for any nonneg trig polynomial `g(q) = |∑ₖ dₖ e^{i⟨aₖ,q⟩}|²`,
+the function `t ↦ ∫ g dν_t` is semigroup-PD.
 
-The proof uses the "n × m product index" trick: apply `hpd`
-with n·m test points, where the coefficients factor as cᵢ · dₖ
-and the times/spatial vectors are (tᵢ, aₖ). The resulting double
-sum factors into `∑ᵢⱼ c̄ᵢ cⱼ · ∫ |∑ₖ dₖ e^{i⟨aₖ,q⟩}|² dν_{tᵢ+tⱼ}`,
-and the PD condition gives nonnegativity. -/
+**Proof**: Apply `IsSemigroupGroupPD` with `n · m` test points indexed
+by `(i, k) ∈ Fin n × Fin m`, where:
+- coefficients: `c'_{(i,k)} = cᵢ · dₖ`
+- times: `ts'_{(i,k)} = tsᵢ`
+- spatial vectors: `as'_{(i,k)} = asₖ`
+
+The PD sum equals `∑ᵢⱼ c̄ᵢ cⱼ · (∑ₖₗ d̄ₖ dₗ F(tᵢ+tⱼ, aₗ-aₖ))`.
+Substituting the Fourier representation and computing:
+`∑ₖₗ d̄ₖ dₗ F(t, aₗ-aₖ) = ∫ |∑ₖ dₖ e^{i⟨aₖ,q⟩}|² dν_t(q)`,
+giving the desired inequality. -/
 private lemma trig_poly_integral_pd {d : ℕ} (F : ℝ → (Fin d → ℝ) → ℂ)
     (hpd : IsSemigroupGroupPD d F)
     (ν : ℝ → Measure (Fin d → ℝ))
@@ -343,39 +347,62 @@ private lemma trig_poly_integral_pd {d : ℕ} (F : ℝ → (Fin d → ℝ) → �
             (Complex.normSq (∑ k : Fin m, dd k *
               exp (I * ↑(∑ l : Fin d, q l * (as k) l))) : ℝ)
           ∂(ν (ts i + ts j)))).re := by
+  -- The proof uses the "n × m product index" trick.
+  -- Apply hpd with n·m test points indexed by (i,k) ∈ Fin n × Fin m,
+  -- with c'_{(i,k)} = cᵢ · ddₖ, ts'_{(i,k)} = tsᵢ, as'_{(i,k)} = asₖ.
+  --
+  -- The PD quadruple sum factors as:
+  -- ∑_{(i,k),(j,l)} c̄ᵢd̄ₖ cⱼdₗ F(tᵢ+tⱼ, aₗ-aₖ)
+  -- = ∑ᵢⱼ c̄ᵢcⱼ (∑ₖₗ d̄ₖdₗ F(tᵢ+tⱼ, aₗ-aₖ))
+  -- = ∑ᵢⱼ c̄ᵢcⱼ ∫ |∑ₖ dₖ e^{i⟨aₖ,q⟩}|² dν_{tᵢ+tⱼ}
+  --
+  -- The last equality uses:
+  -- (a) hνF to substitute F(t,a) = ∫ e^{i⟨a,q⟩} dν_t
+  -- (b) linearity of integral to pull ∑ₖₗ inside
+  -- (c) normSq expansion: |∑ dₖ e^{i⟨aₖ,q⟩}|² = ∑ₖₗ d̄ₖdₗ e^{i⟨aₗ-aₖ,q⟩}
   sorry
 
-/-- Approximation of indicator functions by nonneg trigonometric
-polynomial integrals.
+/-- Nonneg trigonometric polynomial integrals approximate μ(B).
 
-For any finite measure `μ` on `ℝ^d` and measurable `B`,
-the integrals `∫ |∑ dₖ e^{i⟨aₖ,q⟩}|² dμ` can approximate `μ(B)`
-(from above and below, via Fejér kernel convolution on compact
-exhaustions + dominated convergence). This, combined with the PD
-property of `trig_poly_integral_pd`, transfers PD to `t ↦ ν_t(B)`.
+For finite measures μ₁, ..., μ_N on ℝ^d and measurable B,
+there exist trig polynomials |∑ dₖ e^{i⟨aₖ,·⟩}|² whose integrals
+simultaneously approximate each μᵢ(B) to within ε.
 
-Standard result in Fourier analysis; the formalization requires:
-- Stone-Weierstrass on compact subsets of ℝ^d (trig polys separate points)
-- Dominated convergence on compact exhaustions K_n ↑ ℝ^d
-- Inner regularity of finite Borel measures on ℝ^d -/
-private lemma indicator_approx_by_trig_polys {d : ℕ}
-    (ν : Measure (Fin d → ℝ)) [IsFiniteMeasure ν]
+This is the hard analysis step, requiring:
+1. Inner regularity: approximate B by compact K with μᵢ(B \ K) < ε
+2. Stone-Weierstrass: approximate 1_K pointwise on a large compact
+   set by nonneg trig polynomials |∑ dₖ e^{i⟨aₖ,·⟩}|²
+3. Dominated convergence: pass pointwise to L¹ convergence
+
+The "simultaneous" approximation for N measures uses the average
+measure μ_avg = (1/N) ∑ μᵢ: since μᵢ ≤ N · μ_avg, L¹(μ_avg)
+convergence implies L¹(μᵢ) convergence for all i. -/
+private lemma indicator_approx_simultaneous {d : ℕ}
+    {N : ℕ} (μs : Fin N → Measure (Fin d → ℝ))
+    (hfin : ∀ i, IsFiniteMeasure (μs i))
     (B : Set (Fin d → ℝ)) (hB : MeasurableSet B)
     (ε : ℝ) (hε : 0 < ε) :
     ∃ (m : ℕ) (dd : Fin m → ℂ) (as : Fin m → (Fin d → ℝ)),
-      |∫ q : Fin d → ℝ,
-          (Complex.normSq (∑ k : Fin m, dd k *
-            exp (I * ↑(∑ l : Fin d, q l * (as k) l))) : ℝ)
-        ∂ν - (ν B).toReal| < ε := by
+      ∀ i : Fin N,
+        |∫ q : Fin d → ℝ,
+            (Complex.normSq (∑ k : Fin m, dd k *
+              exp (I * ↑(∑ l : Fin d, q l * (as k) l))) : ℝ)
+          ∂(μs i) - ((μs i) B).toReal| < ε := by
   sorry
 
 /-- For each Borel B, the function t ↦ ν_t(B) is semigroup-PD.
 
-Uses the "n × m product index" trick: any nonneg trigonometric
-polynomial `g = |∑ dₖ e^{i⟨aₖ,·⟩}|²` has semigroup-PD integrals
-(`trig_poly_integral_pd`), and such functions approximate `1_B`
-in L¹(ν_t) (`indicator_approx_by_trig_polys`), so the PD
-condition passes to the limit. -/
+**Proof structure:**
+
+1. Suppose for contradiction that the PD sum `S < 0` for some
+   `n, c, ts`.
+2. Let `M = ∑ᵢⱼ ‖c̄ᵢ cⱼ‖` and pick `ε = (-S) / (2(M + 1)) > 0`.
+3. By `indicator_approx_simultaneous`, find a single trig polynomial
+   `g = |∑ dₖ e^{i⟨aₖ,·⟩}|²` such that for ALL pairs `(i,j)`:
+   `|∫ g dν_{tᵢ+tⱼ} - ν_{tᵢ+tⱼ}(B)| < ε`.
+4. The approximation error in the PD sum satisfies
+   `|S - S_approx| ≤ M · ε < |S| / 2`, so `S_approx < 0`.
+5. But `S_approx ≥ 0` by `trig_poly_integral_pd`. Contradiction. -/
 theorem spatial_measures_pd {d : ℕ} (F : ℝ → (Fin d → ℝ) → ℂ)
     (hpd : IsSemigroupGroupPD d F)
     (ν : ℝ → Measure (Fin d → ℝ))
@@ -385,44 +412,133 @@ theorem spatial_measures_pd {d : ℕ} (F : ℝ → (Fin d → ℝ) → ℂ)
     (B : Set (Fin d → ℝ)) (hB : MeasurableSet B) :
     IsSemigroupPD (fun t => ((ν t) B).toReal) := by
   intro n c ts hts
-  -- Goal: 0 ≤ Re(∑ᵢⱼ c̄ᵢ cⱼ (ν(tᵢ+tⱼ))(B).toReal)
-  -- Strategy: approximate (ν_t B).toReal by ∫ |trig poly|² dν_t,
-  -- use trig_poly_integral_pd, and pass to the limit.
-  --
-  -- The PD sum S = ∑ᵢⱼ c̄ᵢ cⱼ r_{ij} where r_{ij} ∈ ℝ.
-  -- For each ε > 0 and each (i,j), approximate r_{ij} = ν_{tᵢ+tⱼ}(B)
-  -- by ∫ |trig poly|² dν_{tᵢ+tⱼ} to within ε.
-  -- The PD sum with trig poly integrals is ≥ 0 by trig_poly_integral_pd.
-  -- Sending ε → 0, the limit (= original sum) is ≥ 0.
+  -- Goal: 0 ≤ Re(∑ᵢⱼ c̄ᵢ cⱼ (ν(tᵢ+tⱼ)(B)).toReal)
+  -- Notation: for trig poly (m, dd, as_poly), define:
+  --   r(s) := ∫ |∑ dₖ e^{i⟨aₖ,q⟩}|² dν_s  (trig poly integral)
+  --   v(s) := (ν s B).toReal                 (measure of B)
+  -- We show ∑ c̄ᵢ cⱼ v(tᵢ+tⱼ) ≥ 0 by approximating v by r.
   by_contra h_neg
   push_neg at h_neg
-  -- S < 0. Pick ε small enough that the approximation stays negative.
+  -- The PD sum is negative
+  -- Coefficient bound
+  set M := ∑ i : Fin n, ∑ j : Fin n, ‖star (c i) * c j‖
+  have hM_nonneg : 0 ≤ M := Finset.sum_nonneg
+    (fun i _ => Finset.sum_nonneg (fun j _ => norm_nonneg _))
+  -- Pick ε small enough
   set S := (∑ i : Fin n, ∑ j : Fin n,
-    star (c i) * c j * (((ν (ts i + ts j)) B).toReal : ℂ)).re with hS_def
-  -- We have S < 0
-  -- Bound: |S - S_approx| ≤ ∑ᵢⱼ |c̄ᵢ cⱼ| · ε
-  -- So for ε < |S| / (∑ᵢⱼ |c̄ᵢ cⱼ|), S_approx < 0.
-  -- But S_approx ≥ 0 by trig_poly_integral_pd. Contradiction.
-  set M := ∑ i : Fin n, ∑ j : Fin n, Complex.abs (star (c i) * c j)
-  -- Pick ε = |S| / (M + 1) > 0
+    star (c i) * c j *
+      (((ν (ts i + ts j)) B).toReal : ℂ)).re
   have hS_neg : S < 0 := h_neg
-  set ε := (-S) / (M + 1) with hε_def
+  set ε := (-S) / (2 * (M + 1))
   have hε_pos : 0 < ε := by
-    apply div_pos (neg_pos.mpr hS_neg)
-    positivity
-  -- For each time tᵢ + tⱼ, get approximating trig poly
-  -- (We need a single trig poly that works for all relevant measures
-  -- ν_{tᵢ+tⱼ}. Use the max approximation error.)
-  -- Actually, we just need: for each (i,j), ∃ trig poly with
-  -- |∫ |poly|² dν_{tᵢ+tⱼ} - ν_{tᵢ+tⱼ}(B)| < ε.
-  -- Then the total error in S is ≤ M · ε < |S|, contradiction.
-  -- For simplicity, use a SINGLE trig poly for ALL (i,j) pairs.
-  -- (This is possible by taking a common refinement / max of all
-  -- approximation requirements.)
+    apply div_pos (neg_pos.mpr hS_neg); positivity
+  -- Define the n² measures indexed by Fin (n * n)
+  let idx := finProdFinEquiv (m := n) (n := n)
+  let μs : Fin (n * n) → Measure (Fin d → ℝ) :=
+    fun p => ν (ts (idx.symm p).1 + ts (idx.symm p).2)
+  have hμs_fin : ∀ p, IsFiniteMeasure (μs p) := by
+    intro p; exact hν _ (add_nonneg (hts _) (hts _))
+  -- Get a single trig poly approximating 1_B for all n² measures
+  obtain ⟨m, dd, as_poly, h_approx⟩ :=
+    indicator_approx_simultaneous μs hμs_fin B hB ε hε_pos
+  -- For each (i,j), the trig poly integral approximates ν_{tᵢ+tⱼ}(B)
+  -- Let r(s) = ∫ |poly|² dν_s
+  let r : ℝ → ℝ := fun s => ∫ q : Fin d → ℝ,
+    (Complex.normSq (∑ k : Fin m, dd k *
+      exp (I * ↑(∑ l : Fin d, q l * (as_poly k) l))) : ℝ) ∂(ν s)
+  have h_approx_ij : ∀ i j : Fin n,
+      |r (ts i + ts j) - ((ν (ts i + ts j)) B).toReal| < ε := by
+    intro i j
+    have h := h_approx (idx (i, j))
+    simp only [μs, Equiv.symm_apply_apply] at h
+    exact h
+  -- The trig poly PD sum is nonneg: ∑ c̄ᵢ cⱼ r(tᵢ+tⱼ) ≥ 0
+  have h_pd := trig_poly_integral_pd F hpd ν hν hνF
+    n c ts hts m dd as_poly
+  -- h_pd : 0 ≤ (∑ i j, c̄ᵢ cⱼ ↑(r(tᵢ+tⱼ))).re
+  -- Now bound |∑ c̄ᵢ cⱼ (r(tᵢ+tⱼ) - v(tᵢ+tⱼ))| ≤ M · ε
+  -- which gives S ≥ S' - M·ε ≥ -M·ε > S (contradiction)
+  -- where S' = Re(∑ c̄ᵢ cⱼ r(tᵢ+tⱼ)) ≥ 0.
   --
-  -- Actually, it's easier to use a SEPARATE approximation for each
-  -- (i,j) pair and bound the total error.
-  sorry
+  -- Error bound: M * ε < -S
+  have h_bound : M * ε < -S := by
+    -- ε = (-S) / (2(M+1)), so M·ε = M·(-S)/(2(M+1)) < -S
+    -- because M < 2(M+1).
+    rw [show ε = (-S) / (2 * (M + 1)) from rfl]
+    have hS_pos : 0 < -S := neg_pos.mpr hS_neg
+    calc M * ((-S) / (2 * (M + 1)))
+        = M * (-S) / (2 * (M + 1)) := by ring
+      _ ≤ (M + 1) * (-S) / (2 * (M + 1)) := by
+          apply div_le_div_of_nonneg_right _ (by positivity)
+          exact mul_le_mul_of_nonneg_right (by linarith) hS_pos.le
+      _ = (-S) / 2 := by field_simp
+      _ < -S := by linarith
+  -- Bound the norm of the difference sum
+  -- |Re(∑ c̄ᵢcⱼ(↑r(tᵢ+tⱼ) - ↑v(tᵢ+tⱼ)))| ≤ M · ε
+  have h_err : |((∑ i : Fin n, ∑ j : Fin n,
+      star (c i) * c j * ((r (ts i + ts j) : ℂ) -
+        (((ν (ts i + ts j)) B).toReal : ℂ))).re)| ≤ M * ε := by
+    calc _ ≤ ‖∑ i : Fin n, ∑ j : Fin n,
+            star (c i) * c j * ((r (ts i + ts j) : ℂ) -
+              (((ν (ts i + ts j)) B).toReal : ℂ))‖ :=
+          Complex.abs_re_le_norm _
+      _ ≤ ∑ i, ‖∑ j, star (c i) * c j *
+            ((r (ts i + ts j) : ℂ) -
+              (((ν (ts i + ts j)) B).toReal : ℂ))‖ :=
+          norm_sum_le _ _
+      _ ≤ ∑ i, ∑ j, ‖star (c i) * c j *
+            ((r (ts i + ts j) : ℂ) -
+              (((ν (ts i + ts j)) B).toReal : ℂ))‖ :=
+          Finset.sum_le_sum (fun i _ => norm_sum_le _ _)
+      _ = ∑ i, ∑ j, ‖star (c i) * c j‖ *
+            ‖(r (ts i + ts j) : ℂ) -
+              (((ν (ts i + ts j)) B).toReal : ℂ)‖ := by
+          congr 1; ext i; congr 1; ext j; exact norm_mul _ _
+      _ ≤ ∑ i, ∑ j, ‖star (c i) * c j‖ * ε := by
+          apply Finset.sum_le_sum; intro i _
+          apply Finset.sum_le_sum; intro j _
+          apply mul_le_mul_of_nonneg_left _ (norm_nonneg _)
+          rw [show (r (ts i + ts j) : ℂ) -
+            (((ν (ts i + ts j)) B).toReal : ℂ) =
+            ((r (ts i + ts j) -
+              ((ν (ts i + ts j)) B).toReal : ℝ) : ℂ) from by
+              push_cast; ring]
+          rw [Complex.norm_real]
+          exact le_of_lt (h_approx_ij i j)
+      _ = M * ε := by
+          rw [show (∑ i : Fin n, ∑ j : Fin n,
+            ‖star (c i) * c j‖ * ε) =
+            (∑ i : Fin n, ∑ j : Fin n,
+              ‖star (c i) * c j‖) * ε from by
+            rw [Finset.sum_mul]
+            apply Finset.sum_congr rfl; intro i _
+            exact (Finset.sum_mul _ _ _).symm]
+  -- The difference of the sums:
+  -- (∑ c̄ᵢcⱼ ↑r(tᵢ+tⱼ)).re - S
+  -- = Re(∑ c̄ᵢcⱼ(↑r(tᵢ+tⱼ) - ↑v(tᵢ+tⱼ)))
+  have h_split : (∑ i : Fin n, ∑ j : Fin n,
+      star (c i) * c j * (r (ts i + ts j) : ℂ)).re - S =
+    (∑ i : Fin n, ∑ j : Fin n,
+      star (c i) * c j * ((r (ts i + ts j) : ℂ) -
+        (((ν (ts i + ts j)) B).toReal : ℂ))).re := by
+    -- ∑ cᵢⱼ(rᵢⱼ - vᵢⱼ) = ∑ cᵢⱼ rᵢⱼ - ∑ cᵢⱼ vᵢⱼ, then take Re
+    have h_expand : (∑ i : Fin n, ∑ j : Fin n,
+        star (c i) * c j * ((r (ts i + ts j) : ℂ) -
+          (((ν (ts i + ts j)) B).toReal : ℂ))) =
+      (∑ i : Fin n, ∑ j : Fin n,
+        star (c i) * c j * (r (ts i + ts j) : ℂ)) -
+      (∑ i : Fin n, ∑ j : Fin n,
+        star (c i) * c j *
+          (((ν (ts i + ts j)) B).toReal : ℂ)) := by
+      simp_rw [mul_sub, Finset.sum_sub_distrib]
+    rw [h_expand, Complex.sub_re]
+  -- Combine: 0 ≤ S' and S = S' - err with |err| ≤ M·ε < -S
+  -- So S ≥ S' - M·ε ≥ 0 - M·ε > S. Contradiction.
+  have hS' := h_pd  -- 0 ≤ (∑ c̄ᵢcⱼ ↑r(tᵢ+tⱼ)).re
+  -- From h_split: S = (∑ c̄ᵢcⱼ ↑r).re - err where |err| ≤ M·ε
+  -- So S ≥ (∑ c̄ᵢcⱼ ↑r).re - M·ε ≥ -M·ε
+  -- But M·ε < -S, so S > S. Contradiction.
+  linarith [abs_le.mp h_err, h_split]
 
 /-! ## Step 3: Product measure assembly
 
