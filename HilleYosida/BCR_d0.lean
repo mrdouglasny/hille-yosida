@@ -20,12 +20,14 @@ Proof route:
 -/
 
 import HilleYosida.Bernstein
+import Mathlib.Analysis.Calculus.ContDiff.Convolution
 import Mathlib.Analysis.Calculus.IteratedDeriv.Defs
 import Mathlib.Data.Nat.Choose.Vandermonde
 
 noncomputable section
 
 open MeasureTheory Complex Finset Set
+open scoped Convolution
 
 /-! ## Semigroup PD condition for scalar functions -/
 
@@ -943,15 +945,136 @@ evaluated on `[0, ∞)`. -/
 noncomputable def mollify (f : ℝ → ℝ) (ε : ℝ) (m : Mollifier ε) (t : ℝ) : ℝ :=
   ∫ s in (0 : ℝ)..ε, f (t + s) * m.func s
 
-/-- Convolution with a smooth compactly-supported function is C^∞.
+/-- Extend `f` continuously to all of `ℝ` by freezing it at `f 0` on `(-∞, 0)`. -/
+private def iciConstExtend (f : ℝ → ℝ) : ℝ → ℝ :=
+  fun t => if t < 0 then f 0 else f t
 
-Axiomatized: the proof requires the Leibniz integral rule applied
-inductively (~500 lines of measurability boilerplate), orthogonal
-to the PD theory. The key idea: in `∫_t^{t+ε} f(u) m(u-t) du`,
-differentiation in t hits `m(u-t)` (C^∞), not `f(u)` (continuous). -/
-axiom mollify_smooth (f : ℝ → ℝ) (hcont : ContinuousOn f (Ici 0))
+private lemma iciConstExtend_of_nonneg (f : ℝ → ℝ) {t : ℝ} (ht : 0 ≤ t) :
+    iciConstExtend f t = f t := by
+  simp [iciConstExtend, not_lt.mpr ht]
+
+private lemma continuous_iciConstExtend (f : ℝ → ℝ) (hcont : ContinuousOn f (Ici 0)) :
+    Continuous (iciConstExtend f) := by
+  have hfront :
+      ∀ a ∈ (Set.univ : Set ℝ) ∩ frontier {x : ℝ | x < 0}, (fun _ => f 0) a = f a := by
+    intro a ha
+    have ha0 : a = 0 := by
+      rw [show ({x : ℝ | x < 0} : Set ℝ) = Set.Iio 0 by ext x; simp] at ha
+      rw [frontier_Iio] at ha
+      simpa using ha.2
+    simp [ha0]
+  have hright : ContinuousOn f ((Set.univ : Set ℝ) ∩ closure {x : ℝ | ¬ x < 0}) := by
+    rw [show ({x : ℝ | ¬ x < 0} : Set ℝ) = Set.Ici 0 by ext x; simp [not_lt]]
+    rw [closure_Ici]
+    simpa
+  simpa [iciConstExtend] using
+    (ContinuousOn.if (s := Set.univ) (p := fun x : ℝ => x < 0)
+      hfront continuousOn_const hright)
+
+private lemma mollifier_eq_zero_on_nonpos {ε : ℝ} (m : Mollifier ε) :
+    Set.EqOn m.func 0 (Set.Iic 0) := by
+  have hEqIio : Set.EqOn m.func 0 (Set.Iio 0) := by
+    intro x hx
+    exact m.supp x (by
+      intro hxIcc
+      exact not_lt_of_ge hxIcc.1 hx)
+  rw [← closure_Iio]
+  exact Set.EqOn.closure hEqIio m.smooth.continuous continuous_const
+
+private lemma mollifier_eq_zero_on_ge {ε : ℝ} (m : Mollifier ε) :
+    Set.EqOn m.func 0 (Set.Ici ε) := by
+  have hEqIoi : Set.EqOn m.func 0 (Set.Ioi ε) := by
+    intro x hx
+    exact m.supp x (by
+      intro hxIcc
+      exact not_lt_of_ge hxIcc.2 hx)
+  rw [← closure_Ioi]
+  exact Set.EqOn.closure hEqIoi m.smooth.continuous continuous_const
+
+private def mollifyKernel {ε : ℝ} (m : Mollifier ε) : ℝ → ℝ :=
+  fun s => m.func (-s)
+
+private lemma hasCompactSupport_mollifyKernel {ε : ℝ} (m : Mollifier ε) :
+    HasCompactSupport (mollifyKernel m) := by
+  refine HasCompactSupport.intro (K := Set.Icc (-ε) 0) isCompact_Icc ?_
+  intro s hs
+  exact m.supp (-s) (by
+    intro hsIcc
+    apply hs
+    constructor <;> linarith [hsIcc.1, hsIcc.2])
+
+private noncomputable def mollifyGlobal (f : ℝ → ℝ) (ε : ℝ) (m : Mollifier ε) : ℝ → ℝ :=
+  (iciConstExtend f ⋆[ContinuousLinearMap.mul ℝ ℝ, volume] mollifyKernel m)
+
+private lemma mollifyGlobal_smooth (f : ℝ → ℝ) (hcont : ContinuousOn f (Ici 0))
+    (ε : ℝ) (m : Mollifier ε) :
+    ContDiff ℝ (↑(⊤ : ℕ∞)) (mollifyGlobal f ε m) := by
+  have hkernel : ContDiff ℝ (↑(⊤ : ℕ∞)) (mollifyKernel m) := by
+    simpa [mollifyKernel, Function.comp] using m.smooth.comp contDiff_neg
+  simpa [mollifyGlobal, mollifyKernel] using
+    (hasCompactSupport_mollifyKernel m).contDiff_convolution_right (n := ⊤)
+      (ContinuousLinearMap.mul ℝ ℝ) (continuous_iciConstExtend f hcont).locallyIntegrable hkernel
+
+private lemma mollifyGlobal_eq_mollify (f : ℝ → ℝ)
     (ε : ℝ) (hε : 0 < ε) (m : Mollifier ε) :
-    ContDiff ℝ (↑(⊤ : ℕ∞)) (mollify f ε m)
+    Set.EqOn (mollifyGlobal f ε m) (mollify f ε m) (Ici 0) := by
+  intro t ht
+  let h : ℝ → ℝ := fun u => iciConstExtend f u * m.func (u - t)
+  have hsupp : Function.support h ⊆ Set.Ioc t (t + ε) := by
+    intro u hu
+    have hm_ne : m.func (u - t) ≠ 0 := by
+      intro hm_zero
+      apply hu
+      simp [h, hm_zero]
+    have hmem : u - t ∈ Set.Ioc 0 ε := by
+      constructor
+      · by_contra h_nonpos
+        exact hm_ne ((mollifier_eq_zero_on_nonpos m) (x := u - t) (by simpa using h_nonpos))
+      · by_contra h_nlt
+        have hge : ε ≤ u - t := le_of_lt (lt_of_not_ge h_nlt)
+        exact hm_ne ((mollifier_eq_zero_on_ge m) (x := u - t) hge)
+    constructor
+    · linarith [hmem.1]
+    · linarith [hmem.2]
+  calc
+    mollifyGlobal f ε m t = ∫ u, h u := by
+      change ∫ u, iciConstExtend f u * m.func (-(t - u)) = ∫ u, h u
+      congr with u
+      have hu' : iciConstExtend f u * m.func (-(t - u)) = h u := by
+        dsimp [h]
+        ring_nf
+      simpa using hu'
+    _ = ∫ u in t..(t + ε), h u := by
+      symm
+      exact intervalIntegral.integral_eq_integral_of_support_subset hsupp
+    _ = ∫ s in (0 : ℝ)..ε, h (s + t) := by
+      simpa [add_comm, add_left_comm, add_assoc] using
+        (intervalIntegral.integral_comp_add_right h t).symm
+    _ = ∫ s in (0 : ℝ)..ε, iciConstExtend f (t + s) * m.func s := by
+      apply intervalIntegral.integral_congr_ae
+      filter_upwards with s hs
+      have hsimp : h (s + t) = iciConstExtend f (t + s) * m.func s := by
+        dsimp [h]
+        ring_nf
+      simpa [add_comm, add_left_comm, add_assoc] using hsimp
+    _ = ∫ s in (0 : ℝ)..ε, f (t + s) * m.func s := by
+      apply intervalIntegral.integral_congr_ae
+      rw [uIoc_of_le hε.le]
+      filter_upwards with s hs
+      rw [iciConstExtend_of_nonneg f]
+      have ht0 : 0 ≤ t := ht
+      linarith [ht0, hs.1]
+    _ = mollify f ε m t := by
+      simp [mollify]
+
+/-- Convolution with a smooth compactly-supported kernel is smooth on `[0, ∞)`. -/
+theorem mollify_smooth (f : ℝ → ℝ) (hcont : ContinuousOn f (Ici 0))
+    (ε : ℝ) (hε : 0 < ε) (m : Mollifier ε) :
+    ContDiffOn ℝ (↑(⊤ : ℕ∞)) (mollify f ε m) (Ici 0) := by
+  have hEq : Set.EqOn (mollifyGlobal f ε m) (mollify f ε m) (Ici 0) :=
+    mollifyGlobal_eq_mollify f ε hε m
+  exact (mollifyGlobal_smooth f hcont ε m).contDiffOn.congr fun x hx =>
+    (hEq (x := x) hx).symm
 
 /-- Forward differences pass under the convolution integral. -/
 lemma mollify_alternating_diff (f : ℝ → ℝ) (hcont : ContinuousOn f (Ici 0))
@@ -995,18 +1118,37 @@ lemma mollify_isCompletelyMonotone (f : ℝ → ℝ) (hpd : IsSemigroupPD f)
     (hcont : ContinuousOn f (Ici 0)) (hbdd : ∃ C : ℝ, ∀ t, 0 ≤ t → |f t| ≤ C)
     (ε : ℝ) (hε : 0 < ε) (m : Mollifier ε) :
     IsCompletelyMonotone (mollify f ε m) := by
-  set g := mollify f ε m
-  have hsmooth : ContDiff ℝ (↑(⊤ : ℕ∞)) g := mollify_smooth f hcont ε hε m
+  let g := mollifyGlobal f ε m
+  have hEq : Set.EqOn g (mollify f ε m) (Ici 0) :=
+    mollifyGlobal_eq_mollify f ε hε m
+  have hsmooth : ContDiff ℝ (↑(⊤ : ℕ∞)) g := mollifyGlobal_smooth f hcont ε m
+  have hmollify_smooth : ContDiffOn ℝ (↑(⊤ : ℕ∞)) (mollify f ε m) (Ici 0) :=
+    mollify_smooth f hcont ε hε m
   have hdiff_g : ∀ n t h, 0 ≤ t → 0 < h →
       0 ≤ (-1 : ℝ) ^ n * iterForwardDiff n h g t :=
-    fun n t h ht hh => mollify_alternating_diff f hcont
-      (fun n t h ht hh => hpd.alternating_forwardDiff n t ht h hh hbdd) ε hε m n t h ht hh
+    by
+      intro n t h ht hh
+      have hiter : iterForwardDiff n h g t = iterForwardDiff n h (mollify f ε m) t := by
+        rw [iterForwardDiff_eq_sum, iterForwardDiff_eq_sum]
+        apply Finset.sum_congr rfl
+        intro k hk
+        congr 3
+        have hk_nonneg : 0 ≤ (k : ℝ) * h := mul_nonneg (Nat.cast_nonneg k) (le_of_lt hh)
+        exact hEq (x := t + (k : ℝ) * h) (Set.mem_Ici.mpr (add_nonneg ht hk_nonneg))
+      rw [hiter]
+      exact mollify_alternating_diff f hcont
+        (fun n t h ht hh => hpd.alternating_forwardDiff n t ht h hh hbdd) ε hε m n t h ht hh
   have hderiv_signs := smooth_discrete_cm_implies_cm g hsmooth hdiff_g
-  refine ⟨hsmooth.contDiffOn, fun n t ht => ?_⟩
+  refine ⟨hmollify_smooth, fun n t ht => ?_⟩
   -- Connect iteratedDerivWithin n (Ici 0) to iterOp deriv n for globally smooth functions.
   have hcda : ContDiffAt ℝ (↑n : WithTop ℕ∞) g t :=
     ContDiffAt.of_le hsmooth.contDiffAt (WithTop.coe_le_coe.mpr le_top)
-  rw [iteratedDerivWithin_eq_iteratedDeriv (uniqueDiffOn_Ici 0) hcda (Set.mem_Ici.mpr ht),
+  have hEqIter :
+      iteratedDerivWithin n (mollify f ε m) (Set.Ici 0) t =
+        iteratedDerivWithin n g (Set.Ici 0) t :=
+    (iteratedDerivWithin_congr (n := n) (fun x hx => (hEq (x := x) hx).symm))
+      (Set.mem_Ici.mpr ht)
+  rw [hEqIter, iteratedDerivWithin_eq_iteratedDeriv (uniqueDiffOn_Ici 0) hcda (Set.mem_Ici.mpr ht),
       iteratedDeriv_eq_iterate, ← iterOp_deriv_eq_iterate]
   exact hderiv_signs n t ht
 
