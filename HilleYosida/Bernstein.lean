@@ -1606,7 +1606,17 @@ private lemma prokhorov_limit_identification (f : ℝ → ℝ) (hcm : IsComplete
       sorry -- ~15 lines: integral comparison kernel ≤ exp(-x₀p) on support
     -- Choose x₀ > 0 with f(0)-f(x₀) < ε/2 (continuity at 0)
     have hx₀ : ∃ x₀ : ℝ, 0 < x₀ ∧ f 0 - f x₀ < ε / 2 := by
-      sorry -- ~5 lines: from ContinuousWithinAt + antitone
+      have hcont : ContinuousWithinAt f (Set.Ici 0) 0 :=
+        hcm.1.continuousOn.continuousWithinAt (Set.mem_Ici.mpr le_rfl)
+      rw [Metric.continuousWithinAt_iff] at hcont
+      obtain ⟨δ, hδ, hclose⟩ := hcont (ε / 2) (half_pos hε)
+      refine ⟨δ / 2, by positivity, ?_⟩
+      have hdist : dist (f (δ/2)) (f 0) < ε / 2 :=
+        hclose (Set.mem_Ici.mpr (by positivity)) (by
+          rw [dist_zero_right, Real.norm_eq_abs, abs_of_pos (by positivity)]; linarith)
+      rw [Real.dist_eq] at hdist
+      rw [show f 0 - f (δ/2) = -(f (δ/2) - f 0) from by ring]
+      linarith [neg_abs_le (f (δ/2) - f 0)]
     obtain ⟨x₀, hx₀_pos, hx₀_bound⟩ := hx₀
     -- Choose K = max(1/x₀, 1) so exp(-x₀K) ≤ exp(-1) < 1/2
     refine ⟨max (1 / x₀) 1, fun n => ?_⟩
