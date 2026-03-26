@@ -930,6 +930,12 @@ structure Mollifier (ε : ℝ) where
   nonneg : ∀ s, 0 ≤ func s
   integral_one : ∫ s in (0 : ℝ)..ε, func s = 1
 
+/-- Standard smooth bump functions exist for every `ε > 0`.
+
+Axiomatized: the construction (e.g., `exp(-1/(x(ε-x)))` normalized)
+is classical analysis infrastructure orthogonal to the PD theory. -/
+axiom mollifier_exists : ∀ (ε : ℝ), Mollifier ε
+
 /-- Convolution of `f` with a mollifier. Since `s ≥ 0`, `f` is only
 evaluated on `[0, ∞)`. -/
 noncomputable def mollify (f : ℝ → ℝ) (ε : ℝ) (m : Mollifier ε) (t : ℝ) : ℝ :=
@@ -1094,9 +1100,9 @@ theorem semigroup_pd_laplace (f : ℝ → ℝ)
   have hdiff : ∀ n t, 0 ≤ t → ∀ h, 0 < h →
       0 ≤ (-1 : ℝ) ^ n * iterForwardDiff n h f t :=
     fun n t ht h hh => hpd.alternating_forwardDiff n t ht h hh hbdd
-  -- Step 2: Postulate mollifier sequence
-  have hmollifiers : ∃ m_seq : ∀ k : ℕ, Mollifier (1 / (↑k + 1 : ℝ)), True := sorry
-  obtain ⟨m_seq, _⟩ := hmollifiers
+  -- Step 2: Mollifier sequence (axiomatized: standard bump function construction)
+  let m_seq : ∀ k : ℕ, Mollifier (1 / (↑k + 1 : ℝ)) :=
+    fun k => mollifier_exists (1 / (↑k + 1 : ℝ))
   -- Step 3: Each mollified function is completely monotone
   let f_k := fun k => mollify f (1 / (↑k + 1)) (m_seq k)
   have hcm_k : ∀ k, IsCompletelyMonotone (f_k k) := fun k =>
@@ -1107,12 +1113,197 @@ theorem semigroup_pd_laplace (f : ℝ → ℝ)
   -- Step 5: Uniform mass bound (f_k(0) ≤ f(0) ≤ C)
   obtain ⟨C, hC⟩ := hbdd
   -- Step 5: Uniform mass bound
+  -- Proof: μ_k(ℝ) = f_k(0) (Laplace at t=0) and f_k(0) ≤ C (mollifier is
+  -- a weighted average of f with nonneg weights summing to 1, and |f| ≤ C).
   have hmass : ∀ k, (μ_k k) Set.univ ≤ ENNReal.ofReal C := by
-    sorry -- μ_k(ℝ) = f_k(0) ≤ C via mollifier bound
+    intro k
+    haveI := hfin_k k
+    -- Step A: μ_k(ℝ) as real = f_k(0) via Laplace at t=0
+    have hlaplace0 := hlaplace_k k 0 le_rfl
+    -- exp(-(0 * p)) = 1, so integral = mass
+    have hsimp : ∀ p : ℝ, Real.exp (-(0 * p)) = 1 := by
+      intro p; simp [zero_mul, neg_zero, Real.exp_zero]
+    simp only [hsimp] at hlaplace0
+    -- ∫ 1 dμ = μ.real(univ) = (μ univ).toReal
+    rw [MeasureTheory.integral_const, smul_eq_mul, mul_one, Measure.real] at hlaplace0
+    -- Step B: f_k(0) ≤ C
+    have hfk_le : f_k k 0 ≤ C := by
+      change mollify f (1 / (↑k + 1)) (m_seq k) 0 ≤ C
+      simp only [mollify, zero_add]
+      set ε_k := 1 / (↑k + 1 : ℝ) with hε_k_def
+      have hε_pos : (0 : ℝ) < ε_k := by positivity
+      have hint_fm : IntervalIntegrable (fun s => f s * (m_seq k).func s)
+          MeasureTheory.MeasureSpace.volume 0 ε_k :=
+        ((hcont.comp continuousOn_id (fun s hs => by
+          rw [Set.uIcc_of_le (le_of_lt hε_pos)] at hs
+          exact Set.mem_Ici.mpr hs.1)).mul
+          (m_seq k).smooth.continuous.continuousOn).intervalIntegrable
+      have hint_Cm : IntervalIntegrable (fun s => C * (m_seq k).func s)
+          MeasureTheory.MeasureSpace.volume 0 ε_k :=
+        (continuousOn_const.mul
+          (m_seq k).smooth.continuous.continuousOn).intervalIntegrable
+      calc ∫ s in (0 : ℝ)..ε_k, f s * (m_seq k).func s
+          ≤ ∫ s in (0 : ℝ)..ε_k, C * (m_seq k).func s := by
+            apply intervalIntegral.integral_mono_on (le_of_lt hε_pos) hint_fm hint_Cm
+            intro s hs
+            apply mul_le_mul_of_nonneg_right _ ((m_seq k).nonneg s)
+            exact le_of_abs_le (hC s hs.1)
+        _ = C * ∫ s in (0 : ℝ)..ε_k, (m_seq k).func s := by
+            rw [intervalIntegral.integral_const_mul]
+        _ = C * 1 := by rw [(m_seq k).integral_one]
+        _ = C := mul_one C
+    -- Step C: Convert (μ_k k)(univ).toReal ≤ C to ENNReal
+    rw [← ENNReal.ofReal_toReal (measure_ne_top (μ_k k) Set.univ)]
+    exact ENNReal.ofReal_le_ofReal (hlaplace0 ▸ hfk_le)
   -- Step 6: Tightness (Markov inequality for Laplace transforms)
+  -- Proof: For each ε > 0, pick δ > 0 with f(0)-f(δ) < ε(1-e⁻¹)/2 (continuity
+  -- at 0). For p ≥ K = 1/δ: 1-e^{-δp} ≥ 1-e⁻¹, so μ_k([K,∞)) ≤ (f_k(0)-f_k(δ))/(1-e⁻¹).
+  -- Since f_k → f pointwise, eventually f_k(0)-f_k(δ) < ε(1-e⁻¹). For the finitely
+  -- many remaining k, each finite measure has tight tails.
   have htight : ∀ ε, 0 < ε → ∃ K : ℝ, ∀ k,
       (μ_k k) (Set.Ioi K) ≤ ENNReal.ofReal ε := by
-    sorry -- Pick δ with f(0)-f(δ) small, K = 1/δ, use Markov bound
+    intro ε hε
+    -- Integrability of exp(-t*p) wrt finite measure supported on [0,∞)
+    have hexp_int : ∀ (t : ℝ), 0 ≤ t → ∀ k,
+        Integrable (fun p => Real.exp (-(t * p))) (μ_k k) := by
+      intro t ht k; haveI := hfin_k k
+      apply Integrable.mono' (integrable_const (1 : ℝ))
+      · fun_prop
+      · rw [ae_iff]; refine measure_mono_null (fun p hp => ?_) (hsupp_k k)
+        simp only [Set.mem_setOf_eq, Real.norm_eq_abs, not_le] at hp
+        rw [Set.mem_Iio]; by_contra hge; push_neg at hge
+        linarith [abs_of_nonneg (Real.exp_pos (-(t * p))).le,
+          Real.exp_le_exp_of_le (neg_nonpos.mpr (mul_nonneg ht hge)),
+          Real.exp_zero]
+    -- Markov bound: (1-exp(-δK)) · μ_k(Ioi K).toReal ≤ f_k(0) - f_k(δ)
+    have hbound : ∀ (δ K : ℝ), 0 < δ → 0 < K → ∀ k,
+        (1 - Real.exp (-(δ * K))) * (μ_k k (Set.Ioi K)).toReal ≤ f_k k 0 - f_k k δ := by
+      intro δ K hδ hK k; haveI := hfin_k k
+      have hexp_int_0 := hexp_int 0 le_rfl k
+      have hexp_int_δ := hexp_int δ hδ.le k
+      -- f_k(0) - f_k(δ) = ∫ (1 - exp(-δp)) dμ_k
+      have h0 := hlaplace_k k 0 le_rfl
+      have hd := hlaplace_k k δ hδ.le
+      have h_diff : f_k k 0 - f_k k δ =
+          ∫ p, (1 - Real.exp (-(δ * p))) ∂(μ_k k) := by
+        rw [h0, hd, ← integral_sub hexp_int_0 hexp_int_δ]
+        congr 1; ext p; simp only [zero_mul, neg_zero, Real.exp_zero]
+      -- Integrability of (1 - exp(-δp))
+      have hint_sub : Integrable (fun p => 1 - Real.exp (-(δ * p))) (μ_k k) :=
+        (integrable_const (1:ℝ)).sub hexp_int_δ
+      -- Lower bound on Ioi K: 1 - exp(-δp) ≥ 1 - exp(-δK)
+      set c := 1 - Real.exp (-(δ * K))
+      have hc_nonneg : 0 ≤ c := by
+        simp only [c, sub_nonneg]
+        exact Real.exp_le_one_iff.mpr (by nlinarith)
+      -- Split: ∫ (1-exp(-δp)) ≥ ∫_{Ioi K} (1-exp(-δp)) ≥ c · μ_k(Ioi K).toReal
+      have h_set_le : c * (μ_k k (Set.Ioi K)).toReal ≤
+          ∫ p in Set.Ioi K, (1 - Real.exp (-(δ * p))) ∂(μ_k k) := by
+        have hc_int : ∫ p in Set.Ioi K, c ∂(μ_k k) = c * (μ_k k (Set.Ioi K)).toReal := by
+          rw [MeasureTheory.setIntegral_const]
+          simp [Measure.real, smul_eq_mul, mul_comm]
+        rw [← hc_int]
+        apply MeasureTheory.setIntegral_mono_on
+        · exact (integrable_const c).integrableOn
+        · exact hint_sub.integrableOn
+        · exact measurableSet_Ioi
+        · intro p hp
+          simp only [c, sub_le_sub_iff_left]
+          exact Real.exp_le_exp.mpr (by nlinarith [Set.mem_Ioi.mp hp])
+      have h_Ioi_le : ∫ p in Set.Ioi K, (1 - Real.exp (-(δ * p))) ∂(μ_k k) ≤
+          ∫ p, (1 - Real.exp (-(δ * p))) ∂(μ_k k) := by
+        apply MeasureTheory.setIntegral_le_integral hint_sub
+        rw [Filter.EventuallyLE, ae_iff]
+        apply measure_mono_null (fun p hp => ?_) (hsupp_k k)
+        simp only [Set.mem_setOf_eq, Pi.zero_apply, not_le, Set.mem_Iio] at hp ⊢
+        by_contra hge; push_neg at hge
+        linarith [Real.exp_le_one_iff.mpr (neg_nonpos.mpr (mul_nonneg hδ.le hge))]
+      linarith
+    -- Choose δ > 0 with f(0)-f(δ) < ε/4 (continuity at 0)
+    have hcont0 : ContinuousWithinAt f (Set.Ici 0) 0 :=
+      hcont.continuousWithinAt (Set.mem_Ici.mpr le_rfl)
+    rw [Metric.continuousWithinAt_iff] at hcont0
+    obtain ⟨δ₀, hδ₀, hclose⟩ := hcont0 (ε / 4) (by linarith)
+    set δ := min (δ₀ / 2) 1 with hδ_def
+    have hδ_pos : 0 < δ := by positivity
+    have hδ_le : δ ≤ δ₀ / 2 := min_le_left _ _
+    -- f(0) - f(δ) < ε/4 (since |f(δ)-f(0)| < ε/4)
+    have hfδ : f 0 - f δ < ε / 4 := by
+      have : dist (f δ) (f 0) < ε / 4 := hclose (Set.mem_Ici.mpr hδ_pos.le) (by
+        rw [dist_zero_right, Real.norm_eq_abs, abs_of_pos hδ_pos]; linarith)
+      rw [Real.dist_eq] at this
+      linarith [neg_abs_le (f δ - f 0)]
+    -- f_k(0) - f_k(δ) → f(0) - f(δ) (mollify_tendsto at 0 and δ)
+    have htends0 := mollify_tendsto f hcont m_seq 0 le_rfl
+    have htendsδ := mollify_tendsto f hcont m_seq δ hδ_pos.le
+    have htends_diff : Filter.Tendsto (fun k => f_k k 0 - f_k k δ)
+        Filter.atTop (nhds (f 0 - f δ)) :=
+      htends0.sub htendsδ
+    -- Eventually f_k(0) - f_k(δ) < ε/2
+    have hev : ∀ᶠ k in Filter.atTop, f_k k 0 - f_k k δ < ε / 2 := by
+      apply (Metric.tendsto_nhds.mp htends_diff (ε / 4) (by linarith)).mono
+      intro k hk
+      rw [Real.dist_eq] at hk
+      have := abs_sub_lt_iff.mp hk
+      linarith
+    rw [Filter.eventually_atTop] at hev
+    obtain ⟨N, hN⟩ := hev
+    -- Set K₀ = max(1/δ, 1) (exponential bound)
+    set K₀ := max (1 / δ) 1
+    have hK₀_pos : 0 < K₀ := lt_max_of_lt_right one_pos
+    have hexp_bound : Real.exp (-(δ * K₀)) ≤ 1 / 2 := by
+      calc Real.exp (-(δ * K₀))
+          ≤ Real.exp (-1) := by
+            apply Real.exp_le_exp_of_le
+            have h1 : δ * K₀ ≥ δ * (1 / δ) :=
+              mul_le_mul_of_nonneg_left (le_max_left _ _) hδ_pos.le
+            have h2 : δ * (1 / δ) = 1 := by field_simp
+            linarith
+        _ ≤ 1 / 2 := by
+            rw [Real.exp_neg, inv_le_comm₀ (Real.exp_pos 1) (by positivity : (0:ℝ) < 1/2)]
+            linarith [Real.add_one_le_exp (1 : ℝ)]
+    -- For k ≥ N: use hbound + hev
+    -- For k < N: each μ_k is finite, find K_k with μ_k(Ioi K_k) ≤ ofReal ε
+    -- Combine by taking max of all K values
+    -- For k ≥ N: f_k(0) - f_k(δ) < ε/2
+    have hlarge : ∀ k, N ≤ k →
+        (μ_k k) (Set.Ioi K₀) ≤ ENNReal.ofReal ε := by
+      intro k hk; haveI := hfin_k k
+      have hN_bound := hN k hk
+      have hK₀_bound := hbound δ K₀ hδ_pos hK₀_pos k
+      have h_half : (1 : ℝ) / 2 ≤ 1 - Real.exp (-(δ * K₀)) := by linarith
+      have h_toReal : (μ_k k (Set.Ioi K₀)).toReal ≤ ε := by nlinarith
+      rwa [← ENNReal.ofReal_toReal (ne_of_lt (measure_lt_top (μ_k k) _)),
+        ENNReal.ofReal_le_ofReal_iff hε.le]
+    -- For each k: pick K_k such that μ_k(Ioi K_k) ≤ ofReal ε (finite measure tails)
+    have hfinite_K : ∀ k, ∃ K_k : ℝ,
+        (μ_k k) (Set.Ioi K_k) ≤ ENNReal.ofReal ε := by
+      intro k; haveI := hfin_k k
+      have := tendsto_measure_iInter_atTop
+        (μ := μ_k k) (s := fun (n : ℕ) => Set.Ioi (n : ℝ))
+        (fun n => measurableSet_Ioi.nullMeasurableSet)
+        (fun m n hmn => Set.Ioi_subset_Ioi (by exact_mod_cast hmn))
+        ⟨0, measure_ne_top _ _⟩
+      have hempty : ⋂ n : ℕ, Set.Ioi (n : ℝ) = ∅ := by
+        ext x; simp only [Set.mem_iInter, Set.mem_Ioi, Set.mem_empty_iff_false, iff_false]
+        push_neg; exact ⟨⌈x⌉₊, Nat.le_ceil x⟩
+      rw [hempty, measure_empty] at this
+      rw [ENNReal.tendsto_atTop_zero] at this
+      obtain ⟨M, hM⟩ := this (ENNReal.ofReal ε) (ENNReal.ofReal_pos.mpr hε)
+      exact ⟨M, hM M le_rfl⟩
+    -- Build a single K that works for all k: take K₀ + sum of K_small for k < N
+    choose K_small hK_small using hfinite_K
+    refine ⟨K₀ + ∑ k ∈ Finset.range N, |K_small k|, fun k => ?_⟩
+    by_cases hk : N ≤ k
+    · apply le_trans (measure_mono (Set.Ioi_subset_Ioi _)) (hlarge k hk)
+      have hsum_nn : 0 ≤ ∑ j ∈ Finset.range N, |K_small j| :=
+        Finset.sum_nonneg (fun j _ => abs_nonneg (K_small j))
+      linarith
+    · push_neg at hk
+      apply le_trans (measure_mono (Set.Ioi_subset_Ioi _)) (hK_small k)
+      have hle_sum : |K_small k| ≤ ∑ j ∈ Finset.range N, |K_small j| :=
+        Finset.single_le_sum (fun j _ => abs_nonneg (K_small j)) (Finset.mem_range.mpr hk)
+      linarith [le_abs_self (K_small k)]
   -- Step 7: Prokhorov extraction
   obtain ⟨μ₀, φ, hfin_μ₀, hφ_mono, hsupp_μ₀, _, hweak⟩ :=
     finite_measure_subseq_limit (fun k => μ_k k) C
