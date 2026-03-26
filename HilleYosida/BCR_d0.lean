@@ -611,40 +611,150 @@ lemma IsSemigroupPD.alternating_forwardDiff (hpd : IsSemigroupPD f)
   · -- Odd case: n = 2*m + 1
     exact hpd.odd_forwardDiff m t ht h hh hbdd
 
-/-! ## CM-discrete → CM (smoothness)
+/-! ## Phase 1: The Iterated Integral Bridge
 
-A continuous function with nonneg alternating forward differences is C^∞
-on `(0, ∞)`. However, it is NOT necessarily C^∞ at `t = 0` (e.g., if the
-underlying measure has infinite moments).
--/
+To prove that alternating differences imply alternating derivatives for SMOOTH
+functions, we avoid limits completely. Instead, we use the identity that the
+n-th forward difference is the n-th iterated integral of the n-th derivative. -/
 
-/-! ## Main theorem: BCR 4.1.13 for d=0 -/
+/-- The interval integral operator: `intOp h F t = ∫_0^h F(t + s) ds`. -/
+def intOp (h : ℝ) (F : ℝ → ℝ) (t : ℝ) : ℝ := ∫ s in (0 : ℝ)..h, F (t + s)
+
+/-- Iterate an operator `n` times. -/
+def iterOp (op : (ℝ → ℝ) → (ℝ → ℝ)) : ℕ → (ℝ → ℝ) → (ℝ → ℝ)
+  | 0, F => F
+  | n + 1, F => op (iterOp op n F)
+
+/-- The discrete difference equivalence: iterating `forwardDiff h` gives
+the same result as `iterForwardDiff`. -/
+lemma iterOp_fd_eq_iterForwardDiff (n : ℕ) (h : ℝ) (F : ℝ → ℝ) (t : ℝ) :
+    iterOp (forwardDiff h) n F t = iterForwardDiff n h F t := by
+  sorry
+
+/-- The main identity: `Δ_h^n F(t) = ∫...∫ F^{(n)}(t + s₁ + ... + sₙ) ds₁...dsₙ`.
+
+This is the fundamental theorem of calculus iterated n times:
+`F(t+h) - F(t) = ∫_0^h F'(t+s) ds`, applied inductively. -/
+lemma iterOp_fd_eq_intOp_deriv (n : ℕ) (h : ℝ) (F : ℝ → ℝ)
+    (hF : ContDiff ℝ ⊤ F) :
+    iterOp (forwardDiff h) n F = iterOp (intOp h) n (iterOp deriv n F) := by
+  sorry
+
+/-- Bounding the iterated integral: if `G ≤ M` on `[t, t + n·h]`,
+then `∫...∫ G ds₁...dsₙ ≤ M · h^n`. -/
+lemma iterOp_intOp_le_local (n : ℕ) (h : ℝ) (hh : 0 ≤ h) (G : ℝ → ℝ) (M t : ℝ)
+    (hG : ∀ x ∈ Icc t (t + n * h), G x ≤ M) :
+    iterOp (intOp h) n G t ≤ M * h ^ n := by
+  sorry
+
+/-- Similarly, a lower bound: if `G ≥ m` on `[t, t + n·h]`,
+then `∫...∫ G ds₁...dsₙ ≥ m · h^n`. -/
+lemma iterOp_intOp_ge_local (n : ℕ) (h : ℝ) (hh : 0 ≤ h) (G : ℝ → ℝ) (m t : ℝ)
+    (hG : ∀ x ∈ Icc t (t + n * h), m ≤ G x) :
+    m * h ^ n ≤ iterOp (intOp h) n G t := by
+  sorry
+
+/-- If a smooth function has alternating discrete differences, its continuous
+derivatives also alternate in sign.
+
+Proof by contradiction: if `(-1)^n F^{(n)}(t₀) < 0`, by continuity it is
+strictly negative (`≤ -ε < 0`) on `[t₀, t₀+δ]`. Choose `h = δ/n`. Then
+the iterated integral is `≤ -ε·h^n < 0`. But this integral equals
+`(-1)^n Δ_h^n F(t₀) ≥ 0` by hypothesis. Contradiction. -/
+lemma smooth_discrete_cm_implies_cm (F : ℝ → ℝ) (hF : ContDiff ℝ ⊤ F)
+    (hdiff : ∀ n t h, 0 ≤ t → 0 < h →
+      0 ≤ (-1 : ℝ) ^ n * iterForwardDiff n h F t) :
+    ∀ n t, 0 ≤ t → 0 ≤ (-1 : ℝ) ^ n * iterOp deriv n F t := by
+  sorry
+
+/-! ## Phase 2: The Mollifier Trick
+
+We convolve our merely continuous function `f` with a smooth bump function
+to produce a C^∞ function that inherits the alternating differences. -/
+
+/-- A smooth mollifier supported in `[0, ε]`. -/
+structure Mollifier (ε : ℝ) where
+  func : ℝ → ℝ
+  smooth : ContDiff ℝ ⊤ func
+  supp : ∀ s, s ∉ Icc 0 ε → func s = 0
+  nonneg : ∀ s, 0 ≤ func s
+  integral_one : ∫ s in (0 : ℝ)..ε, func s = 1
+
+/-- Convolution of `f` with a mollifier. Since `s ≥ 0`, `f` is only
+evaluated on `[0, ∞)`. -/
+noncomputable def mollify (f : ℝ → ℝ) (ε : ℝ) (m : Mollifier ε) (t : ℝ) : ℝ :=
+  ∫ s in (0 : ℝ)..ε, f (t + s) * m.func s
+
+/-- Convolution with a smooth function is C^∞. -/
+lemma mollify_smooth (f : ℝ → ℝ) (hcont : ContinuousOn f (Ici 0))
+    (ε : ℝ) (hε : 0 < ε) (m : Mollifier ε) :
+    ContDiff ℝ ⊤ (mollify f ε m) := by
+  sorry
+
+/-- Forward differences pass under the convolution integral. -/
+lemma mollify_alternating_diff (f : ℝ → ℝ)
+    (hdiff : ∀ n t h, 0 ≤ t → 0 < h →
+      0 ≤ (-1 : ℝ) ^ n * iterForwardDiff n h f t)
+    (ε : ℝ) (hε : 0 < ε) (m : Mollifier ε)
+    (n : ℕ) (t h : ℝ) (ht : 0 ≤ t) (hh : 0 < h) :
+    0 ≤ (-1 : ℝ) ^ n * iterForwardDiff n h (mollify f ε m) t := by
+  sorry
+
+/-- The mollified function is completely monotone (smooth + alternating derivatives).
+Combines `mollify_smooth`, `mollify_alternating_diff`, `smooth_discrete_cm_implies_cm`,
+and connects `iterOp deriv` to `iteratedDerivWithin`. -/
+lemma mollify_isCompletelyMonotone (f : ℝ → ℝ) (hpd : IsSemigroupPD f)
+    (hcont : ContinuousOn f (Ici 0)) (hbdd : ∃ C : ℝ, ∀ t, 0 ≤ t → |f t| ≤ C)
+    (ε : ℝ) (hε : 0 < ε) (m : Mollifier ε) :
+    IsCompletelyMonotone (mollify f ε m) := by
+  sorry
+
+/-- The mollified function converges pointwise to `f` as `ε → 0`. -/
+lemma mollify_tendsto (f : ℝ → ℝ) (hcont : ContinuousOn f (Ici 0))
+    (m_seq : ∀ k : ℕ, Mollifier (1 / (↑k + 1 : ℝ)))
+    (t : ℝ) (ht : 0 ≤ t) :
+    Filter.Tendsto (fun k => mollify f (1 / (↑k + 1)) (m_seq k) t)
+      Filter.atTop (nhds (f t)) := by
+  sorry
+
+/-! ## Phase 3: Prokhorov Extraction (Main Theorem) -/
 
 /-- **BCR 4.1.13 (d=0)**: A bounded continuous semigroup-PD function on [0,∞)
 is the Laplace transform of a finite positive measure supported on [0,∞).
 
-**Formalization Note (The Shift Trick):**
-Because general finite measures do not necessarily have finite moments, `f(t)` is
-not necessarily smooth at `t = 0` (e.g., if `μ(dp) = dp/(1+p²)`, then `f'(0) = -∞`).
-Therefore, we cannot apply `bernstein_theorem` directly to `f`, because our definition
-of `IsCompletelyMonotone` requires `ContDiffOn ℝ ⊤ f (Set.Ici 0)`.
-
-In classical analysis, one bridges this gap using the **Shift Trick**:
-We define `f_n(t) = f(t + 1/n)`. Because `f` has non-negative alternating forward
-differences on `[0, ∞)`, it is `C^∞` on `(0, ∞)` (Widder IV.12a). Thus, the shifted
-function `f_n` is strictly `C^∞` on `[0, ∞)` and satisfies `IsCompletelyMonotone`.
-We apply `bernstein_theorem` to `f_n` to obtain a sequence of measures `μ_n`. Since
-`f_n(0) = f(1/n) ≤ f(0)`, the masses are uniformly bounded, and we can apply
-Prokhorov's theorem (exactly as in the Bernstein proof) to extract a weakly
-convergent subsequence `μ_{n_k} → μ`, yielding `f(t) = ∫ e^{-tp} dμ(p)`.
-
-To avoid duplicating the Prokhorov extraction machinery from `Bernstein.lean`,
-we isolate this topological shift-and-limit argument as an axiom. -/
-axiom semigroup_pd_laplace (f : ℝ → ℝ)
+**Proof architecture (Mollifier + Bernstein + Prokhorov):**
+1. Use `alternating_forwardDiff` (proved above) to get discrete CM from PD.
+2. Mollify `f` to get a sequence `f_k` of C^∞ functions with alternating differences.
+3. Apply `smooth_discrete_cm_implies_cm` to get alternating derivatives.
+4. Apply `bernstein_theorem` to each `f_k` to get measures `μ_k`.
+5. The masses are uniformly bounded (`f_k(0) ≤ f(0) ≤ C`).
+6. Apply Prokhorov extraction to get weak limit `μ`.
+7. Verify `f(t) = ∫ e^{-tp} dμ(p)` via pointwise convergence. -/
+theorem semigroup_pd_laplace (f : ℝ → ℝ)
     (hpd : IsSemigroupPD f) (hcont : ContinuousOn f (Ici 0))
     (hbdd : ∃ C : ℝ, ∀ t, 0 ≤ t → |f t| ≤ C) :
     ∃ (μ : Measure ℝ), IsFiniteMeasure μ ∧
       μ (Iio 0) = 0 ∧
-      ∀ t, 0 ≤ t → f t = ∫ p, Real.exp (-(t * p)) ∂μ
+      ∀ t, 0 ≤ t → f t = ∫ p, Real.exp (-(t * p)) ∂μ := by
+  -- Step 1: Discrete alternating differences from PD (proved above)
+  have hdiff : ∀ n t, 0 ≤ t → ∀ h, 0 < h →
+      0 ≤ (-1 : ℝ) ^ n * iterForwardDiff n h f t :=
+    fun n t ht h hh => hpd.alternating_forwardDiff n t ht h hh hbdd
+  -- Step 2: Postulate mollifier sequence
+  have hmollifiers : ∃ m_seq : ∀ k : ℕ, Mollifier (1 / (↑k + 1 : ℝ)), True := sorry
+  obtain ⟨m_seq, _⟩ := hmollifiers
+  -- Step 3: Each mollified function is completely monotone
+  let f_k := fun k => mollify f (1 / (↑k + 1)) (m_seq k)
+  have hcm_k : ∀ k, IsCompletelyMonotone (f_k k) := fun k =>
+    mollify_isCompletelyMonotone f hpd hcont hbdd _ (by positivity) (m_seq k)
+  -- Step 4: Apply Bernstein to each f_k
+  have hbern := fun k => bernstein_theorem (f_k k) (hcm_k k)
+  choose μ_k hfin_k hsupp_k hlaplace_k using hbern
+  -- Step 5: Uniform mass bound (f_k(0) ≤ f(0) ≤ C)
+  obtain ⟨C, hC⟩ := hbdd
+  -- Step 6: Prokhorov extraction + Step 7: Laplace verification
+  -- The tightness argument and weak limit identification follow
+  -- the same pattern as in bernstein_theorem (Bernstein.lean).
+  sorry
 
 end
