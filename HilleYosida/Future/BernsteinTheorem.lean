@@ -497,47 +497,561 @@ private lemma trig_poly_integral_pd {d : ℕ} (F : ℝ → (Fin d → ℝ) → �
     ring
   rw [h_lhs, h_factor, h_reindex]
 
-/-- **Axiom: Simultaneous trig polynomial approximation of indicators.**
+private lemma fourier_integral_continuous {d : ℕ} (μ : Measure (Fin d → ℝ))
+    [IsFiniteMeasure μ] :
+    Continuous fun a : Fin d → ℝ =>
+      ∫ q, exp (I * ↑(∑ i : Fin d, q i * a i)) ∂μ := by
+  apply MeasureTheory.continuous_of_dominated
+  · intro a
+    exact Continuous.aestronglyMeasurable (by fun_prop)
+  · intro a
+    refine ae_of_all _ fun q => ?_
+    exact le_of_eq (by simpa [mul_comm] using
+      Complex.norm_exp_ofReal_mul_I (∑ i : Fin d, q i * a i))
+  · simpa using (integrable_const (1 : ℝ))
+  · refine ae_of_all _ ?_
+    intro q
+    apply Continuous.cexp
+    apply Continuous.mul continuous_const
+    apply continuous_ofReal.comp
+    exact continuous_finset_sum _ fun i _ => continuous_const.mul (continuous_apply i)
 
-For finitely many finite measures on ℝ^d, indicator functions 1_B can be
-simultaneously approximated in L¹ by nonneg trig polynomials |∑ d_k e^{i⟨a_k,·⟩}|².
+private lemma positive_definite_to_finite_measure {d : ℕ} (φ : (Fin d → ℝ) → ℂ)
+    (hcont : Continuous φ) (hpd : IsPositiveDefinite φ) :
+    ∃ (μ : Measure (Fin d → ℝ)), IsFiniteMeasure μ ∧
+      ∀ a, φ a = ∫ q, exp (I * ↑(∑ i : Fin d, q i * a i)) ∂μ := by
+  by_cases h0 : φ 0 = 0
+  · refine ⟨0, inferInstance, fun a => ?_⟩
+    have : ‖φ a‖ ≤ (φ 0).re := hpd.bounded_by_zero a
+    rw [h0] at this
+    simp at this
+    simp [this, integral_zero_measure]
+  · have h0_re_pos : 0 < (φ 0).re := by
+      have hre := hpd.eval_zero_nonneg
+      have him := hpd.eval_zero_real
+      by_contra h_not_pos
+      push_neg at h_not_pos
+      have hre0 : (φ 0).re = 0 := le_antisymm h_not_pos hre
+      exfalso
+      apply h0
+      apply Complex.ext <;> simp [him, hre0]
+    have h0_eq : φ 0 = ↑(φ 0).re := by
+      apply Complex.ext
+      · simp
+      · exact hpd.eval_zero_real
+    have h0_ne : φ 0 ≠ 0 := h0
+    let toE : (Fin d → ℝ) → EuclideanSpace ℝ (Fin d) := WithLp.toLp 2
+    let fromE : EuclideanSpace ℝ (Fin d) → (Fin d → ℝ) := WithLp.equiv 2 _
+    let ψ : EuclideanSpace ℝ (Fin d) → ℂ := fun a => φ (fromE a) / φ 0
+    have hψ_cont : Continuous ψ := by
+      exact (hcont.comp (PiLp.continuousLinearEquiv 2 ℝ
+        (fun _ : Fin d => ℝ)).continuous).div_const _
+    have hψ_pd : IsPositiveDefinite ψ := by
+      have hpd_fromE : IsPositiveDefinite (fun a : Fin d → ℝ => φ a) := hpd
+      constructor
+      · intro x
+        change φ (fromE (-x)) / φ 0 = starRingEnd ℂ (φ (fromE x) / φ 0)
+        rw [map_div₀]
+        congr 1
+        · change φ (fromE (-x)) = (starRingEnd ℂ) (φ (fromE x))
+          rw [show fromE (-x) = -fromE x from rfl]
+          exact hpd_fromE.hermitian (fromE x)
+        · rw [show (starRingEnd ℂ) (φ 0) = φ 0 from by
+            rw [starRingEnd_apply, star_def]
+            rw [h0_eq]
+            simp [Complex.conj_ofReal]]
+      · intro m xs c
+        have h_pd_base := hpd_fromE.nonneg m (fun i => fromE (xs i)) c
+        have hψ_unfold : ∀ i j : Fin m,
+            (starRingEnd ℂ) (c i) * c j * (ψ (xs i - xs j)) =
+            (starRingEnd ℂ) (c i) * c j *
+              φ (fromE (xs i) - fromE (xs j)) * (φ 0)⁻¹ := by
+          intro i j
+          change _ * (φ _ / φ 0) = _
+          rw [show fromE (xs i - xs j) = fromE (xs i) - fromE (xs j) from rfl]
+          rw [div_eq_mul_inv]
+          ring
+        simp_rw [hψ_unfold]
+        simp_rw [← Finset.sum_mul]
+        rw [h0_eq]
+        rw [show (↑(φ 0).re : ℂ)⁻¹ = (↑((φ 0).re⁻¹) : ℂ) from by
+          push_cast
+          ring]
+        simp only [Complex.mul_re, Complex.ofReal_re, Complex.ofReal_im, mul_zero, sub_zero]
+        exact mul_nonneg h_pd_base (le_of_lt (inv_pos.mpr h0_re_pos))
+    have hψ_zero : ψ 0 = 1 := div_self h0
+    obtain ⟨μ_prob, hμ⟩ := bochner_theorem ψ hψ_cont hψ_pd hψ_zero
+    obtain ⟨hμ_eq, _⟩ := hμ
+    let μ_base : Measure (Fin d → ℝ) :=
+      (↑μ_prob : Measure (EuclideanSpace ℝ (Fin d))).map fromE
+    let μ_val : Measure (Fin d → ℝ) :=
+      ENNReal.ofReal (φ 0).re • μ_base
+    haveI : IsFiniteMeasure (↑μ_prob : Measure (EuclideanSpace ℝ (Fin d))) := inferInstance
+    have hμ_fin : IsFiniteMeasure μ_val := by
+      constructor
+      change ENNReal.ofReal (φ 0).re * μ_base Set.univ < ⊤
+      apply ENNReal.mul_lt_top ENNReal.ofReal_lt_top
+      exact measure_lt_top _ _
+    refine ⟨μ_val, hμ_fin, fun a => ?_⟩
+    have step1 : φ a = φ 0 * ψ (toE a) := by
+      change φ a = φ 0 * (φ (fromE (toE a)) / φ 0)
+      rw [show fromE (toE a) = a from rfl]
+      rw [mul_div_cancel₀ _ h0_ne]
+    have step2 : ψ (toE a) = charFun (↑μ_prob : Measure _) (toE a) := (hμ_eq (toE a)).symm
+    rw [step1, step2, charFun_apply]
+    calc
+      φ 0 * ∫ x : EuclideanSpace ℝ (Fin d), exp (↑(inner ℝ x (toE a)) * I) ∂↑μ_prob
+          = ((φ 0).re : ℂ) *
+              ∫ x : EuclideanSpace ℝ (Fin d),
+                exp (I * ↑(∑ i : Fin d, (fromE x) i * a i)) ∂↑μ_prob := by
+            rw [h0_eq]
+            congr 1
+            apply integral_congr_ae
+            filter_upwards with x
+            have hsum :
+                ∑ i : Fin d, ((inner ℝ (x i) (a i) : ℝ) : ℂ) =
+                  ∑ i : Fin d, ((a i : ℂ) * (x i : ℂ)) := by
+              apply Finset.sum_congr rfl
+              intro i hi
+              have hreal : inner ℝ (x i) (a i) = a i * x i := by
+                exact RCLike.inner_apply (x i) (a i)
+              simpa using congrArg (fun r : ℝ => (r : ℂ)) hreal
+            have hexp :
+                (∑ i : Fin d, ((inner ℝ (x i) (a i) : ℝ) : ℂ)) * I =
+                  I * ∑ i : Fin d, ((x i : ℂ) * (a i : ℂ)) := by
+              rw [hsum]
+              simp [mul_comm]
+            simpa [toE, fromE, PiLp.inner_apply] using congrArg Complex.exp hexp
+      _ = ((φ 0).re : ℂ) *
+            ∫ q : Fin d → ℝ, exp (I * ↑(∑ i : Fin d, q i * a i)) ∂μ_base := by
+            congr 1
+            symm
+            simpa [μ_base, fromE] using
+              (integral_map_equiv
+                ((MeasurableEquiv.toLp 2 (Fin d → ℝ)).symm)
+                (μ := (↑μ_prob : Measure (EuclideanSpace ℝ (Fin d))))
+                (f := fun q : Fin d → ℝ => exp (I * ↑(∑ i : Fin d, q i * a i))))
+      _ = ∫ q : Fin d → ℝ, exp (I * ↑(∑ i : Fin d, q i * a i)) ∂μ_val := by
+            symm
+            rw [show μ_val = ENNReal.ofReal (φ 0).re • μ_base from rfl, integral_smul_measure,
+              ENNReal.toReal_ofReal (le_of_lt h0_re_pos)]
+            rfl
 
-**Proof route** (not formalized):
-1. Inner regularity: approximate B by compact K with μ_i(B \ K) < ε/3 for all i
-   (using the average measure μ_avg = (1/N)∑ μ_i for uniformity)
-2. Urysohn: find continuous f with 1_K ≤ f ≤ 1_B
-3. Stone-Weierstrass on the one-point compactification: approximate f by
-   nonneg trig polynomials |∑ d_k e^{i⟨a_k,·⟩}|² uniformly on a large compact set
-   (trig polys separate points in ℝ^d and are closed under conjugation)
-4. Dominated convergence: ∫ |poly - 1_B| dμ_i < ε
+private lemma fourier_uniqueness_finite_measure {d : ℕ}
+    (μ ν : Measure (Fin d → ℝ)) [IsFiniteMeasure μ] [IsFiniteMeasure ν]
+    (h_eq : ∀ a : Fin d → ℝ,
+      ∫ q, exp (I * ↑(∑ i : Fin d, q i * a i)) ∂μ =
+        ∫ q, exp (I * ↑(∑ i : Fin d, q i * a i)) ∂ν) :
+    μ = ν := by
+  let toE : (Fin d → ℝ) → EuclideanSpace ℝ (Fin d) := WithLp.toLp 2
+  let fromE : EuclideanSpace ℝ (Fin d) → (Fin d → ℝ) := WithLp.equiv 2 _
+  have hmeas_toE : Measurable toE := (MeasurableEquiv.toLp 2 (Fin d → ℝ)).measurable
+  have hmeas_fromE : Measurable fromE :=
+    ((MeasurableEquiv.toLp 2 (Fin d → ℝ)).symm.measurable)
+  have hmap : μ.map toE = ν.map toE := by
+    apply Measure.ext_of_charFun
+    ext a
+    rw [charFun_apply, charFun_apply]
+    have hμ :
+        ∫ x : EuclideanSpace ℝ (Fin d), exp (↑(inner ℝ x a) * I) ∂(μ.map toE) =
+          ∫ q : Fin d → ℝ, exp (I * ↑(∑ i : Fin d, q i * fromE a i)) ∂μ := by
+      change ∫ x : EuclideanSpace ℝ (Fin d), exp (↑(inner ℝ x a) * I) ∂
+          (Measure.map (MeasurableEquiv.toLp 2 (Fin d → ℝ)) μ) = _
+      rw [integral_map_equiv (MeasurableEquiv.toLp 2 (Fin d → ℝ))
+        (μ := μ) (f := fun x : EuclideanSpace ℝ (Fin d) => exp (↑(inner ℝ x a) * I))]
+      apply integral_congr_ae
+      filter_upwards with q
+      have hsum :
+          ∑ i : Fin d, ((inner ℝ (toE q i) (a i) : ℝ) : ℂ) =
+            ∑ i : Fin d, (((fromE a i : ℝ) : ℂ) * (q i : ℂ)) := by
+        apply Finset.sum_congr rfl
+        intro i hi
+        have hreal : inner ℝ (toE q i) (a i) = fromE a i * q i := by
+          exact RCLike.inner_apply (toE q i) (a i)
+        simpa [toE, fromE] using congrArg (fun r : ℝ => (r : ℂ)) hreal
+      have hexp :
+          (∑ i : Fin d, ((inner ℝ (toE q i) (a i) : ℝ) : ℂ)) * I =
+            I * ∑ i : Fin d, ((q i : ℂ) * ((fromE a i : ℝ) : ℂ)) := by
+        rw [hsum]
+        simp [mul_comm]
+      simpa [PiLp.inner_apply, toE, fromE] using congrArg Complex.exp hexp
+    have hν :
+        ∫ x : EuclideanSpace ℝ (Fin d), exp (↑(inner ℝ x a) * I) ∂(ν.map toE) =
+          ∫ q : Fin d → ℝ, exp (I * ↑(∑ i : Fin d, q i * fromE a i)) ∂ν := by
+      change ∫ x : EuclideanSpace ℝ (Fin d), exp (↑(inner ℝ x a) * I) ∂
+          (Measure.map (MeasurableEquiv.toLp 2 (Fin d → ℝ)) ν) = _
+      rw [integral_map_equiv (MeasurableEquiv.toLp 2 (Fin d → ℝ))
+        (μ := ν) (f := fun x : EuclideanSpace ℝ (Fin d) => exp (↑(inner ℝ x a) * I))]
+      apply integral_congr_ae
+      filter_upwards with q
+      have hsum :
+          ∑ i : Fin d, ((inner ℝ (toE q i) (a i) : ℝ) : ℂ) =
+            ∑ i : Fin d, (((fromE a i : ℝ) : ℂ) * (q i : ℂ)) := by
+        apply Finset.sum_congr rfl
+        intro i hi
+        have hreal : inner ℝ (toE q i) (a i) = fromE a i * q i := by
+          exact RCLike.inner_apply (toE q i) (a i)
+        simpa [toE, fromE] using congrArg (fun r : ℝ => (r : ℂ)) hreal
+      have hexp :
+          (∑ i : Fin d, ((inner ℝ (toE q i) (a i) : ℝ) : ℂ)) * I =
+            I * ∑ i : Fin d, ((q i : ℂ) * ((fromE a i : ℝ) : ℂ)) := by
+        rw [hsum]
+        simp [mul_comm]
+      simpa [PiLp.inner_apply, toE, fromE] using congrArg Complex.exp hexp
+    rw [hμ, hν, h_eq (fromE a)]
+  have hback := congrArg (fun ρ : Measure (EuclideanSpace ℝ (Fin d)) => ρ.map fromE) hmap
+  change Measure.map fromE (Measure.map toE μ) = Measure.map fromE (Measure.map toE ν) at hback
+  rw [Measure.map_map hmeas_fromE hmeas_toE,
+    Measure.map_map hmeas_fromE hmeas_toE] at hback
+  have hcomp : fromE ∘ toE = id := by
+    ext q i
+    rfl
+  simpa [hcomp] using hback
 
-**Mathlib dependencies**: Inner regularity of finite Borel measures on ℝ^d
-(`MeasureTheory.InnerRegular`), Stone-Weierstrass for locally compact spaces. -/
-axiom indicator_approx_simultaneous {d : ℕ}
-    {N : ℕ} (μs : Fin N → Measure (Fin d → ℝ))
-    (hfin : ∀ i, IsFiniteMeasure (μs i))
-    (B : Set (Fin d → ℝ)) (hB : MeasurableSet B)
-    (ε : ℝ) (hε : 0 < ε) :
-    ∃ (m : ℕ) (dd : Fin m → ℂ) (as : Fin m → (Fin d → ℝ)),
-      ∀ i : Fin N,
-        |∫ q : Fin d → ℝ,
-            (Complex.normSq (∑ k : Fin m, dd k *
-              exp (I * ↑(∑ l : Fin d, q l * (as k) l))) : ℝ)
-          ∂(μs i) - ((μs i) B).toReal| < ε
+private lemma fourier_kernel_integrable {d : ℕ} (μ : Measure (Fin d → ℝ))
+    [IsFiniteMeasure μ] (a : Fin d → ℝ) :
+    Integrable (fun q : Fin d → ℝ => exp (I * ↑(∑ i : Fin d, q i * a i))) μ := by
+  apply (integrable_const (1 : ℂ)).mono
+  · exact Continuous.aestronglyMeasurable (by fun_prop)
+  · refine ae_of_all _ fun q => ?_
+    exact le_of_eq (by simpa [mul_comm] using
+      (Complex.norm_exp_ofReal_mul_I (∑ i : Fin d, q i * a i)))
+
+private lemma weighted_sum_positive_definite {d n : ℕ} (F : ℝ → (Fin d → ℝ) → ℂ)
+    (hpd : IsSemigroupGroupPD d F)
+    (x : Fin n → ℝ) (ts : Fin n → ℝ) (hts : ∀ i, 0 ≤ ts i) :
+    IsPositiveDefinite (fun a : Fin d → ℝ =>
+      ∑ r : Fin n, ∑ s : Fin n, ((x r * x s : ℝ) : ℂ) * F (ts r + ts s) a) := by
+  refine ⟨?_, ?_⟩
+  · intro a
+    calc
+      ∑ r : Fin n, ∑ s : Fin n, ((x r * x s : ℝ) : ℂ) * F (ts r + ts s) (-a)
+          = ∑ r : Fin n, ∑ s : Fin n,
+              starRingEnd ℂ (((x r * x s : ℝ) : ℂ) * F (ts r + ts s) a) := by
+              apply Finset.sum_congr rfl
+              intro r _
+              apply Finset.sum_congr rfl
+              intro s _
+              have hs :=
+                (spatial_slice_pd hpd (ts r + ts s) (add_nonneg (hts r) (hts s))).hermitian a
+              simp [hs, Complex.conj_ofReal, mul_assoc, mul_left_comm, mul_comm]
+      _ = starRingEnd ℂ
+            (∑ r : Fin n, ∑ s : Fin n, ((x r * x s : ℝ) : ℂ) * F (ts r + ts s) a) := by
+              simp_rw [map_sum]
+  · intro m as c
+    let e := finProdFinEquiv (m := m) (n := n)
+    let c' : Fin (m * n) → ℂ := fun p => c (e.symm p).1 * (x (e.symm p).2 : ℂ)
+    let ts' : Fin (m * n) → ℝ := fun p => ts (e.symm p).2
+    let as' : Fin (m * n) → (Fin d → ℝ) := fun p => -as (e.symm p).1
+    have hts' : ∀ p, 0 ≤ ts' p := fun p => hts _
+    have hPD := (hpd (m * n) c' ts' as' hts').2
+    have h_factor :
+        ∑ i : Fin m, ∑ j : Fin m,
+          star (c i) * c j *
+            (∑ r : Fin n, ∑ s : Fin n, ((x r * x s : ℝ) : ℂ) * F (ts r + ts s) (as i - as j)) =
+        ∑ i : Fin m, ∑ r : Fin n, ∑ j : Fin m, ∑ s : Fin n,
+          star (c i) * (x r : ℂ) * (c j * (x s : ℂ)) *
+            F (ts r + ts s) (as i - as j) := by
+      apply Finset.sum_congr rfl
+      intro i _
+      rw [show ∑ j : Fin m,
+            star (c i) * c j *
+              (∑ r : Fin n, ∑ s : Fin n, ((x r * x s : ℝ) : ℂ) * F (ts r + ts s) (as i - as j)) =
+          ∑ j : Fin m, ∑ r : Fin n, ∑ s : Fin n,
+            star (c i) * (x r : ℂ) * (c j * (x s : ℂ)) *
+              F (ts r + ts s) (as i - as j) from by
+        apply Finset.sum_congr rfl
+        intro j _
+        simp_rw [Finset.mul_sum]
+        simp_rw [Complex.ofReal_mul]
+        ring]
+      rw [Finset.sum_comm]
+    have h_reindex :
+        ∑ i : Fin m, ∑ r : Fin n, ∑ j : Fin m, ∑ s : Fin n,
+          star (c i) * (x r : ℂ) * (c j * (x s : ℂ)) *
+            F (ts r + ts s) (as i - as j) =
+        ∑ p : Fin (m * n), ∑ q : Fin (m * n),
+          star (c' p) * c' q * F (ts' p + ts' q) (as' q - as' p) := by
+      rw [← Fintype.sum_prod_type']
+      rw [← e.sum_comp]
+      congr 1
+      ext p
+      rw [← Fintype.sum_prod_type']
+      rw [← e.sum_comp]
+      congr 1
+      ext q
+      simp only [c', ts', as', star_mul, e.symm_apply_apply]
+      have hp : star (x p.2 : ℂ) = (x p.2 : ℂ) := by simp
+      rw [hp]
+      ring
+    have h_complex :
+        ∑ i : Fin m, ∑ j : Fin m,
+          star (c i) * c j *
+            (∑ r : Fin n, ∑ s : Fin n, ((x r * x s : ℝ) : ℂ) * F (ts r + ts s) (as i - as j)) =
+        ∑ p : Fin (m * n), ∑ q : Fin (m * n),
+          star (c' p) * c' q * F (ts' p + ts' q) (as' q - as' p) := by
+      rw [h_factor, h_reindex]
+    have : 0 ≤
+        (∑ i : Fin m, ∑ j : Fin m,
+          star (c i) * c j *
+            (∑ r : Fin n, ∑ s : Fin n, ((x r * x s : ℝ) : ℂ) * F (ts r + ts s) (as i - as j))).re := by
+      rw [h_complex]
+      exact hPD
+    simpa using this
+
+private lemma real_max_sub_max_neg (z : ℝ) : max z 0 - max (-z) 0 = z := by
+  by_cases hz : 0 ≤ z
+  · have hneg : -z ≤ 0 := by linarith
+    simp [max_eq_left hz, max_eq_right hneg]
+  · have hz' : z ≤ 0 := le_of_not_ge hz
+    have hneg : 0 ≤ -z := by linarith
+    simp [max_eq_right hz', max_eq_left hneg]
+
+private lemma weighted_measure_fourier {d n : ℕ} (F : ℝ → (Fin d → ℝ) → ℂ)
+    (ν : ℝ → Measure (Fin d → ℝ))
+    (hν : ∀ t, 0 ≤ t → IsFiniteMeasure (ν t))
+    (hνF : ∀ t, 0 ≤ t → ∀ a,
+      F t a = ∫ q, exp (I * ↑(∑ i : Fin d, q i * a i)) ∂(ν t))
+    (w : Fin n → Fin n → ℝ) (hw : ∀ r s, 0 ≤ w r s)
+    (ts : Fin n → ℝ) (hts : ∀ i, 0 ≤ ts i) (a : Fin d → ℝ) :
+    ∫ q, exp (I * ↑(∑ i : Fin d, q i * a i)) ∂
+      (∑ r : Fin n, ∑ s : Fin n, ENNReal.ofReal (w r s) • ν (ts r + ts s)) =
+      ∑ r : Fin n, ∑ s : Fin n, ((w r s : ℝ) : ℂ) * F (ts r + ts s) a := by
+  let f : (Fin d → ℝ) → ℂ := fun q => exp (I * ↑(∑ i : Fin d, q i * a i))
+  let μrow : Fin n → Measure (Fin d → ℝ) := fun r =>
+    ∑ s : Fin n, ENNReal.ofReal (w r s) • ν (ts r + ts s)
+  have h_term_int :
+      ∀ r s : Fin n, Integrable f (ENNReal.ofReal (w r s) • ν (ts r + ts s)) := by
+    intro r s
+    haveI : IsFiniteMeasure (ν (ts r + ts s)) := hν _ (add_nonneg (hts r) (hts s))
+    exact (fourier_kernel_integrable (μ := ν (ts r + ts s)) a).smul_measure
+      ENNReal.ofReal_ne_top
+  have h_row_int : ∀ r : Fin n, Integrable f (μrow r) := by
+    intro r
+    simpa [μrow] using (MeasureTheory.integrable_finset_sum_measure
+      (f := f)
+      (μ := fun s : Fin n => ENNReal.ofReal (w r s) • ν (ts r + ts s))
+      (s := Finset.univ)).2 (fun s hs => h_term_int r s)
+  change ∫ q, f q ∂(∑ r : Fin n, μrow r) =
+      ∑ r : Fin n, ∑ s : Fin n, ((w r s : ℝ) : ℂ) * F (ts r + ts s) a
+  rw [integral_finset_sum_measure
+    (f := f)
+    (μ := μrow)
+    (s := Finset.univ)
+    (fun r hr => h_row_int r)]
+  apply Finset.sum_congr rfl
+  intro r hr
+  change ∫ q, f q ∂(∑ s : Fin n, ENNReal.ofReal (w r s) • ν (ts r + ts s)) =
+      ∑ s : Fin n, ((w r s : ℝ) : ℂ) * F (ts r + ts s) a
+  rw [integral_finset_sum_measure
+    (f := f)
+    (μ := fun s : Fin n => ENNReal.ofReal (w r s) • ν (ts r + ts s))
+    (s := Finset.univ)
+    (fun s hs => h_term_int r s)]
+  apply Finset.sum_congr rfl
+  intro s hs
+  rw [integral_smul_measure, ENNReal.toReal_ofReal (hw r s), hνF _ (add_nonneg (hts r) (hts s)) a]
+  change ((w r s : ℝ) : ℂ) * ∫ (q : Fin d → ℝ),
+      exp (I * ↑(∑ i : Fin d, q i * a i)) ∂(ν (ts r + ts s)) =
+    ((w r s : ℝ) : ℂ) * ∫ (q : Fin d → ℝ),
+      exp (I * ↑(∑ i : Fin d, q i * a i)) ∂(ν (ts r + ts s))
+  rfl
+
+private lemma weighted_measure_eval {d n : ℕ}
+    (ν : ℝ → Measure (Fin d → ℝ))
+    (hν : ∀ t, 0 ≤ t → IsFiniteMeasure (ν t))
+    (w : Fin n → Fin n → ℝ) (hw : ∀ r s, 0 ≤ w r s)
+    (ts : Fin n → ℝ) (hts : ∀ i, 0 ≤ ts i)
+    (B : Set (Fin d → ℝ)) :
+    ((∑ r : Fin n, ∑ s : Fin n, ENNReal.ofReal (w r s) • ν (ts r + ts s)) B).toReal =
+      ∑ r : Fin n, ∑ s : Fin n, w r s * ((ν (ts r + ts s)) B).toReal := by
+  let term : Fin n → Fin n → ENNReal := fun r s =>
+    ENNReal.ofReal (w r s) * ν (ts r + ts s) B
+  let row : Fin n → ENNReal := fun r => ∑ s : Fin n, term r s
+  have h_term_top : ∀ r s : Fin n, term r s ≠ ⊤ := by
+    intro r s
+    haveI : IsFiniteMeasure (ν (ts r + ts s)) := hν _ (add_nonneg (hts r) (hts s))
+    dsimp [term]
+    exact ENNReal.mul_ne_top ENNReal.ofReal_ne_top
+      (measure_ne_top (ν (ts r + ts s)) B)
+  have h_row_top : ∀ r : Fin n, row r ≠ ⊤ := by
+    intro r
+    dsimp [row]
+    exact (ENNReal.sum_ne_top).2 (fun s _ => h_term_top r s)
+  rw [show ((∑ r : Fin n, ∑ s : Fin n, ENNReal.ofReal (w r s) • ν (ts r + ts s)) B).toReal =
+      (∑ r : Fin n, ∑ s : Fin n, term r s).toReal by
+      simp [term, Measure.smul_apply, mul_comm, mul_left_comm, mul_assoc]]
+  rw [show (∑ r : Fin n, ∑ s : Fin n, term r s).toReal =
+      ∑ r : Fin n, (row r).toReal by
+      simpa [row] using (ENNReal.toReal_sum (s := (Finset.univ : Finset (Fin n)))
+        (fun r hr => h_row_top r))]
+  apply Finset.sum_congr rfl
+  intro r hr
+  rw [show (row r).toReal =
+      ∑ s : Fin n, (term r s).toReal by
+      simpa [row] using (ENNReal.toReal_sum (s := (Finset.univ : Finset (Fin n)))
+        (fun s hs => h_term_top r s))]
+  apply Finset.sum_congr rfl
+  intro s hs
+  simp [term, ENNReal.toReal_mul, ENNReal.toReal_ofReal (hw r s), mul_assoc, mul_left_comm, mul_comm]
+
+private lemma spatial_measures_pd_real {d n : ℕ} (F : ℝ → (Fin d → ℝ) → ℂ)
+    (hpd : IsSemigroupGroupPD d F)
+    (ν : ℝ → Measure (Fin d → ℝ))
+    (hν : ∀ t, 0 ≤ t → IsFiniteMeasure (ν t))
+    (hνF : ∀ t, 0 ≤ t → ∀ a,
+      F t a = ∫ q, exp (I * ↑(∑ i : Fin d, q i * a i)) ∂(ν t))
+    (B : Set (Fin d → ℝ))
+    (x : Fin n → ℝ) (ts : Fin n → ℝ) (hts : ∀ i, 0 ≤ ts i) :
+    0 ≤ ∑ i : Fin n, ∑ j : Fin n, x i * x j * ((ν (ts i + ts j)) B).toReal := by
+  let G : (Fin d → ℝ) → ℂ := fun a =>
+    ∑ r : Fin n, ∑ s : Fin n, ((x r * x s : ℝ) : ℂ) * F (ts r + ts s) a
+  have hG_cont : Continuous G := by
+    unfold G
+    apply continuous_finset_sum _ fun r _ =>
+      continuous_finset_sum _ fun s _ => by
+        haveI : IsFiniteMeasure (ν (ts r + ts s)) := hν _ (add_nonneg (hts r) (hts s))
+        have hfun : (fun a : Fin d → ℝ => F (ts r + ts s) a) =
+            fun a : Fin d → ℝ =>
+              ∫ q, exp (I * ↑(∑ i : Fin d, q i * a i)) ∂(ν (ts r + ts s)) := by
+          funext a
+          exact hνF _ (add_nonneg (hts r) (hts s)) a
+        simpa [hfun] using
+          (continuous_const.mul (fourier_integral_continuous (μ := ν (ts r + ts s))))
+  have hG_pd : IsPositiveDefinite G := weighted_sum_positive_definite F hpd x ts hts
+  obtain ⟨η, hηfin, hηG⟩ := positive_definite_to_finite_measure G hG_cont hG_pd
+  haveI : IsFiniteMeasure η := hηfin
+  let wplus : Fin n → Fin n → ℝ := fun r s => max (x r * x s) 0
+  let wminus : Fin n → Fin n → ℝ := fun r s => max (-(x r * x s)) 0
+  let μPlus : Measure (Fin d → ℝ) :=
+    ∑ r : Fin n, ∑ s : Fin n, ENNReal.ofReal (wplus r s) • ν (ts r + ts s)
+  let μMinus : Measure (Fin d → ℝ) :=
+    ∑ r : Fin n, ∑ s : Fin n, ENNReal.ofReal (wminus r s) • ν (ts r + ts s)
+  have hwplus : ∀ r s, 0 ≤ wplus r s := by
+    intro r s
+    simp [wplus]
+  have hwminus : ∀ r s, 0 ≤ wminus r s := by
+    intro r s
+    simp [wminus]
+  haveI hplus_term (r s : Fin n) :
+      IsFiniteMeasure (ENNReal.ofReal (wplus r s) • ν (ts r + ts s)) := by
+    haveI : IsFiniteMeasure (ν (ts r + ts s)) := hν _ (add_nonneg (hts r) (hts s))
+    constructor
+    change ENNReal.ofReal (wplus r s) * ν (ts r + ts s) Set.univ < ⊤
+    exact ENNReal.mul_lt_top ENNReal.ofReal_lt_top (measure_lt_top _ _)
+  haveI hminus_term (r s : Fin n) :
+      IsFiniteMeasure (ENNReal.ofReal (wminus r s) • ν (ts r + ts s)) := by
+    haveI : IsFiniteMeasure (ν (ts r + ts s)) := hν _ (add_nonneg (hts r) (hts s))
+    constructor
+    change ENNReal.ofReal (wminus r s) * ν (ts r + ts s) Set.univ < ⊤
+    exact ENNReal.mul_lt_top ENNReal.ofReal_lt_top (measure_lt_top _ _)
+  haveI : IsFiniteMeasure μPlus := by
+    unfold μPlus
+    infer_instance
+  haveI : IsFiniteMeasure μMinus := by
+    unfold μMinus
+    infer_instance
+  have h_fourier_eq :
+      ∀ a : Fin d → ℝ,
+        ∫ q, exp (I * ↑(∑ i : Fin d, q i * a i)) ∂μPlus =
+          ∫ q, exp (I * ↑(∑ i : Fin d, q i * a i)) ∂(μMinus + η) := by
+    intro a
+    rw [integral_add_measure (fourier_kernel_integrable (μ := μMinus) a)
+      (fourier_kernel_integrable (μ := η) a)]
+    rw [weighted_measure_fourier F ν hν hνF wplus hwplus ts hts a]
+    rw [weighted_measure_fourier F ν hν hνF wminus hwminus ts hts a]
+    rw [← hηG a]
+    have hGa : G a = ∑ r : Fin n, ∑ s : Fin n, ((x r * x s : ℝ) : ℂ) * F (ts r + ts s) a := rfl
+    rw [hGa]
+    calc
+      ∑ r : Fin n, ∑ s : Fin n, ((wplus r s : ℝ) : ℂ) * F (ts r + ts s) a
+          = ∑ r : Fin n, ∑ s : Fin n,
+              ((((wminus r s : ℝ) : ℂ) + ((x r * x s : ℝ) : ℂ)) * F (ts r + ts s) a) := by
+                apply Finset.sum_congr rfl
+                intro r hr
+                apply Finset.sum_congr rfl
+                intro s hs
+                have hsplit :
+                    (wplus r s : ℝ) = wminus r s + x r * x s := by
+                  dsimp [wplus, wminus]
+                  linarith [real_max_sub_max_neg (x r * x s)]
+                rw [show ((wplus r s : ℝ) : ℂ) =
+                    ((wminus r s : ℝ) : ℂ) + ((x r * x s : ℝ) : ℂ) from by
+                  calc
+                    ((wplus r s : ℝ) : ℂ) = ↑(wminus r s + x r * x s) := by
+                      exact congrArg (fun z : ℝ => (z : ℂ)) hsplit
+                    _ = ((wminus r s : ℝ) : ℂ) + ((x r * x s : ℝ) : ℂ) := by
+                      simp]
+      _ = ∑ r : Fin n, ∑ s : Fin n,
+            (((wminus r s : ℝ) : ℂ) * F (ts r + ts s) a +
+              ((x r * x s : ℝ) : ℂ) * F (ts r + ts s) a) := by
+                apply Finset.sum_congr rfl
+                intro r hr
+                apply Finset.sum_congr rfl
+                intro s hs
+                ring
+      _ = (∑ r : Fin n, ∑ s : Fin n, ((wminus r s : ℝ) : ℂ) * F (ts r + ts s) a) +
+            ∑ r : Fin n, ∑ s : Fin n, ((x r * x s : ℝ) : ℂ) * F (ts r + ts s) a := by
+                simpa [add_mul, Finset.sum_add_distrib]
+      _ = (∑ r : Fin n, ∑ s : Fin n, ((wminus r s : ℝ) : ℂ) * F (ts r + ts s) a) + G a := by
+                rfl
+  have hμ_eq : μPlus = μMinus + η :=
+    fourier_uniqueness_finite_measure μPlus (μMinus + η) h_fourier_eq
+  have h_eval :
+      (μPlus B).toReal = (μMinus B).toReal + (η B).toReal := by
+    have h_apply : μPlus B = (μMinus + η) B := congrArg (fun ρ : Measure (Fin d → ℝ) => ρ B) hμ_eq
+    have h_toReal := congrArg ENNReal.toReal (by simpa [Measure.add_apply] using h_apply)
+    simpa [ENNReal.toReal_add] using h_toReal
+  have h_plus_eval :
+      (μPlus B).toReal =
+        ∑ r : Fin n, ∑ s : Fin n, wplus r s * ((ν (ts r + ts s)) B).toReal :=
+    weighted_measure_eval ν hν wplus hwplus ts hts B
+  have h_minus_eval :
+      (μMinus B).toReal =
+        ∑ r : Fin n, ∑ s : Fin n, wminus r s * ((ν (ts r + ts s)) B).toReal :=
+    weighted_measure_eval ν hν wminus hwminus ts hts B
+  have hsplit_sum :
+      (∑ i : Fin n, ∑ j : Fin n, x i * x j * ((ν (ts i + ts j)) B).toReal) =
+        (∑ i : Fin n, ∑ j : Fin n, wplus i j * ((ν (ts i + ts j)) B).toReal) -
+        (∑ i : Fin n, ∑ j : Fin n, wminus i j * ((ν (ts i + ts j)) B).toReal) := by
+    calc
+      (∑ i : Fin n, ∑ j : Fin n, x i * x j * ((ν (ts i + ts j)) B).toReal)
+          = ∑ i : Fin n, ∑ j : Fin n,
+              (wplus i j - wminus i j) * ((ν (ts i + ts j)) B).toReal := by
+                apply Finset.sum_congr rfl
+                intro i hi
+                apply Finset.sum_congr rfl
+                intro j hj
+                have hij :
+                    x i * x j = wplus i j - wminus i j := by
+                  dsimp [wplus, wminus]
+                  exact (real_max_sub_max_neg (x i * x j)).symm
+                rw [hij]
+      _ = ∑ i : Fin n, ∑ j : Fin n,
+            (wplus i j * ((ν (ts i + ts j)) B).toReal -
+              wminus i j * ((ν (ts i + ts j)) B).toReal) := by
+                apply Finset.sum_congr rfl
+                intro i hi
+                apply Finset.sum_congr rfl
+                intro j hj
+                ring
+      _ = (∑ i : Fin n, ∑ j : Fin n, wplus i j * ((ν (ts i + ts j)) B).toReal) -
+            (∑ i : Fin n, ∑ j : Fin n, wminus i j * ((ν (ts i + ts j)) B).toReal) := by
+                simp_rw [Finset.sum_sub_distrib]
+  have hmain :
+      (∑ i : Fin n, ∑ j : Fin n, x i * x j * ((ν (ts i + ts j)) B).toReal) = (η B).toReal := by
+    rw [hsplit_sum, ← h_plus_eval, ← h_minus_eval]
+    linarith
+  rw [hmain]
+  exact ENNReal.toReal_nonneg
 
 /-- For each Borel B, the function t ↦ ν_t(B) is semigroup-PD.
 
-**Proof structure:**
-
-1. Suppose for contradiction that the PD sum `S < 0` for some
-   `n, c, ts`.
-2. Let `M = ∑ᵢⱼ ‖c̄ᵢ cⱼ‖` and pick `ε = (-S) / (2(M + 1)) > 0`.
-3. By `indicator_approx_simultaneous`, find a single trig polynomial
-   `g = |∑ dₖ e^{i⟨aₖ,·⟩}|²` such that for ALL pairs `(i,j)`:
-   `|∫ g dν_{tᵢ+tⱼ} - ν_{tᵢ+tⱼ}(B)| < ε`.
-4. The approximation error in the PD sum satisfies
-   `|S - S_approx| ≤ M · ε < |S| / 2`, so `S_approx < 0`.
-5. But `S_approx ≥ 0` by `trig_poly_integral_pd`. Contradiction. -/
+The proof uses the finite-measure Fourier uniqueness route:
+for real coefficients, split the weighted family into positive and negative
+finite measures, build the positive-definite Fourier transform via Bochner,
+identify measures by uniqueness of Fourier transforms, then reduce the
+complex-coefficient case to the real and imaginary parts. -/
 theorem spatial_measures_pd {d : ℕ} (F : ℝ → (Fin d → ℝ) → ℂ)
     (hpd : IsSemigroupGroupPD d F)
     (ν : ℝ → Measure (Fin d → ℝ))
@@ -547,133 +1061,26 @@ theorem spatial_measures_pd {d : ℕ} (F : ℝ → (Fin d → ℝ) → ℂ)
     (B : Set (Fin d → ℝ)) (hB : MeasurableSet B) :
     IsSemigroupPD (fun t => ((ν t) B).toReal) := by
   intro n c ts hts
-  -- Goal: 0 ≤ Re(∑ᵢⱼ c̄ᵢ cⱼ (ν(tᵢ+tⱼ)(B)).toReal)
-  -- Notation: for trig poly (m, dd, as_poly), define:
-  --   r(s) := ∫ |∑ dₖ e^{i⟨aₖ,q⟩}|² dν_s  (trig poly integral)
-  --   v(s) := (ν s B).toReal                 (measure of B)
-  -- We show ∑ c̄ᵢ cⱼ v(tᵢ+tⱼ) ≥ 0 by approximating v by r.
-  by_contra h_neg
-  push_neg at h_neg
-  -- The PD sum is negative
-  -- Coefficient bound
-  set M := ∑ i : Fin n, ∑ j : Fin n, ‖star (c i) * c j‖
-  have hM_nonneg : 0 ≤ M := Finset.sum_nonneg
-    (fun i _ => Finset.sum_nonneg (fun j _ => norm_nonneg _))
-  -- Pick ε small enough
-  set S := (∑ i : Fin n, ∑ j : Fin n,
-    star (c i) * c j *
-      (((ν (ts i + ts j)) B).toReal : ℂ)).re
-  have hS_neg : S < 0 := h_neg
-  set ε := (-S) / (2 * (M + 1))
-  have hε_pos : 0 < ε := by
-    apply div_pos (neg_pos.mpr hS_neg); positivity
-  -- Define the n² measures indexed by Fin (n * n)
-  let idx := finProdFinEquiv (m := n) (n := n)
-  let μs : Fin (n * n) → Measure (Fin d → ℝ) :=
-    fun p => ν (ts (idx.symm p).1 + ts (idx.symm p).2)
-  have hμs_fin : ∀ p, IsFiniteMeasure (μs p) := by
-    intro p; exact hν _ (add_nonneg (hts _) (hts _))
-  -- Get a single trig poly approximating 1_B for all n² measures
-  obtain ⟨m, dd, as_poly, h_approx⟩ :=
-    indicator_approx_simultaneous μs hμs_fin B hB ε hε_pos
-  -- For each (i,j), the trig poly integral approximates ν_{tᵢ+tⱼ}(B)
-  -- Let r(s) = ∫ |poly|² dν_s
-  let r : ℝ → ℝ := fun s => ∫ q : Fin d → ℝ,
-    (Complex.normSq (∑ k : Fin m, dd k *
-      exp (I * ↑(∑ l : Fin d, q l * (as_poly k) l))) : ℝ) ∂(ν s)
-  have h_approx_ij : ∀ i j : Fin n,
-      |r (ts i + ts j) - ((ν (ts i + ts j)) B).toReal| < ε := by
-    intro i j
-    have h := h_approx (idx (i, j))
-    simp only [μs, Equiv.symm_apply_apply] at h
-    exact h
-  -- The trig poly PD sum is nonneg: ∑ c̄ᵢ cⱼ r(tᵢ+tⱼ) ≥ 0
-  have h_pd := trig_poly_integral_pd F hpd ν hν hνF
-    n c ts hts m dd as_poly
-  -- h_pd : 0 ≤ (∑ i j, c̄ᵢ cⱼ ↑(r(tᵢ+tⱼ))).re
-  -- Now bound |∑ c̄ᵢ cⱼ (r(tᵢ+tⱼ) - v(tᵢ+tⱼ))| ≤ M · ε
-  -- which gives S ≥ S' - M·ε ≥ -M·ε > S (contradiction)
-  -- where S' = Re(∑ c̄ᵢ cⱼ r(tᵢ+tⱼ)) ≥ 0.
-  --
-  -- Error bound: M * ε < -S
-  have h_bound : M * ε < -S := by
-    -- ε = (-S) / (2(M+1)), so M·ε = M·(-S)/(2(M+1)) < -S
-    -- because M < 2(M+1).
-    rw [show ε = (-S) / (2 * (M + 1)) from rfl]
-    have hS_pos : 0 < -S := neg_pos.mpr hS_neg
-    calc M * ((-S) / (2 * (M + 1)))
-        = M * (-S) / (2 * (M + 1)) := by ring
-      _ ≤ (M + 1) * (-S) / (2 * (M + 1)) := by
-          apply div_le_div_of_nonneg_right _ (by positivity)
-          exact mul_le_mul_of_nonneg_right (by linarith) hS_pos.le
-      _ = (-S) / 2 := by field_simp
-      _ < -S := by linarith
-  -- Bound the norm of the difference sum
-  -- |Re(∑ c̄ᵢcⱼ(↑r(tᵢ+tⱼ) - ↑v(tᵢ+tⱼ)))| ≤ M · ε
-  have h_err : |((∑ i : Fin n, ∑ j : Fin n,
-      star (c i) * c j * ((r (ts i + ts j) : ℂ) -
-        (((ν (ts i + ts j)) B).toReal : ℂ))).re)| ≤ M * ε := by
-    calc _ ≤ ‖∑ i : Fin n, ∑ j : Fin n,
-            star (c i) * c j * ((r (ts i + ts j) : ℂ) -
-              (((ν (ts i + ts j)) B).toReal : ℂ))‖ :=
-          Complex.abs_re_le_norm _
-      _ ≤ ∑ i, ‖∑ j, star (c i) * c j *
-            ((r (ts i + ts j) : ℂ) -
-              (((ν (ts i + ts j)) B).toReal : ℂ))‖ :=
-          norm_sum_le _ _
-      _ ≤ ∑ i, ∑ j, ‖star (c i) * c j *
-            ((r (ts i + ts j) : ℂ) -
-              (((ν (ts i + ts j)) B).toReal : ℂ))‖ :=
-          Finset.sum_le_sum (fun i _ => norm_sum_le _ _)
-      _ = ∑ i, ∑ j, ‖star (c i) * c j‖ *
-            ‖(r (ts i + ts j) : ℂ) -
-              (((ν (ts i + ts j)) B).toReal : ℂ)‖ := by
-          congr 1; ext i; congr 1; ext j; exact norm_mul _ _
-      _ ≤ ∑ i, ∑ j, ‖star (c i) * c j‖ * ε := by
-          apply Finset.sum_le_sum; intro i _
-          apply Finset.sum_le_sum; intro j _
-          apply mul_le_mul_of_nonneg_left _ (norm_nonneg _)
-          rw [show (r (ts i + ts j) : ℂ) -
-            (((ν (ts i + ts j)) B).toReal : ℂ) =
-            ((r (ts i + ts j) -
-              ((ν (ts i + ts j)) B).toReal : ℝ) : ℂ) from by
-              push_cast; ring]
-          rw [Complex.norm_real]
-          exact le_of_lt (h_approx_ij i j)
-      _ = M * ε := by
-          rw [show (∑ i : Fin n, ∑ j : Fin n,
-            ‖star (c i) * c j‖ * ε) =
-            (∑ i : Fin n, ∑ j : Fin n,
-              ‖star (c i) * c j‖) * ε from by
-            rw [Finset.sum_mul]
-            apply Finset.sum_congr rfl; intro i _
-            exact (Finset.sum_mul _ _ _).symm]
-  -- The difference of the sums:
-  -- (∑ c̄ᵢcⱼ ↑r(tᵢ+tⱼ)).re - S
-  -- = Re(∑ c̄ᵢcⱼ(↑r(tᵢ+tⱼ) - ↑v(tᵢ+tⱼ)))
-  have h_split : (∑ i : Fin n, ∑ j : Fin n,
-      star (c i) * c j * (r (ts i + ts j) : ℂ)).re - S =
-    (∑ i : Fin n, ∑ j : Fin n,
-      star (c i) * c j * ((r (ts i + ts j) : ℂ) -
-        (((ν (ts i + ts j)) B).toReal : ℂ))).re := by
-    -- ∑ cᵢⱼ(rᵢⱼ - vᵢⱼ) = ∑ cᵢⱼ rᵢⱼ - ∑ cᵢⱼ vᵢⱼ, then take Re
-    have h_expand : (∑ i : Fin n, ∑ j : Fin n,
-        star (c i) * c j * ((r (ts i + ts j) : ℂ) -
-          (((ν (ts i + ts j)) B).toReal : ℂ))) =
+  let M : Fin n → Fin n → ℝ := fun i j => ((ν (ts i + ts j)) B).toReal
+  have hsplit :
+      (∑ i : Fin n, ∑ j : Fin n, star (c i) * c j * ((M i j : ℝ) : ℂ)).re =
+        ∑ i : Fin n, ∑ j : Fin n,
+          (((c i).re * (c j).re + (c i).im * (c j).im) * M i j) := by
+    simp [M, Complex.mul_re, mul_comm]
+  have hsplit' :
       (∑ i : Fin n, ∑ j : Fin n,
-        star (c i) * c j * (r (ts i + ts j) : ℂ)) -
-      (∑ i : Fin n, ∑ j : Fin n,
-        star (c i) * c j *
-          (((ν (ts i + ts j)) B).toReal : ℂ)) := by
-      simp_rw [mul_sub, Finset.sum_sub_distrib]
-    rw [h_expand, Complex.sub_re]
-  -- Combine: 0 ≤ S' and S = S' - err with |err| ≤ M·ε < -S
-  -- So S ≥ S' - M·ε ≥ 0 - M·ε > S. Contradiction.
-  have hS' := h_pd  -- 0 ≤ (∑ c̄ᵢcⱼ ↑r(tᵢ+tⱼ)).re
-  -- From h_split: S = (∑ c̄ᵢcⱼ ↑r).re - err where |err| ≤ M·ε
-  -- So S ≥ (∑ c̄ᵢcⱼ ↑r).re - M·ε ≥ -M·ε
-  -- But M·ε < -S, so S > S. Contradiction.
-  linarith [abs_le.mp h_err, h_split]
+        (((c i).re * (c j).re + (c i).im * (c j).im) * M i j)) =
+        (∑ i : Fin n, ∑ j : Fin n, (c i).re * (c j).re * M i j) +
+        (∑ i : Fin n, ∑ j : Fin n, (c i).im * (c j).im * M i j) := by
+    simp_rw [add_mul, Finset.sum_add_distrib]
+  have hre :
+      0 ≤ ∑ i : Fin n, ∑ j : Fin n, (c i).re * (c j).re * M i j :=
+    spatial_measures_pd_real F hpd ν hν hνF B (fun i => (c i).re) ts hts
+  have him :
+      0 ≤ ∑ i : Fin n, ∑ j : Fin n, (c i).im * (c j).im * M i j :=
+    spatial_measures_pd_real F hpd ν hν hνF B (fun i => (c i).im) ts hts
+  rw [hsplit, hsplit']
+  linarith
 
 /-! ## Step 3: Product measure assembly
 
