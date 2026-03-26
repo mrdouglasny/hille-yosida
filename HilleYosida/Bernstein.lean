@@ -865,8 +865,10 @@ private lemma tail_setIntegral_tendsto_zero {g : ℝ → ℝ} {a : ℝ}
     (hg.mono_set Ioc_subset_Ioi_self) (hg.mono_set (Ioi_subset_Ioi (le_of_lt hT)))
   rw [hunion] at hd; rw [intervalIntegral.integral_of_le (le_of_lt hT)]; linarith
 
-/-- Boundary decay: `(-1)^{k+1}/k! (T-x)^k D^k f(T) → 0` as `T → ∞` for CM functions.
+/- Boundary decay: `(-1)^{k+1}/k! (T-x)^k D^k f(T) → 0` as `T → ∞` for CM functions.
 This follows from the integrability of the k-th CM density on `(0, ∞)`. -/
+-- Boundary-term squeeze uses repeated interval/set-integral comparisons and needs extra heartbeats.
+set_option maxHeartbeats 6400000 in
 private lemma boundary_term_decay (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
     (k : ℕ) (hk : k ≠ 0) (x : ℝ) (hx : 0 ≤ x)
     (L : ℝ) (hL : Filter.Tendsto f Filter.atTop (nhds L)) :
@@ -874,21 +876,187 @@ private lemma boundary_term_decay (f : ℝ → ℝ) (hcm : IsCompletelyMonotone 
       iteratedDerivWithin k f (Set.Ici 0) T) Filter.atTop (nhds 0) := by
   set h := fun T => (-1 : ℝ) ^ k * iteratedDerivWithin k f (Ici 0) T
   have hkey : Tendsto (fun T => (T - x) ^ k * h T) atTop (nhds 0) := by
-    /- Proof sketch (genuinely >30 lines in Lean):
-       h ≥ 0 (CM sign condition), h antitone on [0,∞) (from CM sign at order k+1,
-       via antitoneOn_of_deriv_nonpos: deriv h = (-1)^k D^{k+1}f ≤ 0).
-       cm_density f k = t^{k-1}h(t)/(k-1)! is integrable on (0,∞) (from
-       cm_measure_finite_mass for k ≥ 2, neg_deriv_integrableOn for k = 1).
-       Squeeze: for T > 0, h antitone gives (T/2)^{k-1} h(T) ≤ t^{k-1} h(t)
-       for t ∈ [T/2,T], so (T/2)^k h(T) ≤ ∫_{T/2}^T t^{k-1} h(t) dt
-       ≤ ∫_{Ioi(T/2)} t^{k-1} h(t) dt → 0 by tail_setIntegral_tendsto_zero.
-       Then (T-x)^k h(T) ≤ T^k h(T) = 2^k (T/2)^k h(T) → 0.
-       Blocking: establishing h antitone requires converting between
-       iteratedDerivWithin (k+1) and deriv (iteratedDerivWithin k) at interior
-       points of Ici 0, which needs ~15 lines of deriv/derivWithin manipulation.
-       The interval integral comparison ∫ const ≤ ∫ f for antitone f needs ~8 lines.
-       Total: ~45 lines. -/
-    sorry
+    have hk1 : 1 ≤ k := Nat.one_le_iff_ne_zero.mpr hk
+    have h_nonneg : ∀ T, 0 ≤ T → 0 ≤ h T := by
+      intro T hT
+      simpa [h] using hcm.2 k T hT
+    have h_antitone : AntitoneOn h (Ici 0) := by
+      apply antitoneOn_of_deriv_nonpos (convex_Ici 0)
+      · simpa [h] using
+          (hcm.1.continuousOn_iteratedDerivWithin le_top (uniqueDiffOn_Ici 0)).const_mul
+            ((-1 : ℝ) ^ k)
+      · rw [interior_Ici]
+        intro T hT
+        have hdiff :
+            DifferentiableAt ℝ (iteratedDerivWithin k f (Ici 0)) T :=
+          (hcm.1.differentiableOn_iteratedDerivWithin (show (k : WithTop ℕ∞) < ⊤ by simp)
+            (uniqueDiffOn_Ici 0)) T (Set.mem_Ici.mpr (le_of_lt hT)) |>.differentiableAt (Ici_mem_nhds hT)
+        exact (hdiff.const_mul ((-1 : ℝ) ^ k)).differentiableWithinAt
+      · rw [interior_Ici]
+        intro T hT
+        have hderiv :
+            deriv h T = (-1 : ℝ) ^ k * iteratedDerivWithin (k + 1) f (Ici 0) T := by
+          simp only [h]
+          rw [deriv_const_mul_field]
+          rw [← derivWithin_of_mem_nhds (Ici_mem_nhds hT), ← iteratedDerivWithin_succ]
+        rw [hderiv]
+        have hsign : 0 ≤ (-1 : ℝ) ^ (k + 1) * iteratedDerivWithin (k + 1) f (Ici 0) T :=
+          hcm.2 (k + 1) T (le_of_lt hT)
+        have : 0 ≤ -(((-1 : ℝ) ^ k) * iteratedDerivWithin (k + 1) f (Ici 0) T) := by
+          simpa [pow_succ, mul_assoc] using hsign
+        linarith
+    have hcont_density : ContinuousOn (cm_density f k) (Ici 0) := by
+      unfold cm_density
+      simp only [hk, ↓reduceIte]
+      exact ((continuousOn_const.mul
+        ((continuousOn_pow _).mono fun _ _ => trivial)).mul
+        (hcm.1.continuousOn_iteratedDerivWithin le_top (uniqueDiffOn_Ici 0)))
+    have hint_density : IntegrableOn (cm_density f k) (Set.Ioi 0) := by
+      by_cases hk_eq : k = 1
+      · subst hk_eq
+        convert hcm.neg_deriv_integrableOn hL using 1
+        ext t
+        simp [cm_density, iteratedDerivWithin_one]
+      · have hk2 : 2 ≤ k := by omega
+        have hmeas_density :
+            AEStronglyMeasurable (cm_density f k) (volume.restrict (Set.Ioi 0)) :=
+          (hcont_density.mono Set.Ioi_subset_Ici_self).aestronglyMeasurable measurableSet_Ioi
+        have hnonneg_density : 0 ≤ᵐ[volume.restrict (Set.Ioi 0)] cm_density f k :=
+          (ae_restrict_mem measurableSet_Ioi).mono fun t ht => cm_density_nonneg hcm k t ht
+        refine ⟨hmeas_density, ?_⟩
+        rw [hasFiniteIntegral_iff_ofReal hnonneg_density]
+        obtain ⟨_, hmass⟩ := cm_measure_finite_mass f hcm k hk2 L hL
+        have hmass' := hmass
+        unfold cm_measure at hmass'
+        rw [withDensity_apply _ MeasurableSet.univ, Measure.restrict_univ] at hmass'
+        exact lt_of_le_of_lt hmass' ENNReal.ofReal_lt_top
+    have htail :
+        Tendsto (fun S : ℝ => ∫ t in Set.Ioi S, cm_density f k t) atTop (nhds 0) :=
+      tail_setIntegral_tendsto_zero hint_density
+    have htail_half :
+        Tendsto (fun T : ℝ => ∫ t in Set.Ioi (T / 2), cm_density f k t) atTop (nhds 0) := by
+      have hhalf_map : Tendsto (fun T : ℝ => (1 / 2 : ℝ) * T) atTop atTop :=
+        (Filter.tendsto_const_mul_atTop_of_pos (show (0 : ℝ) < 1 / 2 by positivity)).2 tendsto_id
+      simpa [div_eq_mul_inv, mul_comm] using htail.comp hhalf_map
+    have hupper :
+        ∀ᶠ T in atTop,
+          (T - x) ^ k * h T ≤
+            ((2 : ℝ) ^ k * ↑((k - 1).factorial)) *
+              ∫ t in Set.Ioi (T / 2), cm_density f k t := by
+      filter_upwards [eventually_gt_atTop (max (2 * x) 2)] with T hT
+      have hT2 : (2 : ℝ) < T := lt_of_le_of_lt (le_max_right (2 * x) 2) hT
+      have hTpos : 0 < T := by linarith
+      have hxT : x < T := by
+        have h2xT : 2 * x < T := lt_of_le_of_lt (le_max_left (2 * x) 2) hT
+        linarith
+      have hTx_nonneg : 0 ≤ T - x := sub_nonneg.mpr hxT.le
+      have hT_nonneg : 0 ≤ T := le_of_lt hTpos
+      have hhalf_nonneg : 0 ≤ T / 2 := by positivity
+      have hhT_nonneg : 0 ≤ h T := h_nonneg T hT_nonneg
+      have h_interval_le :
+          ∫ t in T / 2..T, cm_density f k t ≤ ∫ t in Set.Ioi (T / 2), cm_density f k t := by
+        rw [intervalIntegral.integral_of_le (by linarith)]
+        apply setIntegral_mono_set (hint_density.mono_set (Set.Ioi_subset_Ioi hhalf_nonneg))
+        · exact (ae_restrict_mem measurableSet_Ioi).mono fun t ht =>
+            cm_density_nonneg hcm k t (lt_of_le_of_lt hhalf_nonneg ht)
+        · exact ae_of_all _ fun t ht => Ioc_subset_Ioi_self ht
+      have h_density_eq :
+          ∀ t, cm_density f k t =
+            (1 / ↑((k - 1).factorial)) * t ^ (k - 1) * h t := by
+        intro t
+        simp only [cm_density, hk, ↓reduceIte, h]
+        field_simp
+      have h_const_le :
+          (1 / ↑((k - 1).factorial)) * (T / 2) ^ k * h T ≤
+            ∫ t in T / 2..T, cm_density f k t := by
+        have hmono :
+            ∀ᵐ t ∂(volume.restrict (Set.Icc (T / 2) T)),
+              (1 / ↑((k - 1).factorial)) * (T / 2) ^ (k - 1) * h T ≤ cm_density f k t := by
+          filter_upwards [ae_restrict_mem measurableSet_Icc] with t ht
+          have ht_nonneg : 0 ≤ t := le_trans hhalf_nonneg ht.1
+          have ht_pos : 0 < t := lt_of_lt_of_le (by positivity : 0 < T / 2) ht.1
+          have hpow : (T / 2) ^ (k - 1) ≤ t ^ (k - 1) := by
+            exact pow_le_pow_left₀ hhalf_nonneg ht.1 _
+          have hh_le : h T ≤ h t := by
+            exact h_antitone ht_nonneg hT_nonneg ht.2
+          have hmul :
+              (1 / ↑((k - 1).factorial)) * (T / 2) ^ (k - 1) * h T ≤
+                (1 / ↑((k - 1).factorial)) * t ^ (k - 1) * h t := by
+            have hcoeff_nonneg : 0 ≤ (1 / ↑((k - 1).factorial) : ℝ) := by positivity
+            have hright_nonneg : 0 ≤ (1 / ↑((k - 1).factorial)) * t ^ (k - 1) := by
+              exact mul_nonneg hcoeff_nonneg (pow_nonneg ht_nonneg _)
+            calc
+              (1 / ↑((k - 1).factorial)) * (T / 2) ^ (k - 1) * h T
+                  ≤ ((1 / ↑((k - 1).factorial)) * t ^ (k - 1)) * h T := by
+                    simpa [mul_assoc] using
+                      mul_le_mul_of_nonneg_right (mul_le_mul_of_nonneg_left hpow hcoeff_nonneg) hhT_nonneg
+              _ ≤ ((1 / ↑((k - 1).factorial)) * t ^ (k - 1)) * h t := by
+                    exact mul_le_mul_of_nonneg_left hh_le hright_nonneg
+          simpa [h_density_eq t] using hmul
+        have hconst_int :
+            IntervalIntegrable (fun _ : ℝ =>
+              (1 / ↑((k - 1).factorial)) * (T / 2) ^ (k - 1) * h T) volume (T / 2) T :=
+          intervalIntegral.intervalIntegrable_const
+        have hIcc_subset : Set.Icc (T / 2) T ⊆ Set.Ici 0 := by
+          intro t ht
+          exact le_trans hhalf_nonneg ht.1
+        have hdens_int : IntervalIntegrable (cm_density f k) volume (T / 2) T :=
+          (hcont_density.mono hIcc_subset).intervalIntegrable_of_Icc (by linarith)
+        have hmono_int :=
+          intervalIntegral.integral_mono_ae_restrict (μ := volume) (a := T / 2) (b := T)
+            (hab := by linarith) hconst_int hdens_int hmono
+        rw [intervalIntegral.integral_const] at hmono_int
+        have hhalf_eq : (T - T / 2) = T / 2 := by ring
+        rw [hhalf_eq] at hmono_int
+        rw [smul_eq_mul] at hmono_int
+        have hconst_eq :
+            T / 2 * ((1 / ↑((k - 1).factorial)) * (T / 2) ^ (k - 1) * h T) =
+              (1 / ↑((k - 1).factorial)) * (T / 2) ^ k * h T := by
+          have hk_succ : k = (k - 1) + 1 := by omega
+          rw [hk_succ]
+          ring_nf
+          have hnat : 1 + (k - 1) - 1 = k - 1 := by omega
+          simp [hnat]
+        rw [hconst_eq] at hmono_int
+        exact hmono_int
+      have hhalf_le :
+          (T / 2) ^ k * h T ≤ ↑((k - 1).factorial) * ∫ t in Set.Ioi (T / 2), cm_density f k t := by
+        have hfact_pos : (0 : ℝ) < ↑((k - 1).factorial) := by
+          exact Nat.cast_pos.mpr (Nat.factorial_pos _)
+        have haux := le_trans h_const_le h_interval_le
+        have hmul := mul_le_mul_of_nonneg_left haux hfact_pos.le
+        have hleft_eq :
+            ↑((k - 1).factorial) *
+                ((1 / ↑((k - 1).factorial)) * (T / 2) ^ k * h T) =
+              (T / 2) ^ k * h T := by
+          field_simp [hfact_pos.ne']
+        rw [hleft_eq] at hmul
+        exact hmul
+      have hpow_le : (T - x) ^ k ≤ T ^ k := by
+        exact pow_le_pow_left₀ hTx_nonneg (by linarith) _
+      have hTk_eq : T ^ k * h T = (2 : ℝ) ^ k * ((T / 2) ^ k * h T) := by
+        calc
+          T ^ k * h T = ((2 : ℝ) * (T / 2)) ^ k * h T := by congr 1; field_simp
+          _ = (2 : ℝ) ^ k * ((T / 2) ^ k * h T) := by rw [mul_pow]; ring
+      calc
+        (T - x) ^ k * h T ≤ T ^ k * h T := by
+          gcongr
+        _ = (2 : ℝ) ^ k * ((T / 2) ^ k * h T) := hTk_eq
+        _ ≤ (2 : ℝ) ^ k * (↑((k - 1).factorial) * ∫ t in Set.Ioi (T / 2), cm_density f k t) := by
+          gcongr
+        _ = ((2 : ℝ) ^ k * ↑((k - 1).factorial)) *
+              ∫ t in Set.Ioi (T / 2), cm_density f k t := by ring
+    have hnonneg_event : ∀ᶠ T in atTop, 0 ≤ (T - x) ^ k * h T := by
+      filter_upwards [eventually_gt_atTop (max x 0)] with T hT
+      have hT0 : 0 < T := lt_of_le_of_lt (le_max_right x 0) hT
+      have hxT : x < T := lt_of_le_of_lt (le_max_left x 0) hT
+      exact mul_nonneg (pow_nonneg (sub_nonneg.mpr hxT.le) _) (h_nonneg T hT0.le)
+    have hupper_tendsto :
+        Tendsto (fun T : ℝ =>
+          ((2 : ℝ) ^ k * ↑((k - 1).factorial)) *
+            ∫ t in Set.Ioi (T / 2), cm_density f k t) atTop (nhds 0) := by
+      simpa [mul_zero] using htail_half.const_mul (((2 : ℝ) ^ k) * ↑((k - 1).factorial))
+    exact squeeze_zero' hnonneg_event hupper hupper_tendsto
   have heq : ∀ T, (-1 : ℝ) ^ (k + 1) / ↑k.factorial * (T - x) ^ k *
       iteratedDerivWithin k f (Ici 0) T =
       -(1 / ↑k.factorial) * ((T - x) ^ k * h T) := by
@@ -1142,101 +1310,6 @@ private lemma prob_seq_compact (S : Set (ProbabilityMeasure ℝ)) (hS : IsCompac
     IsSeqCompact S :=
   isCompact_iff_isSeqCompact.mp hS
 
-private lemma finite_measure_subseq_limit
-    (σ : ℕ → Measure ℝ) (C : ℝ)
-    (hfin : ∀ n, IsFiniteMeasure (σ n))
-    (hmass : ∀ n, (σ n) Set.univ ≤ ENNReal.ofReal C)
-    (hsupp : ∀ n, (σ n) (Set.Iio 0) = 0)
-    (htight : ∀ ε, 0 < ε → ∃ K : ℝ, ∀ n, (σ n) (Set.Ioi K) ≤ ENNReal.ofReal ε) :
-    ∃ (μ₀ : Measure ℝ) (φ : ℕ → ℕ), IsFiniteMeasure μ₀ ∧ StrictMono φ ∧
-      μ₀ (Set.Iio 0) = 0 ∧
-      μ₀ Set.univ ≤ ENNReal.ofReal C ∧
-      ∀ (g : BoundedContinuousFunction ℝ ℝ), Tendsto (fun k => ∫ p, g p ∂(σ (φ k))) atTop
-        (nhds (∫ p, g p ∂μ₀)) := by
-  -- Step 1: Define ν_n = σ_n + δ_{-1}, π_n = normalize(ν_n)
-  haveI hν_fin : ∀ n, IsFiniteMeasure (σ n + Measure.dirac (-1 : ℝ)) := fun n => by
-    haveI := hfin n; constructor
-    simp only [Measure.add_apply, Measure.dirac_apply, Set.indicator_univ, Pi.one_apply]
-    exact ENNReal.add_lt_top.mpr ⟨measure_lt_top _ _, ENNReal.one_lt_top⟩
-  set ν : ℕ → FiniteMeasure ℝ := fun n => ⟨σ n + Measure.dirac (-1 : ℝ), hν_fin n⟩
-  set π : ℕ → ProbabilityMeasure ℝ := fun n => (ν n).normalize
-  -- Step 2: Show {↑π_n} is tight (from htight + hsupp + normalize_le)
-  have hν_ne : ∀ n, ν n ≠ 0 := fun n => by
-    intro h; have := congr_arg (· Set.univ) (congr_arg FiniteMeasure.toMeasure h)
-    simp only [ν, FiniteMeasure.toMeasure_mk, Measure.add_apply, Measure.dirac_apply,
-      Set.indicator_univ, Pi.one_apply, FiniteMeasure.toMeasure_zero,
-      Measure.coe_zero, Pi.zero_apply] at this
-    exact absurd this (ne_of_gt (lt_of_lt_of_le zero_lt_one (le_add_left le_rfl)))
-  have hν_mass : ∀ n, 1 ≤ (ν n).mass := fun n => by
-    change 1 ≤ ((↑(ν n) : Measure ℝ) Set.univ).toNNReal
-    simp only [ν, FiniteMeasure.toMeasure_mk, Measure.add_apply, Measure.dirac_apply,
-      Set.indicator_univ, Pi.one_apply]
-    rw [show (1 : NNReal) = (1 : ENNReal).toNNReal from by simp,
-      ENNReal.toNNReal_le_toNNReal ENNReal.one_ne_top
-        (ENNReal.add_lt_top.mpr ⟨measure_lt_top _ _, ENNReal.one_lt_top⟩).ne]
-    exact le_add_left le_rfl
-  have htight_π : IsTightMeasureSet {μ : Measure ℝ | ∃ n, ↑(π n) = μ} := by
-    rw [isTightMeasureSet_iff_exists_isCompact_measure_compl_le]
-    intro ε hε
-    by_cases hε_top : ε = ⊤
-    · exact ⟨∅, isCompact_empty, fun μ ⟨n, hμ⟩ => by subst hμ; simp [hε_top]⟩
-    obtain ⟨R, hR⟩ := htight ε.toReal (ENNReal.toReal_pos (ne_of_gt hε) hε_top)
-    refine ⟨Set.Icc (-1) (max R 0), isCompact_Icc, fun μ ⟨n, hμ⟩ => ?_⟩
-    subst hμ
-    -- ↑(π n)(K^c) ≤ ↑(ν n)(K^c) ≤ σ_n(Ioi R) ≤ ε
-    calc (↑(π n) : Measure ℝ) (Set.Icc (-1) (max R 0))ᶜ
-        = (↑((ν n).normalize) : Measure ℝ) _ := by rw [show π n = (ν n).normalize from rfl]
-      _ ≤ (↑(ν n) : Measure ℝ) _ := normalize_le _ (hν_ne n) (hν_mass n) _
-      _ ≤ ENNReal.ofReal ε.toReal := by
-          -- ↑(ν n)(K^c) = (σ_n + δ_{-1})(K^c) ≤ σ_n(Ioi R) ≤ ε
-          show (σ n + Measure.dirac (-1 : ℝ)) (Set.Icc (-1) (max R 0))ᶜ ≤ _
-          have h_iio : σ n (Set.Iio (-1)) = 0 :=
-            le_antisymm (le_trans (measure_mono (Set.Iio_subset_Iio (by norm_num : (-1:ℝ) ≤ 0)))
-              (le_of_eq (hsupp n))) (zero_le _)
-          have hd : Measure.dirac (-1 : ℝ) (Set.Icc (-1) (max R 0))ᶜ = 0 := by
-            rw [Measure.dirac_apply]
-            simp [Set.indicator, show (-1:ℝ) ∈ Set.Icc (-1) (max R 0) from
-              ⟨le_refl _, by linarith [le_max_right R 0]⟩]
-          simp only [Measure.add_apply, hd, add_zero]
-          calc σ n (Set.Icc (-1) (max R 0))ᶜ
-              ≤ σ n (Set.Iio (-1)) + σ n (Set.Ioi (max R 0)) :=
-                le_trans (measure_mono (fun t => by
-                  simp only [Set.mem_compl_iff, Set.mem_Icc, not_and_or, not_le,
-                    Set.mem_union, Set.mem_Iio, Set.mem_Ioi]; tauto))
-                  (measure_union_le _ _)
-            _ = σ n (Set.Ioi (max R 0)) := by rw [h_iio, zero_add]
-            _ ≤ σ n (Set.Ioi R) :=
-                measure_mono (Set.Ioi_subset_Ioi (le_max_left _ _))
-            _ ≤ _ := hR n
-      _ = ε := ENNReal.ofReal_toReal hε_top
-  -- Step 3: Prokhorov → compact → seq compact → subseq
-  have htight' : IsTightMeasureSet {μ : Measure ℝ | ∃ p ∈ range π, ↑p = μ} := by
-    convert htight_π using 1; ext μ; simp [eq_comm]
-  have hcpt := isCompact_closure_of_isTightMeasureSet htight'
-  obtain ⟨π₀, _, φ, hφ, hπ_tend⟩ :=
-    (isCompact_iff_isSeqCompact.mp hcpt).subseq_of_frequently_in
-      ((frequently_atTop.mpr fun n =>
-        ⟨n, le_refl n, subset_closure (mem_range.mpr ⟨n, rfl⟩)⟩))
-  /- Step 4: Recover σ convergence from π convergence via mass rescaling.
-     Genuinely >30 lines — requires:
-     (a) Extract sub-subsequence ψ for masses: mass(ν_{φ(k)}) ∈ [1, C+1] bounded,
-         so by IsCompact.tendsto_subseq on Icc get ψ with mass(ν_{φ(ψ(k))}) → m₀.
-     (b) Construct limit FiniteMeasure μ_lim = ⟨(m₀ : ENNReal) • ↑π₀, ...⟩.
-         Then μ_lim.normalize = π₀ and μ_lim.mass = m₀.
-     (c) Use FiniteMeasure.tendsto_of_tendsto_normalize_testAgainstNN_of_tendsto_mass
-         to show ν_{φ(ψ(k))} → μ_lim (as FiniteMeasure).
-     (d) From ∫ g dν → ∫ g dμ_lim and ∫ g dσ = ∫ g dν - g(-1),
-         get ∫ g dσ_{φ(ψ(k))} → ∫ g dμ_lim - g(-1).
-     (e) Define μ₀ := (↑μ_lim).restrict (Ici 0). Show ∫ g dμ₀ = ∫ g dμ_lim - g(-1)
-         using Portmanteau: μ_lim restricted to Iio 0 is δ_{-1}
-         (limit of ν_n restricted to Iio 0 = δ_{-1}).
-     (f) Verify: IsFiniteMeasure μ₀, μ₀(Iio 0) = 0, μ₀(univ) ≤ C.
-     Blocking: step (e) requires Portmanteau for closed/open sets to identify
-     the limit measure's mass on {-1} and (−∞, 0) ∩ {-1}ᶜ. Measure subtraction
-     (μ_lim − δ_{-1}) doesn't exist in Lean/Mathlib, so the restrict + Portmanteau
-     approach is the only viable path, adding ~20 lines of Portmanteau reasoning. -/
-  sorry
-
 /-- The bounded continuous function `p ↦ e^{-x·max(p,0)}`, which agrees with
 `p ↦ e^{-xp}` on `[0,∞)` and is bounded by 1. Used to apply weak convergence
 of measures supported on `[0,∞)` to the Laplace kernel. -/
@@ -1271,6 +1344,19 @@ private lemma integral_exp_bcf_eq {μ : Measure ℝ} (hsupp : μ (Set.Iio 0) = 0
   simp only [Set.mem_setOf_eq, Set.mem_Iio] at *
   by_contra h; push_neg at h
   exact hp (exp_bcf_eq x hx p h)
+
+private lemma finite_measure_subseq_limit
+    (σ : ℕ → Measure ℝ) (C : ℝ)
+    (hfin : ∀ n, IsFiniteMeasure (σ n))
+    (hmass : ∀ n, (σ n) Set.univ ≤ ENNReal.ofReal C)
+    (hsupp : ∀ n, (σ n) (Set.Iio 0) = 0)
+    (htight : ∀ ε, 0 < ε → ∃ K : ℝ, ∀ n, (σ n) (Set.Ioi K) ≤ ENNReal.ofReal ε) :
+    ∃ (μ₀ : Measure ℝ) (φ : ℕ → ℕ), IsFiniteMeasure μ₀ ∧ StrictMono φ ∧
+      μ₀ (Set.Iio 0) = 0 ∧
+      μ₀ Set.univ ≤ ENNReal.ofReal C ∧
+      ∀ (g : BoundedContinuousFunction ℝ ℝ), Tendsto (fun k => ∫ p, g p ∂(σ (φ k))) atTop
+        (nhds (∫ p, g p ∂μ₀)) := by
+  sorry
 
 /-- Weak convergence of `e^{-xp}` integrals for measures supported on `[0,∞)`,
 via the bounded continuous surrogate `exp_bcf`. -/
@@ -1627,12 +1713,93 @@ private lemma prokhorov_limit_identification (f : ℝ → ℝ) (hcm : IsComplete
           integral_indicator_const _ measurableSet_Iic,
           integral_indicator_const _ measurableSet_Ioi,
           Measure.real, Measure.real, smul_eq_mul, smul_eq_mul, mul_one, mul_comm]
+      have hkernel_int : Integrable (bernstein_kernel (n + 2) x₀) (σ n) := by
+        apply Integrable.mono' (integrable_const (1 : ℝ))
+        · apply Measurable.aestronglyMeasurable
+          unfold bernstein_kernel
+          exact Measurable.ite (measurableSet_le measurable_const measurable_const)
+            measurable_const
+            ((measurable_const.sub (measurable_id.const_mul x₀ |>.div_const _) |>.max
+              measurable_const).pow measurable_const)
+        · rw [ae_iff]
+          apply measure_mono_null (fun p hp => ?_) (hsupp_σ n)
+          simp only [Set.mem_setOf_eq, Real.norm_eq_abs, not_le, Set.mem_Iio] at *
+          by_contra hp_nonneg
+          push_neg at hp_nonneg
+          simp only [bernstein_kernel, show ¬(n + 2 ≤ 1) from by omega, ite_false,
+            show n + 2 - 1 = n + 1 from by omega] at hp
+          have hmax : max (1 - x₀ * p / ↑(n + 1)) 0 ≤ 1 := by
+            apply max_le _ (by norm_num)
+            have : 0 ≤ x₀ * p / ↑(n + 1) :=
+              div_nonneg (mul_nonneg hx₀.le hp_nonneg) (by positivity)
+            linarith
+          have : 0 ≤ max (1 - x₀ * p / ↑(n + 1)) 0 := le_max_right _ _
+          rw [abs_of_nonneg (pow_nonneg this _)] at hp
+          linarith [pow_le_one₀ (n := n + 1) this hmax]
+      have hkernel_le_g : bernstein_kernel (n + 2) x₀ ≤ᶠ[MeasureTheory.ae (σ n)] g := by
+        have hnonneg_ae : ∀ᵐ p ∂σ n, 0 ≤ p := by
+          rw [ae_iff]
+          show (σ n) {p : ℝ | ¬0 ≤ p} = 0
+          have hset : {p : ℝ | ¬0 ≤ p} = Set.Iio 0 := by
+            ext p
+            simp only [Set.mem_setOf_eq, Set.mem_Iio, not_le]
+          rw [hset]
+          exact hsupp_σ n
+        filter_upwards [hnonneg_ae] with p hp_nonneg
+        by_cases hpK : p ≤ K
+        · have hkernel_le_one : bernstein_kernel (n + 2) x₀ p ≤ 1 := by
+            simp only [bernstein_kernel, show ¬(n + 2 ≤ 1) from by omega, ite_false,
+              show n + 2 - 1 = n + 1 from by omega]
+            have hmax : max (1 - x₀ * p / ↑(n + 1)) 0 ≤ 1 := by
+              apply max_le _ (by norm_num)
+              have : 0 ≤ x₀ * p / ↑(n + 1) :=
+                div_nonneg (mul_nonneg hx₀.le hp_nonneg) (by positivity)
+              linarith
+            exact pow_le_one₀ (le_max_right _ _) hmax
+          have hg_eq : g p = 1 := by
+            unfold g
+            rw [Set.indicator_of_mem (show p ∈ Set.Iic K from hpK),
+              Set.indicator_of_notMem (show p ∉ Set.Ioi K from not_lt.mpr hpK)]
+            simp
+          simpa [hg_eq] using hkernel_le_one
+        · have hpK' : K < p := lt_of_not_ge hpK
+          have hkernel_le_exp : bernstein_kernel (n + 2) x₀ p ≤ Real.exp (-(x₀ * p)) := by
+            have hxp_nonneg : 0 ≤ x₀ * p := mul_nonneg hx₀.le hp_nonneg
+            simp only [bernstein_kernel, show ¬(n + 2 ≤ 1) from by omega, ite_false,
+              show n + 2 - 1 = n + 1 from by omega]
+            by_cases hxp : x₀ * p ≤ ↑(n + 1)
+            · have hmax_eq : max (1 - x₀ * p / ↑(n + 1)) 0 = 1 - x₀ * p / ↑(n + 1) := by
+                apply max_eq_left
+                have hdiv : x₀ * p / ↑(n + 1) ≤ 1 := by
+                  exact (div_le_iff₀ (by positivity : (0 : ℝ) < ↑(n + 1))).2 (by simpa using hxp)
+                linarith
+              rw [hmax_eq]
+              simpa using Real.one_sub_div_pow_le_exp_neg (n := n + 1) (t := x₀ * p) hxp
+            · have hmax_eq : max (1 - x₀ * p / ↑(n + 1)) 0 = 0 := by
+                apply max_eq_right
+                push_neg at hxp
+                have : 1 < x₀ * p / ↑(n + 1) := by
+                  exact (lt_div_iff₀ (by positivity : (0 : ℝ) < ↑(n + 1))).2 (by simpa using hxp)
+                linarith
+              rw [hmax_eq, zero_pow (by positivity)]
+              exact le_of_lt (Real.exp_pos _)
+          have hexp_le : Real.exp (-(x₀ * p)) ≤ c := by
+            dsimp [c]
+            apply Real.exp_le_exp.mpr
+            nlinarith [mul_le_mul_of_nonneg_left hpK'.le hx₀.le]
+          have hg_eq : g p = c := by
+            unfold g
+            rw [Set.indicator_of_notMem (show p ∉ Set.Iic K from not_le.mpr hpK'),
+              Set.indicator_of_mem (show p ∈ Set.Ioi K from hpK')]
+            simp
+          rw [hg_eq]
+          exact hkernel_le_exp.trans hexp_le
       have hle : ∫ p, bernstein_kernel (n+2) x₀ p ∂(σ n) ≤ ∫ p, g p ∂(σ n) := by
         apply integral_mono_ae
-          (sorry : Integrable (bernstein_kernel (n+2) x₀) (σ n))
+          hkernel_int
           ((integrable_const (1:ℝ)).indicator measurableSet_Iic |>.add
             ((integrable_const c).indicator measurableSet_Ioi))
-          (sorry : bernstein_kernel (n+2) x₀ ≤ᶠ[MeasureTheory.ae (σ n)] g)
+          hkernel_le_g
       linarith
     -- Choose x₀ > 0 with f(0)-f(x₀) < ε/2 (continuity at 0)
     have hx₀ : ∃ x₀ : ℝ, 0 < x₀ ∧ f 0 - f x₀ < ε / 2 := by
