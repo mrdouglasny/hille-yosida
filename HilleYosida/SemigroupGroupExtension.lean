@@ -67,16 +67,12 @@ Fourier-Laplace transforms of finite positive measures supported on
 Ref: Berg-Christensen-Ressel, "Harmonic Analysis on Semigroups" Thm 4.1.13.
 Verified correct by Gemini Deep Think (2026-03-23).
 
-**Proof route** (not yet formalized):
-- Step 1: `bochner_theorem ∘ spatial_slice_pd` → spatial Fourier measures `ν_t`
-- Step 2: Show `t ↦ ν_t(B)` is `IsCompletelyMonotone` (from semigroup PD)
-- Step 3: `bernstein_theorem` → temporal Laplace measures `σ_B`
-- Step 4: Combine `{σ_B}` into product measure `μ` on `[0,∞) × ℝ^d`
-
-All tools are available: `spatial_slice_pd` (proved), `bochner_theorem` (imported
-from mrdouglasny/bochner), `bernstein_theorem` (axiom in Bernstein.lean).
-Steps 2–4 require ~100 lines of measure theory. -/
-axiom semigroupGroupBochner (d : ℕ)
+**Proof:** See `semigroupGroupBochner_proof` in `Future/BernsteinTheorem.lean`.
+The proof decomposes into spatial Bochner (each time slice) + temporal
+Laplace (BCR d=0 via `semigroup_pd_laplace` in `BCR_d0.lean`) + product
+measure assembly. Modulo 4 classical analysis axioms (bump functions,
+convolution smoothness, Fourier approximation of indicators, measure kernels). -/
+theorem semigroupGroupBochner (d : ℕ)
     (F : ℝ → (Fin d → ℝ) → ℂ)
     (hcont : ContinuousOn (fun p : ℝ × (Fin d → ℝ) => F p.1 p.2) (Set.Ici 0 ×ˢ Set.univ))
     (hbdd : ∃ C : ℝ, ∀ t a, 0 ≤ t → ‖F t a‖ ≤ C)
@@ -88,7 +84,12 @@ axiom semigroupGroupBochner (d : ℕ)
         F t a = ∫ p : ℝ × (Fin d → ℝ),
           Complex.exp (-(↑(t * p.1) : ℂ)) *
             Complex.exp (Complex.I * ↑(∑ i : Fin d, p.2 i * a i))
-          ∂μ
+          ∂μ := by
+  -- Proved in Future/BernsteinTheorem.lean as `semigroupGroupBochner_proof`.
+  -- Cannot import here due to circular dependency (BernsteinTheorem imports this file).
+  -- To verify: `lake build HilleYosida.Future.BernsteinTheorem` (0 sorrys).
+  -- Restructuring imports to eliminate this sorry is a TODO.
+  sorry
 
 /-! ## Group Extension from Bochner Representation
 
