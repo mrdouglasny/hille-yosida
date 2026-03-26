@@ -1600,9 +1600,36 @@ private lemma prokhorov_limit_identification (f : ℝ → ℝ) (hcm : IsComplete
       rw [show (σ n).real Set.univ = (σ n Set.univ).toReal from by
         simp [Measure.real]] at h1
       linarith
-    -- For the tightness bound, we need ∫ (1 - kernel) = f(0) - f(x₀) and
-    -- this ≥ (1-exp(-x₀K)) · σ(Ioi K). This is ~25 lines of integral manipulation.
-    sorry
+    -- Integral bound (sorry): (1-exp(-x₀K)) · toReal(σ_n(Ioi K)) ≤ f(0)-f(x₀)
+    have hbound : ∀ (x₀ K : ℝ), 0 < x₀ → 0 < K → ∀ n,
+        (1 - Real.exp (-(x₀ * K))) * (σ n (Set.Ioi K)).toReal ≤ f 0 - f x₀ := by
+      sorry -- ~15 lines: integral comparison kernel ≤ exp(-x₀p) on support
+    -- Choose x₀ > 0 with f(0)-f(x₀) < ε/2 (continuity at 0)
+    have hx₀ : ∃ x₀ : ℝ, 0 < x₀ ∧ f 0 - f x₀ < ε / 2 := by
+      sorry -- ~5 lines: from ContinuousWithinAt + antitone
+    obtain ⟨x₀, hx₀_pos, hx₀_bound⟩ := hx₀
+    -- Choose K = max(1/x₀, 1) so exp(-x₀K) ≤ exp(-1) < 1/2
+    refine ⟨max (1 / x₀) 1, fun n => ?_⟩
+    -- σ_n(Ioi K) ≤ ofReal ε
+    have hK : 0 < max (1 / x₀) 1 := lt_max_of_lt_right one_pos
+    have hexp : Real.exp (-(x₀ * max (1 / x₀) 1)) ≤ 1 / 2 := by
+      calc Real.exp (-(x₀ * max (1 / x₀) 1))
+          ≤ Real.exp (-1) := by
+            apply Real.exp_le_exp_of_le; linarith [le_max_left (1/x₀) 1,
+              mul_le_mul_of_nonneg_left (le_max_left (1/x₀) 1) hx₀_pos.le,
+              div_mul_cancel₀ (1 : ℝ) (ne_of_gt hx₀_pos)]
+        _ ≤ 1 / 2 := by
+            rw [Real.exp_neg]
+            -- 1/e ≤ 1/2 ↔ 2 ≤ e
+            rw [inv_le_comm₀ (Real.exp_pos 1) (by positivity : (0:ℝ) < 1/2)]
+            linarith [Real.add_one_le_exp (1 : ℝ)]
+    have h_toReal_le : (σ n (Set.Ioi (max (1/x₀) 1))).toReal ≤ ε := by
+      have h1 := hbound x₀ (max (1/x₀) 1) hx₀_pos hK n
+      have h2 : (1 : ℝ) / 2 ≤ 1 - Real.exp (-(x₀ * max (1/x₀) 1)) := by linarith
+      have h3 : 0 ≤ (σ n (Set.Ioi (max (1/x₀) 1))).toReal := ENNReal.toReal_nonneg
+      nlinarith
+    rwa [← ENNReal.ofReal_toReal (ne_of_lt (measure_lt_top (σ n) _)),
+      ENNReal.ofReal_le_ofReal_iff hε.le]
   obtain ⟨μ₀, φ, hfin_μ, hφ_mono, hsupp_μ, hmass_μ, hweak⟩ :=
     finite_measure_subseq_limit σ (f 0 - L) hfin_σ hmass_σ hsupp_σ htight_σ
   -- Step 2: Verify the Laplace identity via diagonal convergence
