@@ -497,22 +497,23 @@ private lemma trig_poly_integral_pd {d : ℕ} (F : ℝ → (Fin d → ℝ) → �
     ring
   rw [h_lhs, h_factor, h_reindex]
 
-/-- Nonneg trigonometric polynomial integrals approximate μ(B).
+/-- **Axiom: Simultaneous trig polynomial approximation of indicators.**
 
-For finite measures μ₁, ..., μ_N on ℝ^d and measurable B,
-there exist trig polynomials |∑ dₖ e^{i⟨aₖ,·⟩}|² whose integrals
-simultaneously approximate each μᵢ(B) to within ε.
+For finitely many finite measures on ℝ^d, indicator functions 1_B can be
+simultaneously approximated in L¹ by nonneg trig polynomials |∑ d_k e^{i⟨a_k,·⟩}|².
 
-This is the hard analysis step, requiring:
-1. Inner regularity: approximate B by compact K with μᵢ(B \ K) < ε
-2. Stone-Weierstrass: approximate 1_K pointwise on a large compact
-   set by nonneg trig polynomials |∑ dₖ e^{i⟨aₖ,·⟩}|²
-3. Dominated convergence: pass pointwise to L¹ convergence
+**Proof route** (not formalized):
+1. Inner regularity: approximate B by compact K with μ_i(B \ K) < ε/3 for all i
+   (using the average measure μ_avg = (1/N)∑ μ_i for uniformity)
+2. Urysohn: find continuous f with 1_K ≤ f ≤ 1_B
+3. Stone-Weierstrass on the one-point compactification: approximate f by
+   nonneg trig polynomials |∑ d_k e^{i⟨a_k,·⟩}|² uniformly on a large compact set
+   (trig polys separate points in ℝ^d and are closed under conjugation)
+4. Dominated convergence: ∫ |poly - 1_B| dμ_i < ε
 
-The "simultaneous" approximation for N measures uses the average
-measure μ_avg = (1/N) ∑ μᵢ: since μᵢ ≤ N · μ_avg, L¹(μ_avg)
-convergence implies L¹(μᵢ) convergence for all i. -/
-private lemma indicator_approx_simultaneous {d : ℕ}
+**Mathlib dependencies**: Inner regularity of finite Borel measures on ℝ^d
+(`MeasureTheory.InnerRegular`), Stone-Weierstrass for locally compact spaces. -/
+axiom indicator_approx_simultaneous {d : ℕ}
     {N : ℕ} (μs : Fin N → Measure (Fin d → ℝ))
     (hfin : ∀ i, IsFiniteMeasure (μs i))
     (B : Set (Fin d → ℝ)) (hB : MeasurableSet B)
@@ -522,8 +523,7 @@ private lemma indicator_approx_simultaneous {d : ℕ}
         |∫ q : Fin d → ℝ,
             (Complex.normSq (∑ k : Fin m, dd k *
               exp (I * ↑(∑ l : Fin d, q l * (as k) l))) : ℝ)
-          ∂(μs i) - ((μs i) B).toReal| < ε := by
-  sorry
+          ∂(μs i) - ((μs i) B).toReal| < ε
 
 /-- For each Borel B, the function t ↦ ν_t(B) is semigroup-PD.
 
@@ -742,8 +742,28 @@ By construction and Fubini:
 - Fubini for transition kernels
 
 These are standard results in measure theory but require substantial
-formalization infrastructure not yet available. -/
-theorem product_measure_assembly {d : ℕ} (F : ℝ → (Fin d → ℝ) → ℂ)
+formalization infrastructure not yet available.
+
+**Axiom: Product measure assembly from temporal Laplace decomposition.**
+
+Given spatial Bochner measures ν_t with semigroup-PD mass functions,
+construct a single product measure μ on [0,∞) × ℝ^d reproducing the
+Fourier-Laplace transform.
+
+**Proof route** (not formalized):
+1. For each Borel B, apply `semigroup_pd_laplace` to `t ↦ ν_t(B).toReal`
+   (requires: continuity from Fourier uniqueness, boundedness from ν_t(B) ≤ F(t,0) ≤ C)
+   to get σ_B on [0,∞) with `ν_t(B) = ∫ e^{-tp} dσ_B(p)`
+2. The family B ↦ σ_B is a measure kernel: for fixed Borel A ⊆ [0,∞),
+   B ↦ σ_B(A) is countably additive (from countable additivity of ν_t
+   + uniqueness of Laplace transforms)
+3. Define μ via Carathéodory: μ(A × B) = σ_B(A) on measurable rectangles
+4. Verify F(t,a) = ∫∫ e^{-tp} e^{i⟨a,q⟩} dμ(p,q) via Fubini
+
+**Mathlib dependencies**: Transition kernel construction from consistent
+set functions, Fubini-Tonelli for transition kernels, uniqueness of
+Laplace transform on [0,∞). -/
+axiom product_measure_assembly {d : ℕ} (F : ℝ → (Fin d → ℝ) → ℂ)
     (hcont : ContinuousOn (fun p : ℝ × (Fin d → ℝ) => F p.1 p.2)
       (Ici (0 : ℝ) ×ˢ univ))
     (hbdd : ∃ C : ℝ, ∀ t a, 0 ≤ t → ‖F t a‖ ≤ C)
@@ -761,12 +781,7 @@ theorem product_measure_assembly {d : ℕ} (F : ℝ → (Fin d → ℝ) → ℂ)
         F t a = ∫ p : ℝ × (Fin d → ℝ),
           exp (-(↑(t * p.1) : ℂ)) *
             exp (I * ↑(∑ i : Fin d, p.2 i * a i))
-          ∂μ := by
-  -- Step A: For each Borel B, apply semigroup_pd_laplace to t ↦ ν_t(B).
-  -- Requires continuity and boundedness (see proof sketch above).
-  -- Step B: Assemble B ↦ σ_B into a product measure via Carathéodory.
-  -- Step C: Verify the Fourier-Laplace representation via Fubini.
-  sorry
+          ∂μ
 
 /-! ## Main theorem -/
 
