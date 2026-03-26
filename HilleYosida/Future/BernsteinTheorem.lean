@@ -21,10 +21,181 @@ import HilleYosida.SemigroupGroupDefs
 import HilleYosida.BCR_d0
 import Bochner.Main
 import Mathlib.Analysis.Normed.Lp.MeasurableSpace
+import Mathlib.MeasureTheory.Integral.RieszMarkovKakutani.Real
+import Mathlib.Topology.ContinuousMap.Weierstrass
 
 noncomputable section
 
 open MeasureTheory Complex Set Filter Finset
+open scoped Polynomial
+
+private noncomputable def expNegToUnitInterval (p : ℝ) : Set.Icc (0 : ℝ) 1 :=
+  ⟨Real.exp (-max p 0), by
+    constructor
+    · positivity
+    · have hmax : 0 ≤ max p 0 := le_max_right _ _
+      have h : Real.exp (-max p 0) ≤ 1 := by
+        exact Real.exp_le_one_iff.mpr (by linarith)
+      exact h⟩
+
+private lemma continuous_expNegToUnitInterval : Continuous expNegToUnitInterval := by
+  have h : Continuous fun p : ℝ => Real.exp (-max p 0) := by
+    fun_prop
+  simpa [expNegToUnitInterval] using
+    h.subtype_mk (fun p => by
+      constructor
+      · positivity
+      · have hmax : 0 ≤ max p 0 := le_max_right _ _
+        have h' : Real.exp (-max p 0) ≤ 1 := by
+          exact Real.exp_le_one_iff.mpr (by linarith)
+        simpa using h')
+
+private lemma measurable_expNegToUnitInterval : Measurable expNegToUnitInterval :=
+  continuous_expNegToUnitInterval.measurable
+
+private lemma coe_expNegToUnitInterval_of_nonneg {p : ℝ} (hp : 0 ≤ p) :
+    (expNegToUnitInterval p : ℝ) = Real.exp (-p) := by
+  simp [expNegToUnitInterval, hp]
+
+private lemma coe_expNegToUnitInterval_of_neg {p : ℝ} (hp : p < 0) :
+    (expNegToUnitInterval p : ℝ) = 1 := by
+  simp [expNegToUnitInterval, max_eq_right (le_of_lt hp), Real.exp_zero]
+
+private noncomputable def laplacePushforwardUnit (μ : Measure ℝ) :
+    Measure (Set.Icc (0 : ℝ) 1) :=
+  μ.map expNegToUnitInterval
+
+private lemma laplacePushforwardUnit_moment_eq
+    (μ : Measure ℝ) [IsFiniteMeasure μ] (hsupp : μ (Set.Iio 0) = 0) (n : ℕ) :
+    ∫ x : Set.Icc (0 : ℝ) 1, (x : ℝ) ^ n ∂(laplacePushforwardUnit μ) =
+      ∫ p : ℝ, Real.exp (-((n : ℝ) * p)) ∂μ := by
+  rw [laplacePushforwardUnit, integral_map measurable_expNegToUnitInterval.aemeasurable]
+  · apply integral_congr_ae
+    refine ae_iff.mpr ?_
+    refine measure_mono_null (fun p hp => ?_) hsupp
+    by_cases hneg : p < 0
+    · exact hneg
+    · have hnonneg : 0 ≤ p := le_of_not_gt hneg
+      exfalso
+      apply hp
+      change (expNegToUnitInterval p : ℝ) ^ n = Real.exp (-((n : ℝ) * p))
+      rw [coe_expNegToUnitInterval_of_nonneg hnonneg, ← Real.exp_nat_mul]
+      congr 1
+      ring
+  · exact (continuous_subtype_val.pow n).aestronglyMeasurable
+
+private lemma laplacePushforwardUnit_moments_eq_of_laplace_eq
+    (μ ν : Measure ℝ) [IsFiniteMeasure μ] [IsFiniteMeasure ν]
+    (hμsupp : μ (Set.Iio 0) = 0) (hνsupp : ν (Set.Iio 0) = 0)
+    (h_eq : ∀ t, 0 ≤ t → ∫ p : ℝ, Real.exp (-(t * p)) ∂μ =
+      ∫ p : ℝ, Real.exp (-(t * p)) ∂ν) :
+    ∀ n : ℕ,
+      ∫ x : Set.Icc (0 : ℝ) 1, (x : ℝ) ^ n ∂(laplacePushforwardUnit μ) =
+        ∫ x : Set.Icc (0 : ℝ) 1, (x : ℝ) ^ n ∂(laplacePushforwardUnit ν) := by
+  intro n
+  rw [laplacePushforwardUnit_moment_eq μ hμsupp n,
+    laplacePushforwardUnit_moment_eq ν hνsupp n]
+  exact h_eq n (Nat.cast_nonneg n)
+
+private lemma poly_integrable_unitInterval
+    (μ : Measure (Set.Icc (0 : ℝ) 1)) [IsFiniteMeasure μ] (p : ℝ[X]) :
+    Integrable (fun x : Set.Icc (0 : ℝ) 1 => Polynomial.eval (x : ℝ) p) μ := by
+  let f : C(Set.Icc (0 : ℝ) 1, ℝ) := p.toContinuousMapOn (Set.Icc (0 : ℝ) 1)
+  have hbcf : Integrable (⇑(BoundedContinuousFunction.mkOfCompact f)) μ :=
+    BoundedContinuousFunction.integrable (μ := μ)
+      ((ContinuousMap.equivBoundedOfCompact (Set.Icc (0 : ℝ) 1) ℝ) f)
+  simpa [f, Polynomial.toContinuousMapOn] using hbcf
+
+private lemma poly_integral_eq_of_moments_eq
+    (μ ν : Measure (Set.Icc (0 : ℝ) 1)) [IsFiniteMeasure μ] [IsFiniteMeasure ν]
+    (hm : ∀ n : ℕ,
+      ∫ x : Set.Icc (0 : ℝ) 1, (x : ℝ) ^ n ∂μ =
+        ∫ x : Set.Icc (0 : ℝ) 1, (x : ℝ) ^ n ∂ν)
+    (p : ℝ[X]) :
+    ∫ x : Set.Icc (0 : ℝ) 1, Polynomial.eval (x : ℝ) p ∂μ =
+      ∫ x : Set.Icc (0 : ℝ) 1, Polynomial.eval (x : ℝ) p ∂ν := by
+  refine Polynomial.induction_on' p ?_ ?_
+  · intro p q hp hq
+    simp only [Polynomial.eval_add]
+    rw [integral_add (poly_integrable_unitInterval μ p) (poly_integrable_unitInterval μ q),
+      integral_add (poly_integrable_unitInterval ν p) (poly_integrable_unitInterval ν q),
+      hp, hq]
+  · intro n a
+    simp [Polynomial.eval_monomial, hm n, integral_const_mul]
+
+private noncomputable def expNegOnIci : Set.Ici (0 : ℝ) → Set.Icc (0 : ℝ) 1 :=
+  fun p => ⟨Real.exp (-p.1), by
+    constructor
+    · positivity
+    · exact Real.exp_le_one_iff.mpr (neg_nonpos.mpr p.2)⟩
+
+private lemma measurable_expNegOnIci : Measurable expNegOnIci := by
+  refine Measurable.subtype_mk ?_
+  exact Real.measurable_exp.comp measurable_subtype_coe.neg
+
+private noncomputable def logInvOnIcc : Set.Icc (0 : ℝ) 1 → Set.Ici (0 : ℝ) :=
+  fun x => ⟨-Real.log (x : ℝ), neg_nonneg.mpr (Real.log_nonpos x.2.1 x.2.2)⟩
+
+private lemma measurable_logInvOnIcc : Measurable logInvOnIcc := by
+  refine Measurable.subtype_mk ?_
+  exact (Real.measurable_log.comp measurable_subtype_coe).neg
+
+private lemma range_expNegOnIci :
+    Set.range expNegOnIci = {x : Set.Icc (0 : ℝ) 1 | 0 < (x : ℝ)} := by
+  ext x
+  constructor
+  · rintro ⟨p, rfl⟩
+    exact Real.exp_pos _
+  · intro hx
+    refine ⟨⟨-Real.log (x : ℝ), neg_nonneg.mpr (Real.log_nonpos x.2.1 x.2.2)⟩, ?_⟩
+    apply Subtype.ext
+    dsimp [expNegOnIci]
+    change Real.exp (-(-Real.log (x : ℝ))) = (x : ℝ)
+    simpa using Real.exp_log hx
+
+private lemma measurableSet_range_expNegOnIci : MeasurableSet (Set.range expNegOnIci) := by
+  rw [range_expNegOnIci]
+  exact measurable_subtype_coe measurableSet_Ioi
+
+private lemma leftInverse_logInvOnIcc : Function.LeftInverse logInvOnIcc expNegOnIci := by
+  intro p
+  apply Subtype.ext
+  change -Real.log (Real.exp (-↑p)) = ↑p
+  rw [Real.log_exp]
+  ring
+
+private lemma measurableEmbedding_expNegOnIci : MeasurableEmbedding expNegOnIci := by
+  exact MeasurableEmbedding.of_measurable_inverse measurable_expNegOnIci
+    measurableSet_range_expNegOnIci measurable_logInvOnIcc leftInverse_logInvOnIcc
+
+private lemma restrict_eq_self_of_support_nonneg
+    (μ : Measure ℝ) (hsupp : μ (Set.Iio 0) = 0) :
+    μ.restrict (Set.Ici 0) = μ := by
+  apply Measure.restrict_eq_self_of_ae_mem
+  rw [ae_iff]
+  simpa [Set.compl_Ici] using hsupp
+
+private lemma laplacePushforwardUnit_eq_map_onIci
+    (μ : Measure ℝ) [IsFiniteMeasure μ] (hsupp : μ (Set.Iio 0) = 0) :
+    laplacePushforwardUnit μ =
+      Measure.map expNegOnIci (μ.comap (fun x : Set.Ici (0 : ℝ) => (x : ℝ))) := by
+  calc
+    laplacePushforwardUnit μ = Measure.map expNegToUnitInterval (μ.restrict (Set.Ici 0)) := by
+      simpa [laplacePushforwardUnit] using
+        congrArg (Measure.map expNegToUnitInterval) (restrict_eq_self_of_support_nonneg μ hsupp).symm
+    _ =
+        Measure.map expNegToUnitInterval
+          (Measure.map (fun x : Set.Ici (0 : ℝ) => (x : ℝ))
+            (μ.comap (fun x : Set.Ici (0 : ℝ) => (x : ℝ)))) := by
+          rw [← map_comap_subtype_coe measurableSet_Ici]
+    _ =
+        Measure.map (expNegToUnitInterval ∘ fun x : Set.Ici (0 : ℝ) => (x : ℝ))
+          (μ.comap (fun x : Set.Ici (0 : ℝ) => (x : ℝ))) := by
+            rw [Measure.map_map measurable_expNegToUnitInterval measurable_subtype_coe]
+    _ = Measure.map expNegOnIci (μ.comap (fun x : Set.Ici (0 : ℝ) => (x : ℝ))) := by
+      congr 1
+      ext x
+      simp [Function.comp, expNegOnIci, expNegToUnitInterval]
 
 /-! ## Step 1: Spatial Bochner measures
 
