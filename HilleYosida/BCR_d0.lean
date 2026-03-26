@@ -306,14 +306,62 @@ private lemma vandermonde_convolution_sum (m : ℕ) (g : ℕ → ℝ) :
       (-1 : ℝ) ^ (i + j) * (m.choose i : ℝ) * (m.choose j : ℝ) * g (i + j) =
     ∑ p ∈ Finset.range (2 * m + 1),
       (-1 : ℝ) ^ p * ((2 * m).choose p : ℝ) * g p := by
-  -- Proof sketch: the LHS coefficient of g(p) is
-  --   (-1)^p · ∑_{i+j=p, i≤m, j≤m} C(m,i) · C(m,j)
-  --   = (-1)^p · C(2m, p)  by Vandermonde.
-  -- We prove this by comparing coefficients of the polynomial (1-X)^{2m}
-  -- viewed as ((1-X)^m)^2, evaluated at suitable points.
-  -- For the formal proof, we use sorry for this standard combinatorial identity.
-  -- It follows from Nat.add_choose_eq : (m+m).choose k = ∑ ij ∈ antidiagonal k, m.choose ij.1 * m.choose ij.2
-  sorry
+  -- Step 1: Convert LHS double sum to sum over product set
+  rw [← Finset.sum_product']
+  -- Step 2: Regroup by p = i + j using sum_fiberwise_of_maps_to
+  rw [← Finset.sum_fiberwise_of_maps_to (g := fun ij : ℕ × ℕ => ij.1 + ij.2)
+    (t := Finset.range (2 * m + 1)) (by
+      intro ⟨i, j⟩ hij
+      simp only [Finset.mem_product, Finset.mem_range] at hij ⊢; omega)]
+  -- LHS = ∑ p ∈ range(2m+1), ∑ (i,j) ∈ filter(i+j=p), (-1)^(i+j) * C(m,i) * C(m,j) * g(i+j)
+  apply Finset.sum_congr rfl
+  intro p _
+  -- Simplify each term using filter condition i+j = p
+  have hsub : ∀ x ∈ (Finset.range (m + 1) ×ˢ Finset.range (m + 1)).filter
+      (fun x : ℕ × ℕ => x.1 + x.2 = p),
+      (-1 : ℝ) ^ (x.1 + x.2) * (m.choose x.1 : ℝ) * (m.choose x.2 : ℝ) * g (x.1 + x.2) =
+      (m.choose x.1 : ℝ) * (m.choose x.2 : ℝ) * ((-1 : ℝ) ^ p * g p) := by
+    intro ⟨i, j⟩ hij
+    simp only [Finset.mem_filter] at hij
+    rw [hij.2]; ring
+  rw [Finset.sum_congr rfl hsub, ← Finset.sum_mul]
+  -- Goal: (∑ x ∈ filter(..), C(m,x.1)*C(m,x.2)) * ((-1)^p * g p) = (-1)^p * C(2m,p) * g p
+  -- Suffices to show the ℕ coefficient sum equals C(2m,p)
+  suffices hcoeff : ∑ x ∈ (Finset.range (m + 1) ×ˢ Finset.range (m + 1)).filter
+      (fun x : ℕ × ℕ => x.1 + x.2 = p),
+      m.choose x.1 * m.choose x.2 = (2 * m).choose p by
+    have : (∑ x ∈ (Finset.range (m + 1) ×ˢ Finset.range (m + 1)).filter
+        (fun x : ℕ × ℕ => x.1 + x.2 = p),
+        (m.choose x.1 : ℝ) * (m.choose x.2 : ℝ)) = ((2 * m).choose p : ℝ) := by
+      rw [← hcoeff]; push_cast; rfl
+    rw [this]; ring
+  -- Prove the ℕ identity: ∑ filter(..), C(m,i)*C(m,j) = C(2m,p)
+  rw [show 2 * m = m + m from by ring, Nat.add_choose_eq m m]
+  -- Goal: ∑ filter(..), C(m,i)*C(m,j) = ∑ ij ∈ antidiagonal p, C(m,ij.1)*C(m,ij.2)
+  -- filter ⊆ antidiagonal, and extra terms in antidiagonal are zero.
+  apply Finset.sum_subset
+  · -- filter ⊆ antidiagonal
+    intro ⟨i, j⟩ hij
+    rw [Finset.mem_filter] at hij
+    exact mem_antidiagonal.mpr hij.2
+  · -- terms in antidiagonal \ filter contribute zero
+    intro ⟨i, j⟩ hi hni
+    have hij : i + j = p := mem_antidiagonal.mp hi
+    rw [Finset.mem_filter] at hni; push_neg at hni
+    -- hni : (i, j) ∈ product → ¬(i + j = p), but we know i + j = p
+    -- So (i, j) ∉ product, meaning i > m or j > m
+    have hprod : (i, j) ∉ Finset.range (m + 1) ×ˢ Finset.range (m + 1) := fun h => hni h hij
+    rw [Finset.mem_product, Finset.mem_range, Finset.mem_range] at hprod
+    push_neg at hprod
+    -- hprod : i ≥ m+1 → True, but as implication: i < m+1 → j ≥ m+1
+    -- Need to case split on i
+    by_cases h1 : m < i
+    · simp [Nat.choose_eq_zero_of_lt h1]
+    · push_neg at h1
+      have h2 : m < j := by
+        have := hprod (by omega)
+        omega
+      simp [Nat.choose_eq_zero_of_lt h2]
 
 /-- `(-1)^{n-k} = (-1)^k` when `k ≤ n` and `n` is even. -/
 private lemma neg_one_pow_sub_even {n k : ℕ} (hk : k ≤ n) (heven : Even n) :
