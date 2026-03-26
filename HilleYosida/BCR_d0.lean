@@ -625,6 +625,41 @@ def iterOp (op : (ℝ → ℝ) → (ℝ → ℝ)) : ℕ → (ℝ → ℝ) → (�
   | 0, F => F
   | n + 1, F => op (iterOp op n F)
 
+/-- `intOp h G` is continuous when `G` is continuous. -/
+private lemma continuous_intOp (h : ℝ) (G : ℝ → ℝ) (hG : Continuous G) :
+    Continuous (intOp h G) := by
+  -- intOp h G t = ∫ s in 0..h, G(t + s) = P(t+h) - P(t)
+  -- where P(t) = ∫ u in 0..t, G u is continuous by continuous_primitive.
+  have hint : ∀ a b, IntervalIntegrable G MeasureTheory.volume a b :=
+    fun a b => hG.intervalIntegrable a b
+  have hP : Continuous (fun t => ∫ u in (0 : ℝ)..t, G u) :=
+    intervalIntegral.continuous_primitive hint 0
+  suffices heq : intOp h G = fun t => (∫ u in (0 : ℝ)..(t + h), G u) - ∫ u in (0 : ℝ)..t, G u by
+    rw [heq]; exact (hP.comp (continuous_id'.add continuous_const)).sub hP
+  ext t; simp only [intOp]
+  have : ∫ s in (0 : ℝ)..h, G (t + s) = ∫ u in t..(t + h), G u := by
+    rw [intervalIntegral.integral_comp_add_left G t]; simp [add_comm t]
+  rw [this]
+  have hsplit := intervalIntegral.integral_add_adjacent_intervals (hint 0 t) (hint t (t + h))
+  linarith
+
+/-- `iterOp (intOp h) n G` is continuous when `G` is continuous. -/
+private lemma continuous_iterOp_intOp (n : ℕ) (h : ℝ) (G : ℝ → ℝ) (hG : Continuous G) :
+    Continuous (iterOp (intOp h) n G) := by
+  induction n with
+  | zero => exact hG
+  | succ n ih => exact continuous_intOp h _ ih
+
+/-- `iterOp deriv n F` equals `deriv^[n] F` (both iterate `deriv` n times). -/
+private lemma iterOp_deriv_eq_iterate (n : ℕ) (F : ℝ → ℝ) :
+    iterOp deriv n F = deriv^[n] F := by
+  induction n with
+  | zero => rfl
+  | succ n ih =>
+    -- Goal: iterOp deriv (n + 1) F = deriv^[n + 1] F
+    -- i.e., deriv (iterOp deriv n F) = deriv (deriv^[n] F)
+    simp only [iterOp, ih, Function.iterate_succ_apply']
+
 /-- The discrete difference equivalence: iterating `forwardDiff h` gives
 the same result as `iterForwardDiff`. -/
 private lemma iterOp_shift (op : (ℝ → ℝ) → (ℝ → ℝ)) (n : ℕ) (F : ℝ → ℝ) :
@@ -702,8 +737,8 @@ private lemma forwardDiff_iterOp_intOp_eq (n : ℕ) (h : ℝ) (G : ℝ → ℝ)
   | succ n ih =>
     change forwardDiff h (intOp h (iterOp (intOp h) n G)) =
       intOp h (intOp h (iterOp (intOp h) n (deriv G)))
-    -- Continuity of iterOp (intOp h) n G (sorry: technical, needs measurability argument)
-    have hcont : Continuous (iterOp (intOp h) n G) := sorry
+    have hcont : Continuous (iterOp (intOp h) n G) :=
+      continuous_iterOp_intOp n h G hG.continuous
     rw [forwardDiff_intOp_comm h _ hcont, ih]
 
 lemma iterOp_fd_eq_intOp_deriv (n : ℕ) (h : ℝ) (F : ℝ → ℝ)
@@ -721,6 +756,7 @@ lemma iterOp_fd_eq_intOp_deriv (n : ℕ) (h : ℝ) (F : ℝ → ℝ)
 /-- Bounding the iterated integral: if `G ≤ M` on `[t, t + n·h]`,
 then `∫...∫ G ds₁...dsₙ ≤ M · h^n`. -/
 lemma iterOp_intOp_le_local (n : ℕ) (h : ℝ) (hh : 0 ≤ h) (G : ℝ → ℝ) (M t : ℝ)
+    (hGcont : Continuous G)
     (hG : ∀ x ∈ Icc t (t + n * h), G x ≤ M) :
     iterOp (intOp h) n G t ≤ M * h ^ n := by
   induction n generalizing t with
@@ -741,9 +777,10 @@ lemma iterOp_intOp_le_local (n : ℕ) (h : ℝ) (hh : 0 ≤ h) (G : ℝ → ℝ)
       · calc x ≤ t + s + ↑n * h := hx.2
           _ ≤ t + h + ↑n * h := by linarith [hs.2]
           _ = t + ↑(n + 1) * h := by push_cast; ring
-    -- Integrability (sorry: in all applications G is continuous)
     have hint : IntervalIntegrable (fun s => iterOp (intOp h) n G (t + s))
-        MeasureTheory.volume 0 h := sorry
+        MeasureTheory.volume 0 h :=
+      ((continuous_iterOp_intOp n h G hGcont).comp
+        (continuous_const.add continuous_id')).intervalIntegrable 0 h
     calc ∫ s in (0 : ℝ)..h, iterOp (intOp h) n G (t + s)
         ≤ ∫ _s in (0 : ℝ)..h, M * h ^ n :=
           intervalIntegral.integral_mono_on hh hint intervalIntegrable_const
@@ -754,6 +791,7 @@ lemma iterOp_intOp_le_local (n : ℕ) (h : ℝ) (hh : 0 ≤ h) (G : ℝ → ℝ)
 /-- Similarly, a lower bound: if `G ≥ m` on `[t, t + n·h]`,
 then `∫...∫ G ds₁...dsₙ ≥ m · h^n`. -/
 lemma iterOp_intOp_ge_local (n : ℕ) (h : ℝ) (hh : 0 ≤ h) (G : ℝ → ℝ) (m t : ℝ)
+    (hGcont : Continuous G)
     (hG : ∀ x ∈ Icc t (t + n * h), m ≤ G x) :
     m * h ^ n ≤ iterOp (intOp h) n G t := by
   induction n generalizing t with
@@ -774,9 +812,10 @@ lemma iterOp_intOp_ge_local (n : ℕ) (h : ℝ) (hh : 0 ≤ h) (G : ℝ → ℝ)
       · calc x ≤ t + s + ↑n * h := hx.2
           _ ≤ t + h + ↑n * h := by linarith [hs.2]
           _ = t + ↑(n + 1) * h := by push_cast; ring
-    -- Integrability (sorry: in all applications G is continuous)
     have hint : IntervalIntegrable (fun s => iterOp (intOp h) n G (t + s))
-        MeasureTheory.volume 0 h := sorry
+        MeasureTheory.volume 0 h :=
+      ((continuous_iterOp_intOp n h G hGcont).comp
+        (continuous_const.add continuous_id')).intervalIntegrable 0 h
     calc m * h ^ (n + 1) = m * h ^ n * h := by rw [pow_succ]; ring
       _ = ∫ _s in (0 : ℝ)..h, m * h ^ n := by
           rw [intervalIntegral.integral_const, smul_eq_mul, sub_zero]; ring
@@ -859,7 +898,7 @@ lemma smooth_discrete_cm_implies_cm (F : ℝ → ℝ) (hF : ContDiff ℝ ⊤ F)
       have hGle : ∀ x ∈ Icc t₀ (t₀ + δ'), G x ≤ c / 2 := by
         intro x hx; have := hbound x hx; rw [h1, one_mul] at this; exact this
       rw [h1, one_mul]
-      have hle := iterOp_intOp_le_local n h hh_pos.le G (c / 2) t₀ (by
+      have hle := iterOp_intOp_le_local n h hh_pos.le G (c / 2) t₀ hG_cont (by
         intro x hx; rw [hnh] at hx; exact hGle x hx)
       have hhn : 0 < h ^ n := pow_pos hh_pos n
       linarith [mul_neg_of_neg_of_pos hc2_neg hhn]
@@ -868,7 +907,7 @@ lemma smooth_discrete_cm_implies_cm (F : ℝ → ℝ) (hF : ContDiff ℝ ⊤ F)
       have hGge : ∀ x ∈ Icc t₀ (t₀ + δ'), (-c / 2) ≤ G x := by
         intro x hx; have := hbound x hx; rw [h1] at this; linarith
       rw [h1]
-      have hge := iterOp_intOp_ge_local n h hh_pos.le G (-c / 2) t₀ (by
+      have hge := iterOp_intOp_ge_local n h hh_pos.le G (-c / 2) t₀ hG_cont (by
         intro x hx; rw [hnh] at hx; exact hGge x hx)
       have hhn : 0 < h ^ n := pow_pos hh_pos n
       have hmc : 0 < -c / 2 := by linarith
@@ -903,7 +942,7 @@ lemma mollify_smooth (f : ℝ → ℝ) (hcont : ContinuousOn f (Ici 0))
   sorry
 
 /-- Forward differences pass under the convolution integral. -/
-lemma mollify_alternating_diff (f : ℝ → ℝ)
+lemma mollify_alternating_diff (f : ℝ → ℝ) (hcont : ContinuousOn f (Ici 0))
     (hdiff : ∀ n t h, 0 ≤ t → 0 < h →
       0 ≤ (-1 : ℝ) ^ n * iterForwardDiff n h f t)
     (ε : ℝ) (hε : 0 < ε) (m : Mollifier ε)
@@ -929,7 +968,13 @@ lemma mollify_alternating_diff (f : ℝ → ℝ)
       from fun k => by ring]
     rw [← Finset.sum_mul, iterForwardDiff_eq_sum]; congr 1
     apply Finset.sum_congr rfl; intro k _; congr 2; ring
-  · intro k _; sorry -- IntervalIntegrable (needs measurability of f)
+  · intro k _
+    apply ContinuousOn.intervalIntegrable
+    rw [Set.uIcc_of_le (le_of_lt hε)]
+    exact (continuousOn_const.mul ((hcont.comp (continuousOn_const.add continuousOn_id)
+      (fun s hs => Set.mem_Ici.mpr
+        (add_nonneg (add_nonneg ht (mul_nonneg (Nat.cast_nonneg k) (le_of_lt hh))) hs.1))).mul
+      m.smooth.continuous.continuousOn))
 
 /-- The mollified function is completely monotone (smooth + alternating derivatives).
 Combines `mollify_smooth`, `mollify_alternating_diff`, `smooth_discrete_cm_implies_cm`,
@@ -942,12 +987,16 @@ lemma mollify_isCompletelyMonotone (f : ℝ → ℝ) (hpd : IsSemigroupPD f)
   have hsmooth : ContDiff ℝ ⊤ g := mollify_smooth f hcont ε hε m
   have hdiff_g : ∀ n t h, 0 ≤ t → 0 < h →
       0 ≤ (-1 : ℝ) ^ n * iterForwardDiff n h g t :=
-    fun n t h ht hh => mollify_alternating_diff f
+    fun n t h ht hh => mollify_alternating_diff f hcont
       (fun n t h ht hh => hpd.alternating_forwardDiff n t ht h hh hbdd) ε hε m n t h ht hh
   have hderiv_signs := smooth_discrete_cm_implies_cm g hsmooth hdiff_g
   refine ⟨hsmooth.contDiffOn, fun n t ht => ?_⟩
-  -- Connect iterOp deriv n to iteratedDerivWithin n (Ici 0) for smooth functions.
-  sorry
+  -- Connect iteratedDerivWithin n (Ici 0) to iterOp deriv n for globally smooth functions.
+  have hcda : ContDiffAt ℝ (↑n : WithTop ℕ∞) g t :=
+    ContDiffAt.of_le hsmooth.contDiffAt le_top
+  rw [iteratedDerivWithin_eq_iteratedDeriv (uniqueDiffOn_Ici 0) hcda (Set.mem_Ici.mpr ht),
+      iteratedDeriv_eq_iterate, ← iterOp_deriv_eq_iterate]
+  exact hderiv_signs n t ht
 
 /-- The mollified function converges pointwise to `f` as `ε → 0`. -/
 lemma mollify_tendsto (f : ℝ → ℝ) (hcont : ContinuousOn f (Ici 0))
