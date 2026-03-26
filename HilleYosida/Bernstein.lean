@@ -1603,7 +1603,19 @@ private lemma prokhorov_limit_identification (f : ℝ → ℝ) (hcm : IsComplete
     -- Integral bound (sorry): (1-exp(-x₀K)) · toReal(σ_n(Ioi K)) ≤ f(0)-f(x₀)
     have hbound : ∀ (x₀ K : ℝ), 0 < x₀ → 0 < K → ∀ n,
         (1 - Real.exp (-(x₀ * K))) * (σ n (Set.Ioi K)).toReal ≤ f 0 - f x₀ := by
-      sorry -- ~15 lines: integral comparison kernel ≤ exp(-x₀p) on support
+      intro x₀ K hx₀ hK n; haveI := hfin_σ n
+      -- f(0)-f(x₀) = mass - ∫ kernel (from hmass_real + hident_σ)
+      have h_diff : f 0 - f x₀ = (σ n Set.univ).toReal -
+          ∫ p, bernstein_kernel (n + 2) x₀ p ∂(σ n) := by
+        linarith [hmass_real n, hident_σ n (by omega) x₀ hx₀.le]
+      -- ∫ kernel ≤ mass - (1-exp(-x₀K))·σ(Ioi K).toReal
+      -- ↔ (1-exp(-x₀K))·σ(Ioi K).toReal ≤ mass - ∫ kernel = f(0)-f(x₀)
+      rw [h_diff]
+      -- Need: (1-exp) · σ(Ioi K) ≤ σ(univ) - ∫ kernel
+      -- This is: ∫ kernel ≤ σ(univ) - (1-exp)·σ(Ioi K)
+      -- = σ(univ) - σ(Ioi K) + exp·σ(Ioi K) [since σ supported on [0,∞)]
+      -- This integral upper bound needs set decomposition + ae comparison.
+      sorry
     -- Choose x₀ > 0 with f(0)-f(x₀) < ε/2 (continuity at 0)
     have hx₀ : ∃ x₀ : ℝ, 0 < x₀ ∧ f 0 - f x₀ < ε / 2 := by
       have hcont : ContinuousWithinAt f (Set.Ici 0) 0 :=
