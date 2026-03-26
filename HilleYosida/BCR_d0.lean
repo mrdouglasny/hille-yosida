@@ -683,19 +683,21 @@ lemma iterOp_fd_eq_iterForwardDiff (n : ℕ) (h : ℝ) (F : ℝ → ℝ) (t : �
 This is the fundamental theorem of calculus iterated n times:
 `F(t+h) - F(t) = ∫_0^h F'(t+s) ds`, applied inductively. -/
 -- iterOp deriv n of a smooth function is still smooth.
-private lemma contDiff_iterOp_deriv (n : ℕ) (F : ℝ → ℝ) (hF : ContDiff ℝ ⊤ F) :
-    ContDiff ℝ ⊤ (iterOp deriv n F) := by
+private lemma contDiff_iterOp_deriv (n : ℕ) (F : ℝ → ℝ) (hF : ContDiff ℝ (↑(⊤ : ℕ∞)) F) :
+    ContDiff ℝ (↑(⊤ : ℕ∞)) (iterOp deriv n F) := by
   induction n with
   | zero => exact hF
   | succ n ih =>
-    change ContDiff ℝ ⊤ (deriv (iterOp deriv n F))
-    have htop : (⊤ : WithTop ℕ∞) + (1 : WithTop ℕ∞) = ⊤ := WithTop.top_add (1 : WithTop ℕ∞)
-    rw [show (⊤ : WithTop ℕ∞) = ⊤ + 1 from htop.symm]
+    change ContDiff ℝ (↑(⊤ : ℕ∞)) (deriv (iterOp deriv n F))
+    have htop : (↑(⊤ : ℕ∞) : WithTop ℕ∞) + 1 = ↑(⊤ : ℕ∞) := by
+      rw [show (1 : WithTop ℕ∞) = ↑(1 : ℕ∞) from rfl, ← WithTop.coe_add,
+        show (⊤ : ℕ∞) + 1 = ⊤ from WithTop.top_add _]
+    rw [show (↑(⊤ : ℕ∞) : WithTop ℕ∞) = ↑(⊤ : ℕ∞) + 1 from htop.symm]
     exact (contDiff_succ_iff_deriv.mp (htop ▸ ih)).2.2
 
 -- FTC bridge: forward difference = integral of derivative for smooth functions.
 private lemma forwardDiff_eq_intOp_deriv (h : ℝ) (G : ℝ → ℝ)
-    (hG : ContDiff ℝ ⊤ G) :
+    (hG : ContDiff ℝ (↑(⊤ : ℕ∞)) G) :
     forwardDiff h G = intOp h (deriv G) := by
   ext t
   simp only [forwardDiff, intOp]
@@ -706,8 +708,8 @@ private lemma forwardDiff_eq_intOp_deriv (h : ℝ) (G : ℝ → ℝ)
   have hFTC : ∫ y in t..(t + h), deriv G y = G (t + h) - G t := by
     apply intervalIntegral.integral_eq_sub_of_hasDerivAt
     · intro x _
-      exact (hG.differentiable (by simp : (⊤ : WithTop ℕ∞) ≠ 0)).differentiableAt.hasDerivAt
-    · exact (hG.continuous_deriv (by simp : 1 ≤ (⊤ : WithTop ℕ∞))).intervalIntegrable t (t + h)
+      exact (hG.differentiable (WithTop.coe_ne_zero.mpr ENat.top_ne_zero)).differentiableAt.hasDerivAt
+    · exact (hG.continuous_deriv (WithTop.coe_le_coe.mpr le_top)).intervalIntegrable t (t + h)
   linarith
 
 -- Commutation: forwardDiff commutes past intOp for continuous functions.
@@ -727,7 +729,7 @@ private lemma forwardDiff_intOp_comm (h : ℝ) (G : ℝ → ℝ)
 
 -- forwardDiff h (iterOp (intOp h) n G) = intOp h (iterOp (intOp h) n (deriv G))
 private lemma forwardDiff_iterOp_intOp_eq (n : ℕ) (h : ℝ) (G : ℝ → ℝ)
-    (hG : ContDiff ℝ ⊤ G) :
+    (hG : ContDiff ℝ (↑(⊤ : ℕ∞)) G) :
     forwardDiff h (iterOp (intOp h) n G) =
     intOp h (iterOp (intOp h) n (deriv G)) := by
   induction n with
@@ -742,7 +744,7 @@ private lemma forwardDiff_iterOp_intOp_eq (n : ℕ) (h : ℝ) (G : ℝ → ℝ)
     rw [forwardDiff_intOp_comm h _ hcont, ih]
 
 lemma iterOp_fd_eq_intOp_deriv (n : ℕ) (h : ℝ) (F : ℝ → ℝ)
-    (hF : ContDiff ℝ ⊤ F) :
+    (hF : ContDiff ℝ (↑(⊤ : ℕ∞)) F) :
     iterOp (forwardDiff h) n F = iterOp (intOp h) n (iterOp deriv n F) := by
   induction n with
   | zero => rfl
@@ -830,7 +832,7 @@ Proof by contradiction: if `(-1)^n F^{(n)}(t₀) < 0`, by continuity it is
 strictly negative (`≤ -ε < 0`) on `[t₀, t₀+δ]`. Choose `h = δ/n`. Then
 the iterated integral is `≤ -ε·h^n < 0`. But this integral equals
 `(-1)^n Δ_h^n F(t₀) ≥ 0` by hypothesis. Contradiction. -/
-lemma smooth_discrete_cm_implies_cm (F : ℝ → ℝ) (hF : ContDiff ℝ ⊤ F)
+lemma smooth_discrete_cm_implies_cm (F : ℝ → ℝ) (hF : ContDiff ℝ (↑(⊤ : ℕ∞)) F)
     (hdiff : ∀ n t h, 0 ≤ t → 0 < h →
       0 ≤ (-1 : ℝ) ^ n * iterForwardDiff n h F t) :
     ∀ n t, 0 ≤ t → 0 ≤ (-1 : ℝ) ^ n * iterOp deriv n F t := by
@@ -848,7 +850,7 @@ lemma smooth_discrete_cm_implies_cm (F : ℝ → ℝ) (hF : ContDiff ℝ ⊤ F)
   push_neg at h_neg
   -- Set G = iterOp deriv n F, which is continuous
   set G := iterOp deriv n F with hG_def
-  have hG_smooth : ContDiff ℝ ⊤ G := contDiff_iterOp_deriv n F hF
+  have hG_smooth : ContDiff ℝ (↑(⊤ : ℕ∞)) G := contDiff_iterOp_deriv n F hF
   have hG_cont : Continuous G := hG_smooth.continuous
   -- h_neg : (-1)^n * G t₀ < 0
   set c := (-1 : ℝ) ^ n * G t₀ with hc_def
@@ -925,7 +927,7 @@ to produce a C^∞ function that inherits the alternating differences. -/
 /-- A smooth mollifier supported in `[0, ε]`. -/
 structure Mollifier (ε : ℝ) where
   func : ℝ → ℝ
-  smooth : ContDiff ℝ ⊤ func
+  smooth : ContDiff ℝ (↑(⊤ : ℕ∞)) func
   supp : ∀ s, s ∉ Icc 0 ε → func s = 0
   nonneg : ∀ s, 0 ≤ func s
   integral_one : ∫ s in (0 : ℝ)..ε, func s = 1
@@ -949,7 +951,7 @@ to the PD theory. The key idea: in `∫_t^{t+ε} f(u) m(u-t) du`,
 differentiation in t hits `m(u-t)` (C^∞), not `f(u)` (continuous). -/
 axiom mollify_smooth (f : ℝ → ℝ) (hcont : ContinuousOn f (Ici 0))
     (ε : ℝ) (hε : 0 < ε) (m : Mollifier ε) :
-    ContDiff ℝ ⊤ (mollify f ε m)
+    ContDiff ℝ (↑(⊤ : ℕ∞)) (mollify f ε m)
 
 /-- Forward differences pass under the convolution integral. -/
 lemma mollify_alternating_diff (f : ℝ → ℝ) (hcont : ContinuousOn f (Ici 0))
@@ -994,7 +996,7 @@ lemma mollify_isCompletelyMonotone (f : ℝ → ℝ) (hpd : IsSemigroupPD f)
     (ε : ℝ) (hε : 0 < ε) (m : Mollifier ε) :
     IsCompletelyMonotone (mollify f ε m) := by
   set g := mollify f ε m
-  have hsmooth : ContDiff ℝ ⊤ g := mollify_smooth f hcont ε hε m
+  have hsmooth : ContDiff ℝ (↑(⊤ : ℕ∞)) g := mollify_smooth f hcont ε hε m
   have hdiff_g : ∀ n t h, 0 ≤ t → 0 < h →
       0 ≤ (-1 : ℝ) ^ n * iterForwardDiff n h g t :=
     fun n t h ht hh => mollify_alternating_diff f hcont
@@ -1003,7 +1005,7 @@ lemma mollify_isCompletelyMonotone (f : ℝ → ℝ) (hpd : IsSemigroupPD f)
   refine ⟨hsmooth.contDiffOn, fun n t ht => ?_⟩
   -- Connect iteratedDerivWithin n (Ici 0) to iterOp deriv n for globally smooth functions.
   have hcda : ContDiffAt ℝ (↑n : WithTop ℕ∞) g t :=
-    ContDiffAt.of_le hsmooth.contDiffAt le_top
+    ContDiffAt.of_le hsmooth.contDiffAt (WithTop.coe_le_coe.mpr le_top)
   rw [iteratedDerivWithin_eq_iteratedDeriv (uniqueDiffOn_Ici 0) hcda (Set.mem_Ici.mpr ht),
       iteratedDeriv_eq_iterate, ← iterOp_deriv_eq_iterate]
   exact hderiv_signs n t ht

@@ -37,9 +37,20 @@ a ~500-line bootstrap from differences to derivatives in Lean.
 
 Examples: constants ≥ 0, `e^{-αt}` (α ≥ 0), `1/(t+α)^β` (α,β > 0). -/
 def IsCompletelyMonotone (f : ℝ → ℝ) : Prop :=
-  ContDiffOn ℝ ⊤ f (Set.Ici 0) ∧
+  ContDiffOn ℝ (↑(⊤ : ℕ∞)) f (Set.Ici 0) ∧
   ∀ (n : ℕ) (t : ℝ), 0 ≤ t →
     0 ≤ (-1 : ℝ) ^ n * iteratedDerivWithin n f (Set.Ici 0) t
+
+/-! ## Smoothness index helpers for `↑(⊤ : ℕ∞)` in `WithTop ℕ∞` -/
+
+private lemma coe_top_ne_zero : (↑(⊤ : ℕ∞) : WithTop ℕ∞) ≠ 0 :=
+  WithTop.coe_ne_zero.mpr (ENat.top_ne_zero)
+
+private lemma nat_le_coe_top (n : ℕ) : (↑n : WithTop ℕ∞) ≤ ↑(⊤ : ℕ∞) :=
+  WithTop.coe_le_coe.mpr le_top
+
+private lemma nat_lt_coe_top (n : ℕ) : (↑n : WithTop ℕ∞) < ↑(⊤ : ℕ∞) :=
+  WithTop.coe_lt_coe.mpr (WithTop.coe_lt_top n)
 
 /-! ## Basic properties of CM functions -/
 
@@ -58,7 +69,7 @@ lemma IsCompletelyMonotone.deriv_nonpos (hcm : IsCompletelyMonotone f) (t : ℝ)
 /-- A CM function is bounded by f(0) on [0, ∞). -/
 lemma IsCompletelyMonotone.bounded (hcm : IsCompletelyMonotone f) (t : ℝ) (ht : 0 ≤ t) :
     f t ≤ f 0 := by
-  have htop : (⊤ : WithTop ℕ∞) ≠ 0 := Ne.symm (ne_of_beq_false rfl)
+  have htop : (↑(⊤ : ℕ∞) : WithTop ℕ∞) ≠ 0 := coe_top_ne_zero
   have hanti : AntitoneOn f (Set.Ici 0) :=
     antitoneOn_of_deriv_nonpos (convex_Ici 0) hcm.1.continuousOn
       ((hcm.1.differentiableOn htop).mono interior_subset)
@@ -128,7 +139,7 @@ theorem taylor_integral_remainder {f : ℝ → ℝ} {a b : ℝ} {n : ℕ} (hab :
 so `f(t) → L ≥ 0` as `t → ∞`. -/
 lemma IsCompletelyMonotone.tendsto_atTop (hcm : IsCompletelyMonotone f) :
     ∃ L, Filter.Tendsto f Filter.atTop (nhds L) ∧ 0 ≤ L := by
-  have htop : (⊤ : WithTop ℕ∞) ≠ 0 := Ne.symm (ne_of_beq_false rfl)
+  have htop : (↑(⊤ : ℕ∞) : WithTop ℕ∞) ≠ 0 := coe_top_ne_zero
   have hanti : AntitoneOn f (Set.Ici 0) :=
     antitoneOn_of_deriv_nonpos (convex_Ici 0) hcm.1.continuousOn
       ((hcm.1.differentiableOn htop).mono interior_subset)
@@ -158,7 +169,7 @@ lemma iteratedDerivWithin_Icc_eq_Ici {n : ℕ}
       iteratedDerivWithin n f (Set.Ici 0) t := by
   have ht_pos : 0 < t := lt_of_le_of_lt hx ht.1
   have hcda : ContDiffAt ℝ (↑n : WithTop ℕ∞) f t :=
-    (hcm.1.of_le le_top).contDiffAt (Ici_mem_nhds ht_pos)
+    (hcm.1.of_le (nat_le_coe_top _)).contDiffAt (Ici_mem_nhds ht_pos)
   rw [iteratedDerivWithin_eq_iteratedDeriv (uniqueDiffOn_Icc hxT) hcda
         (Set.Ioo_subset_Icc_self ht),
       ← iteratedDerivWithin_eq_iteratedDeriv (uniqueDiffOn_Ici 0) hcda
@@ -206,7 +217,7 @@ lemma IsCompletelyMonotone.integral_neg_deriv (hcm : IsCompletelyMonotone f)
   have hsubset : Icc x T ⊆ Set.Ici 0 :=
     Icc_subset_Ici_self.trans (Set.Ici_subset_Ici.mpr hx)
   have hcm_Icc : ContDiffOn ℝ (↑(0 + 1) : WithTop ℕ∞) f (Icc x T) :=
-    (hcm.1.mono hsubset).of_le le_top
+    (hcm.1.mono hsubset).of_le (nat_le_coe_top _)
   have htaylor := taylor_integral_remainder hxT hcm_Icc
   -- Degree-0 Taylor polynomial: taylorWithinEval f 0 s x T = f x
   have h0 : taylorWithinEval f 0 (Icc x T) x T = f x := by
@@ -274,7 +285,7 @@ lemma IsCompletelyMonotone.integral_neg_deriv_Ici
   rw [uIoc_of_le (le_of_lt hT)] at ht
   have ht_pos : 0 < t := ht.1
   have hcda : ContDiffAt ℝ (↑1 : WithTop ℕ∞) f t :=
-    (hcm.1.of_le le_top).contDiffAt (Ici_mem_nhds ht_pos)
+    (hcm.1.of_le (nat_le_coe_top _)).contDiffAt (Ici_mem_nhds ht_pos)
   simp only [iteratedDerivWithin_eq_iteratedDeriv (uniqueDiffOn_Icc hT) hcda
       (Ioc_subset_Icc_self ht),
     iteratedDerivWithin_eq_iteratedDeriv (uniqueDiffOn_Ici 0) hcda
@@ -306,7 +317,7 @@ lemma IsCompletelyMonotone.neg_deriv_integrableOn
       (l := Filter.atTop) (b := id)
   · -- IntegrableOn on each Ioc 0 T (continuous on Ici 0 → integrable on compact Icc)
     intro T
-    exact ((hcm.1.continuousOn_iteratedDerivWithin le_top
+    exact ((hcm.1.continuousOn_iteratedDerivWithin (nat_le_coe_top _)
       (uniqueDiffOn_Ici 0)).neg.mono Icc_subset_Ici_self).integrableOn_compact
         isCompact_Icc |>.mono_set Ioc_subset_Icc_self
   · exact Filter.tendsto_id
@@ -511,12 +522,12 @@ private lemma cm_density_ibp_identity (f : ℝ → ℝ) (hcm : IsCompletelyMonot
   set c : ℝ := (-1) ^ (m + 2) / ↑(m + 1).factorial
   set F := fun t : ℝ => t ^ (m + 1) * (c * g t)
   have hg_cont : ContinuousOn g (Set.Ici 0) :=
-    hcm.1.continuousOn_iteratedDerivWithin le_top (uniqueDiffOn_Ici 0)
+    hcm.1.continuousOn_iteratedDerivWithin (nat_le_coe_top _) (uniqueDiffOn_Ici 0)
   have hg_deriv : ∀ t, 0 < t → HasDerivAt g (g' t) t := by
     intro t ht
     have hmem : Set.Ici (0 : ℝ) ∈ nhds t := Ici_mem_nhds ht
     have hda := (hcm.1.differentiableOn_iteratedDerivWithin
-      (show (↑(m + 1) : WithTop ℕ∞) < ⊤ from WithTop.coe_lt_top _)
+      (nat_lt_coe_top (m + 1))
       (uniqueDiffOn_Ici 0)).hasDerivAt hmem
     show HasDerivAt g (g' t) t; convert hda using 1; show g' t = deriv g t
     simp only [g, g']
@@ -540,7 +551,7 @@ private lemma cm_density_ibp_identity (f : ℝ → ℝ) (hcm : IsCompletelyMonot
       simp [cm_density, hk]
     rw [this]
     exact (continuousOn_const.mul (continuous_pow _).continuousOn).mul
-      (hcm.1.continuousOn_iteratedDerivWithin le_top (uniqueDiffOn_Ici 0))
+      (hcm.1.continuousOn_iteratedDerivWithin (nat_le_coe_top _) (uniqueDiffOn_Ici 0))
   have hF'_eq : ∀ t, ↑(m + 1) * t ^ m * (c * g t) + t ^ (m + 1) * (c * g' t) =
       cm_density f (m + 2) t - cm_density f (m + 1) t := by
     intro t
@@ -617,7 +628,7 @@ lemma cm_measure_finite_mass (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
     unfold cm_density; simp only [hn0, ↓reduceIte]
     exact ((continuousOn_const.mul
       ((continuousOn_pow _).mono fun _ _ => trivial)).mul
-      (hcm.1.continuousOn_iteratedDerivWithin le_top (uniqueDiffOn_Ici 0)))
+      (hcm.1.continuousOn_iteratedDerivWithin (nat_le_coe_top _) (uniqueDiffOn_Ici 0)))
   -- IBP recursion: ∫_0^T ρ_n ≤ f(0) - f(T) ≤ f(0) - L
   -- (each IBP step adds a nonpositive boundary term by CM sign condition)
   have hbound : ∀ T, 0 < T →
@@ -648,11 +659,10 @@ lemma cm_measure_finite_mass (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
     -- L ≤ f(T) for T > 0 (antitone + limit)
     intro T hT
     have hfT : L ≤ f T := by
-      have htop : (⊤ : WithTop ℕ∞) ≠ 0 := Ne.symm (ne_of_beq_false rfl)
       set g₀ := fun t : ℝ => f (max t 0)
       have hg_anti : Antitone g₀ := fun a b hab =>
         (antitoneOn_of_deriv_nonpos (convex_Ici 0) hcm.1.continuousOn
-          ((hcm.1.differentiableOn htop).mono interior_subset)
+          ((hcm.1.differentiableOn coe_top_ne_zero).mono interior_subset)
           (fun x hx => by
             rw [interior_Ici] at hx
             have h1 := hcm.deriv_nonpos x (le_of_lt hx)
@@ -801,7 +811,7 @@ private lemma ibp_finite_interval (f : ℝ → ℝ) (hcm : IsCompletelyMonotone 
     continuousOn_const.mul ((continuousOn_id.sub continuousOn_const).pow _)
   have hg_cont : ContinuousOn g (Set.uIcc x T) := by
     rw [Set.uIcc_of_le (le_of_lt hxT)]
-    exact (hcm.1.continuousOn_iteratedDerivWithin le_top (uniqueDiffOn_Ici 0)).mono
+    exact (hcm.1.continuousOn_iteratedDerivWithin (nat_le_coe_top _) (uniqueDiffOn_Ici 0)).mono
       (Icc_subset_Ici_self.trans (Set.Ici_subset_Ici.mpr hx))
   have hu_deriv : ∀ t ∈ Ioo (min x T) (max x T),
       HasDerivWithinAt u (u' t) (Ioi t) t := by
@@ -816,7 +826,7 @@ private lemma ibp_finite_interval (f : ℝ → ℝ) (hcm : IsCompletelyMonotone 
     have hmem : Set.Ici (0 : ℝ) ∈ nhds t := Ici_mem_nhds (by linarith [ht.1])
     apply HasDerivAt.hasDerivWithinAt
     convert (hcm.1.differentiableOn_iteratedDerivWithin
-      (show (↑k : WithTop ℕ∞) < ⊤ from WithTop.coe_lt_top _)
+      (nat_lt_coe_top _)
       (uniqueDiffOn_Ici 0)).hasDerivAt hmem using 1
     simp only [g', iteratedDerivWithin_succ, derivWithin_of_mem_nhds hmem]
   have hu'_int : IntervalIntegrable u' volume x T :=
@@ -824,7 +834,7 @@ private lemma ibp_finite_interval (f : ℝ → ℝ) (hcm : IsCompletelyMonotone 
       ((continuousOn_id.sub continuousOn_const).pow _))).intervalIntegrable
   have hg'_int : IntervalIntegrable g' volume x T := by
     apply ContinuousOn.intervalIntegrable; rw [Set.uIcc_of_le (le_of_lt hxT)]
-    exact (hcm.1.continuousOn_iteratedDerivWithin le_top (uniqueDiffOn_Ici 0)).mono
+    exact (hcm.1.continuousOn_iteratedDerivWithin (nat_le_coe_top _) (uniqueDiffOn_Ici 0)).mono
       (Icc_subset_Ici_self.trans (Set.Ici_subset_Ici.mpr hx))
   have hibp := integral_mul_deriv_eq_deriv_mul_of_hasDeriv_right
     hu_cont hg_cont hu_deriv hg_deriv hu'_int hg'_int
@@ -883,13 +893,13 @@ private lemma boundary_term_decay (f : ℝ → ℝ) (hcm : IsCompletelyMonotone 
     have h_antitone : AntitoneOn h (Ici 0) := by
       apply antitoneOn_of_deriv_nonpos (convex_Ici 0)
       · simpa [h] using
-          (hcm.1.continuousOn_iteratedDerivWithin le_top (uniqueDiffOn_Ici 0)).const_mul
+          (hcm.1.continuousOn_iteratedDerivWithin (nat_le_coe_top _) (uniqueDiffOn_Ici 0)).const_mul
             ((-1 : ℝ) ^ k)
       · rw [interior_Ici]
         intro T hT
         have hdiff :
             DifferentiableAt ℝ (iteratedDerivWithin k f (Ici 0)) T :=
-          (hcm.1.differentiableOn_iteratedDerivWithin (show (k : WithTop ℕ∞) < ⊤ by simp)
+          (hcm.1.differentiableOn_iteratedDerivWithin (nat_lt_coe_top _)
             (uniqueDiffOn_Ici 0)) T (Set.mem_Ici.mpr (le_of_lt hT)) |>.differentiableAt (Ici_mem_nhds hT)
         exact (hdiff.const_mul ((-1 : ℝ) ^ k)).differentiableWithinAt
       · rw [interior_Ici]
@@ -910,7 +920,7 @@ private lemma boundary_term_decay (f : ℝ → ℝ) (hcm : IsCompletelyMonotone 
       simp only [hk, ↓reduceIte]
       exact ((continuousOn_const.mul
         ((continuousOn_pow _).mono fun _ _ => trivial)).mul
-        (hcm.1.continuousOn_iteratedDerivWithin le_top (uniqueDiffOn_Ici 0)))
+        (hcm.1.continuousOn_iteratedDerivWithin (nat_le_coe_top _) (uniqueDiffOn_Ici 0)))
     have hint_density : IntegrableOn (cm_density f k) (Set.Ioi 0) := by
       by_cases hk_eq : k = 1
       · subst hk_eq
@@ -1081,7 +1091,7 @@ private lemma ibp_kernel_integrableOn (f : ℝ → ℝ) (hcm : IsCompletelyMonot
     unfold cm_density; simp only [hk0, ↓reduceIte]
     exact ((continuousOn_const.mul
       ((continuousOn_pow _).mono fun _ _ => trivial)).mul
-      (hcm.1.continuousOn_iteratedDerivWithin le_top (uniqueDiffOn_Ici 0)))
+      (hcm.1.continuousOn_iteratedDerivWithin (nat_le_coe_top _) (uniqueDiffOn_Ici 0)))
   -- ∫₀ᵀ cm_density f j ≤ f(0) - f(T) for j ≥ 1
   have density_le : ∀ j, 1 ≤ j → ∀ T, 0 < T →
       ∫ t in (0 : ℝ)..T, cm_density f j t ≤ f 0 - f T := by
@@ -1103,7 +1113,7 @@ private lemma ibp_kernel_integrableOn (f : ℝ → ℝ) (hcm : IsCompletelyMonot
     set g₀ := fun t : ℝ => f (max t 0)
     have hg_anti : Antitone g₀ := fun a b hab =>
       (antitoneOn_of_deriv_nonpos (convex_Ici 0) hcm.1.continuousOn
-        ((hcm.1.differentiableOn (Ne.symm (ne_of_beq_false rfl))).mono interior_subset)
+        ((hcm.1.differentiableOn coe_top_ne_zero).mono interior_subset)
         (fun y hy => by
           rw [interior_Ici] at hy
           have h1 := hcm.deriv_nonpos y (le_of_lt hy)
@@ -1135,7 +1145,7 @@ private lemma ibp_kernel_integrableOn (f : ℝ → ℝ) (hcm : IsCompletelyMonot
   · apply (ContinuousOn.aestronglyMeasurable _ measurableSet_Ioi)
     exact ((continuousOn_const.mul
       ((continuousOn_id.sub continuousOn_const).pow _)).mul
-      ((hcm.1.continuousOn_iteratedDerivWithin le_top (uniqueDiffOn_Ici 0)).mono
+      ((hcm.1.continuousOn_iteratedDerivWithin (nat_le_coe_top _) (uniqueDiffOn_Ici 0)).mono
         (fun t ht => mem_Ici.mpr (le_of_lt (lt_of_le_of_lt hx ht)))))
   · rw [ae_restrict_iff' measurableSet_Ioi]; apply ae_of_all; intro t ht
     simp only [Ioi, mem_setOf_eq] at ht
@@ -1203,7 +1213,7 @@ private lemma chafai_repeated_ibp (f : ℝ → ℝ) (hcm : IsCompletelyMonotone 
         rw [uIoc_of_le (le_of_lt hxT)] at ht
         have ht_pos : 0 < t := lt_of_le_of_lt hx ht.1
         have hcda : ContDiffAt ℝ (↑1 : WithTop ℕ∞) f t :=
-          (hcm.1.of_le le_top).contDiffAt (Ici_mem_nhds ht_pos)
+          (hcm.1.of_le (nat_le_coe_top _)).contDiffAt (Ici_mem_nhds ht_pos)
         congr 1
         rw [iteratedDerivWithin_eq_iteratedDeriv
             (uniqueDiffOn_Icc hxT) hcda (Ioc_subset_Icc_self ht),
@@ -1270,7 +1280,7 @@ private lemma chafai_identity (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
       unfold cm_density; simp only [hn0, ↓reduceIte]
       exact ((continuousOn_const.mul
         ((continuousOn_pow _).mono fun _ _ => trivial)).mul
-        (hcm.1.continuousOn_iteratedDerivWithin le_top (uniqueDiffOn_Ici 0)))
+        (hcm.1.continuousOn_iteratedDerivWithin (nat_le_coe_top _) (uniqueDiffOn_Ici 0)))
     rw [integral_withDensity_eq_integral_toReal_smul₀
       (AEMeasurable.ennreal_ofReal
         ((hcont_density.mono Set.Ioi_subset_Ici_self).aestronglyMeasurable
