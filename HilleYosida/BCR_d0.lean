@@ -819,8 +819,9 @@ lemma smooth_discrete_cm_implies_cm (F : ℝ → ℝ) (hF : ContDiff ℝ ⊤ F)
     continuous_const.mul hG_cont
   have hc2_neg : c / 2 < 0 := by linarith
   -- Find δ such that |(-1)^n * G x - c| < |c|/2 for x near t₀
-  have := Metric.continuousAt_iff.mp hcG_cont.continuousAt (|c| / 2) (by positivity)
-  obtain ⟨δ, hδ_pos, hδ_ball⟩ := this
+  have hc_abs_pos : 0 < |c| / 2 := div_pos (abs_pos.mpr (ne_of_lt hc_neg)) two_pos
+  rw [Metric.continuous_iff] at hcG_cont
+  obtain ⟨δ, hδ_pos, hδ_ball⟩ := hcG_cont t₀ (|c| / 2) hc_abs_pos
   -- For x ∈ [t₀, t₀ + δ/2], (-1)^n * G x ≤ c/2
   set δ' := δ / 2 with hδ'_def
   have hδ'_pos : 0 < δ' := by positivity
@@ -829,9 +830,9 @@ lemma smooth_discrete_cm_implies_cm (F : ℝ → ℝ) (hF : ContDiff ℝ ⊤ F)
     have hxdist : dist x t₀ < δ := by
       rw [Real.dist_eq, abs_of_nonneg (by linarith [hx.1])]
       linarith [hx.2]
-    have := hδ_ball hxdist
-    rw [Real.dist_eq] at this
-    have habs : |(-1 : ℝ) ^ n * G x - c| < |c| / 2 := this
+    have habs : |(-1 : ℝ) ^ n * G x - c| < |c| / 2 := by
+      have := hδ_ball x hxdist
+      rwa [hc_def, Real.dist_eq] at this
     have hc_abs : |c| = -c := abs_of_neg hc_neg
     rw [hc_abs] at habs
     have := abs_lt.mp habs
@@ -853,25 +854,22 @@ lemma smooth_discrete_cm_implies_cm (F : ℝ → ℝ) (hF : ContDiff ℝ ⊤ F)
   have hle_or_ge := neg_one_pow_eq_or ℝ n
   -- In either case, (-1)^n * iterOp (intOp h) n G t₀ < 0
   have h_integral_neg : (-1 : ℝ) ^ n * iterOp (intOp h) n G t₀ < 0 := by
-    -- We know (-1)^n * G x ≤ c/2 < 0 on [t₀, t₀ + n*h] = [t₀, t₀ + δ']
     rcases hle_or_ge with h1 | h1
-    · -- (-1)^n = 1: G x ≤ c/2 < 0 on the interval
+    · -- (-1)^n = 1: then c = G t₀ < 0, and G x ≤ c/2 on interval
+      have hGle : ∀ x ∈ Icc t₀ (t₀ + δ'), G x ≤ c / 2 := by
+        intro x hx; have := hbound x hx; rw [h1, one_mul] at this; exact this
       rw [h1, one_mul]
-      rw [h1, one_mul] at hbound hc_neg
       have hle := iterOp_intOp_le_local n h hh_pos.le G (c / 2) t₀ (by
-        intro x hx; rw [hnh] at hx; exact hbound x hx)
+        intro x hx; rw [hnh] at hx; exact hGle x hx)
       have hhn : 0 < h ^ n := pow_pos hh_pos n
       linarith [mul_neg_of_neg_of_pos hc2_neg hhn]
-    · -- (-1)^n = -1: G x ≥ -c/2 > 0 (so G x is positive)
+    · -- (-1)^n = -1: then c = -G t₀ < 0, so G t₀ > 0
+      -- hbound: -1 * G x ≤ c/2, i.e., G x ≥ -c/2 > 0
+      have hGge : ∀ x ∈ Icc t₀ (t₀ + δ'), (-c / 2) ≤ G x := by
+        intro x hx; have := hbound x hx; rw [h1] at this; linarith
       rw [h1]
-      -- hbound: -1 * G x ≤ c/2, so G x ≥ -c/2
-      have hge : ∀ x ∈ Icc t₀ (t₀ + δ'), (-c / 2) ≤ G x := by
-        intro x hx
-        have := hbound x hx
-        rw [h1] at this
-        linarith
-      have hge_integral := iterOp_intOp_ge_local n h hh_pos.le G (-c / 2) t₀ (by
-        intro x hx; rw [hnh] at hx; exact hge x hx)
+      have hge := iterOp_intOp_ge_local n h hh_pos.le G (-c / 2) t₀ (by
+        intro x hx; rw [hnh] at hx; exact hGge x hx)
       have hhn : 0 < h ^ n := pow_pos hh_pos n
       have hmc : 0 < -c / 2 := by linarith
       linarith [mul_pos hmc hhn]
