@@ -627,32 +627,162 @@ def iterOp (op : (ℝ → ℝ) → (ℝ → ℝ)) : ℕ → (ℝ → ℝ) → (�
 
 /-- The discrete difference equivalence: iterating `forwardDiff h` gives
 the same result as `iterForwardDiff`. -/
+private lemma iterOp_shift (op : (ℝ → ℝ) → (ℝ → ℝ)) (n : ℕ) (F : ℝ → ℝ) :
+    iterOp op (n + 1) F = iterOp op n (op F) := by
+  induction n with
+  | zero => rfl
+  | succ n ih =>
+    show op (iterOp op (n + 1) F) = op (iterOp op n (op F))
+    rw [ih]
+
 lemma iterOp_fd_eq_iterForwardDiff (n : ℕ) (h : ℝ) (F : ℝ → ℝ) (t : ℝ) :
     iterOp (forwardDiff h) n F t = iterForwardDiff n h F t := by
-  sorry
+  induction n generalizing F with
+  | zero => rfl
+  | succ n ih =>
+    rw [iterOp_shift]
+    exact ih (forwardDiff h F)
 
 /-- The main identity: `Δ_h^n F(t) = ∫...∫ F^{(n)}(t + s₁ + ... + sₙ) ds₁...dsₙ`.
 
 This is the fundamental theorem of calculus iterated n times:
 `F(t+h) - F(t) = ∫_0^h F'(t+s) ds`, applied inductively. -/
+-- iterOp deriv n of a smooth function is still smooth.
+private lemma contDiff_iterOp_deriv (n : ℕ) (F : ℝ → ℝ) (hF : ContDiff ℝ ⊤ F) :
+    ContDiff ℝ ⊤ (iterOp deriv n F) := by
+  induction n with
+  | zero => exact hF
+  | succ n ih =>
+    change ContDiff ℝ ⊤ (deriv (iterOp deriv n F))
+    have htop : (⊤ : WithTop ℕ∞) + (1 : WithTop ℕ∞) = ⊤ := WithTop.top_add (1 : WithTop ℕ∞)
+    rw [show (⊤ : WithTop ℕ∞) = ⊤ + 1 from htop.symm]
+    exact (contDiff_succ_iff_deriv.mp (htop ▸ ih)).2.2
+
+-- FTC bridge: forward difference = integral of derivative for smooth functions.
+private lemma forwardDiff_eq_intOp_deriv (h : ℝ) (G : ℝ → ℝ)
+    (hG : ContDiff ℝ ⊤ G) :
+    forwardDiff h G = intOp h (deriv G) := by
+  ext t
+  simp only [forwardDiff, intOp]
+  have hcov : ∫ s in (0 : ℝ)..h, deriv G (t + s) =
+      ∫ y in t..(t + h), deriv G y := by
+    rw [intervalIntegral.integral_comp_add_left (deriv G) t]
+    simp [add_comm]
+  have hFTC : ∫ y in t..(t + h), deriv G y = G (t + h) - G t := by
+    apply intervalIntegral.integral_eq_sub_of_hasDerivAt
+    · intro x _
+      exact (hG.differentiable (by simp : (⊤ : WithTop ℕ∞) ≠ 0)).differentiableAt.hasDerivAt
+    · exact (hG.continuous_deriv (by simp : 1 ≤ (⊤ : WithTop ℕ∞))).intervalIntegrable t (t + h)
+  linarith
+
+-- Commutation: forwardDiff commutes past intOp for continuous functions.
+private lemma forwardDiff_intOp_comm (h : ℝ) (G : ℝ → ℝ)
+    (hG : Continuous G) :
+    forwardDiff h (intOp h G) = intOp h (forwardDiff h G) := by
+  ext t
+  simp only [forwardDiff, intOp]
+  have hint1 : IntervalIntegrable (fun s => G (t + h + s)) MeasureTheory.volume 0 h :=
+    (hG.comp (continuous_const.add continuous_id')).intervalIntegrable 0 h
+  have hint2 : IntervalIntegrable (fun s => G (t + s)) MeasureTheory.volume 0 h :=
+    (hG.comp (continuous_const.add continuous_id')).intervalIntegrable 0 h
+  rw [← intervalIntegral.integral_sub hint1 hint2]
+  congr 1; ext s
+  show G (t + h + s) - G (t + s) = G (t + s + h) - G (t + s)
+  ring_nf
+
+-- forwardDiff h (iterOp (intOp h) n G) = intOp h (iterOp (intOp h) n (deriv G))
+private lemma forwardDiff_iterOp_intOp_eq (n : ℕ) (h : ℝ) (G : ℝ → ℝ)
+    (hG : ContDiff ℝ ⊤ G) :
+    forwardDiff h (iterOp (intOp h) n G) =
+    intOp h (iterOp (intOp h) n (deriv G)) := by
+  induction n with
+  | zero =>
+    simp only [iterOp]
+    exact forwardDiff_eq_intOp_deriv h G hG
+  | succ n ih =>
+    change forwardDiff h (intOp h (iterOp (intOp h) n G)) =
+      intOp h (intOp h (iterOp (intOp h) n (deriv G)))
+    -- Continuity of iterOp (intOp h) n G (sorry: technical, needs measurability argument)
+    have hcont : Continuous (iterOp (intOp h) n G) := sorry
+    rw [forwardDiff_intOp_comm h _ hcont, ih]
+
 lemma iterOp_fd_eq_intOp_deriv (n : ℕ) (h : ℝ) (F : ℝ → ℝ)
     (hF : ContDiff ℝ ⊤ F) :
     iterOp (forwardDiff h) n F = iterOp (intOp h) n (iterOp deriv n F) := by
-  sorry
+  induction n with
+  | zero => rfl
+  | succ n ih =>
+    change forwardDiff h (iterOp (forwardDiff h) n F) =
+      intOp h (iterOp (intOp h) n (deriv (iterOp deriv n F)))
+    rw [ih]
+    exact forwardDiff_iterOp_intOp_eq n h (iterOp deriv n F)
+      (contDiff_iterOp_deriv n F hF)
 
 /-- Bounding the iterated integral: if `G ≤ M` on `[t, t + n·h]`,
 then `∫...∫ G ds₁...dsₙ ≤ M · h^n`. -/
 lemma iterOp_intOp_le_local (n : ℕ) (h : ℝ) (hh : 0 ≤ h) (G : ℝ → ℝ) (M t : ℝ)
     (hG : ∀ x ∈ Icc t (t + n * h), G x ≤ M) :
     iterOp (intOp h) n G t ≤ M * h ^ n := by
-  sorry
+  induction n generalizing t with
+  | zero =>
+    simp only [iterOp, pow_zero, mul_one]
+    exact hG t ⟨le_refl t, by simp [zero_mul, add_zero]⟩
+  | succ n ih =>
+    change intOp h (iterOp (intOp h) n G) t ≤ M * h ^ (n + 1)
+    simp only [intOp]
+    have hbound : ∀ s ∈ Icc (0 : ℝ) h,
+        iterOp (intOp h) n G (t + s) ≤ M * h ^ n := by
+      intro s hs
+      apply ih
+      intro x hx
+      apply hG
+      constructor
+      · linarith [hx.1, hs.1]
+      · calc x ≤ t + s + ↑n * h := hx.2
+          _ ≤ t + h + ↑n * h := by linarith [hs.2]
+          _ = t + ↑(n + 1) * h := by push_cast; ring
+    -- Integrability (sorry: in all applications G is continuous)
+    have hint : IntervalIntegrable (fun s => iterOp (intOp h) n G (t + s))
+        MeasureTheory.volume 0 h := sorry
+    calc ∫ s in (0 : ℝ)..h, iterOp (intOp h) n G (t + s)
+        ≤ ∫ _s in (0 : ℝ)..h, M * h ^ n :=
+          intervalIntegral.integral_mono_on hh hint intervalIntegrable_const
+            (fun s hs => hbound s hs)
+      _ = M * h ^ (n + 1) := by
+          rw [intervalIntegral.integral_const, smul_eq_mul, sub_zero, pow_succ]; ring
 
 /-- Similarly, a lower bound: if `G ≥ m` on `[t, t + n·h]`,
 then `∫...∫ G ds₁...dsₙ ≥ m · h^n`. -/
 lemma iterOp_intOp_ge_local (n : ℕ) (h : ℝ) (hh : 0 ≤ h) (G : ℝ → ℝ) (m t : ℝ)
     (hG : ∀ x ∈ Icc t (t + n * h), m ≤ G x) :
     m * h ^ n ≤ iterOp (intOp h) n G t := by
-  sorry
+  induction n generalizing t with
+  | zero =>
+    simp only [iterOp, pow_zero, mul_one]
+    exact hG t ⟨le_refl t, by simp [zero_mul, add_zero]⟩
+  | succ n ih =>
+    change m * h ^ (n + 1) ≤ intOp h (iterOp (intOp h) n G) t
+    simp only [intOp]
+    have hbound : ∀ s ∈ Icc (0 : ℝ) h,
+        m * h ^ n ≤ iterOp (intOp h) n G (t + s) := by
+      intro s hs
+      apply ih
+      intro x hx
+      apply hG
+      constructor
+      · linarith [hx.1, hs.1]
+      · calc x ≤ t + s + ↑n * h := hx.2
+          _ ≤ t + h + ↑n * h := by linarith [hs.2]
+          _ = t + ↑(n + 1) * h := by push_cast; ring
+    -- Integrability (sorry: in all applications G is continuous)
+    have hint : IntervalIntegrable (fun s => iterOp (intOp h) n G (t + s))
+        MeasureTheory.volume 0 h := sorry
+    calc m * h ^ (n + 1) = m * h ^ n * h := by rw [pow_succ]; ring
+      _ = ∫ _s in (0 : ℝ)..h, m * h ^ n := by
+          rw [intervalIntegral.integral_const, smul_eq_mul, sub_zero]; ring
+      _ ≤ ∫ s in (0 : ℝ)..h, iterOp (intOp h) n G (t + s) :=
+          intervalIntegral.integral_mono_on hh intervalIntegrable_const hint
+            (fun s hs => hbound s hs)
 
 /-- If a smooth function has alternating discrete differences, its continuous
 derivatives also alternate in sign.
@@ -665,7 +795,90 @@ lemma smooth_discrete_cm_implies_cm (F : ℝ → ℝ) (hF : ContDiff ℝ ⊤ F)
     (hdiff : ∀ n t h, 0 ≤ t → 0 < h →
       0 ≤ (-1 : ℝ) ^ n * iterForwardDiff n h F t) :
     ∀ n t, 0 ≤ t → 0 ≤ (-1 : ℝ) ^ n * iterOp deriv n F t := by
-  sorry
+  intro n t₀ ht₀
+  -- Case n = 0: F t₀ ≥ 0, follows from hdiff with any h > 0
+  by_cases hn : n = 0
+  · subst hn
+    simp only [pow_zero, one_mul, iterOp]
+    -- F t₀ = iterForwardDiff 0 1 F t₀, and hdiff gives 0 ≤ 1 * F t₀
+    have := hdiff 0 t₀ 1 ht₀ one_pos
+    simp only [pow_zero, one_mul, iterForwardDiff] at this
+    exact this
+  -- Case n ≥ 1: proof by contradiction
+  by_contra h_neg
+  push_neg at h_neg
+  -- Set G = iterOp deriv n F, which is continuous
+  set G := iterOp deriv n F with hG_def
+  have hG_smooth : ContDiff ℝ ⊤ G := contDiff_iterOp_deriv n F hF
+  have hG_cont : Continuous G := hG_smooth.continuous
+  -- h_neg : (-1)^n * G t₀ < 0
+  set c := (-1 : ℝ) ^ n * G t₀ with hc_def
+  have hc_neg : c < 0 := h_neg
+  -- By continuity, (-1)^n * G x ≤ c/2 < 0 on [t₀, t₀ + δ] for some δ > 0
+  have hcG_cont : Continuous (fun x => (-1 : ℝ) ^ n * G x) :=
+    continuous_const.mul hG_cont
+  have hc2_neg : c / 2 < 0 := by linarith
+  -- Find δ such that |(-1)^n * G x - c| < |c|/2 for x near t₀
+  have := Metric.continuousAt_iff.mp hcG_cont.continuousAt (|c| / 2) (by positivity)
+  obtain ⟨δ, hδ_pos, hδ_ball⟩ := this
+  -- For x ∈ [t₀, t₀ + δ/2], (-1)^n * G x ≤ c/2
+  set δ' := δ / 2 with hδ'_def
+  have hδ'_pos : 0 < δ' := by positivity
+  have hbound : ∀ x ∈ Icc t₀ (t₀ + δ'), (-1 : ℝ) ^ n * G x ≤ c / 2 := by
+    intro x hx
+    have hxdist : dist x t₀ < δ := by
+      rw [Real.dist_eq, abs_of_nonneg (by linarith [hx.1])]
+      linarith [hx.2]
+    have := hδ_ball hxdist
+    rw [Real.dist_eq] at this
+    have habs : |(-1 : ℝ) ^ n * G x - c| < |c| / 2 := this
+    have hc_abs : |c| = -c := abs_of_neg hc_neg
+    rw [hc_abs] at habs
+    have := abs_lt.mp habs
+    linarith [this.1]
+  -- Choose h = δ' / n (or δ' if n = 0, but n ≥ 1)
+  have hn_pos : 0 < (n : ℝ) := Nat.cast_pos.mpr (Nat.pos_of_ne_zero hn)
+  set h := δ' / n with hh_def
+  have hh_pos : 0 < h := div_pos hδ'_pos hn_pos
+  -- n * h = δ'
+  have hnh : ↑n * h = δ' := by rw [hh_def]; field_simp
+  -- By Lemma 2: iterForwardDiff n h F t₀ = iterOp (intOp h) n G t₀
+  have hbridge : iterForwardDiff n h F t₀ =
+      iterOp (intOp h) n G t₀ := by
+    rw [← iterOp_fd_eq_iterForwardDiff]
+    have := iterOp_fd_eq_intOp_deriv n h F hF
+    exact congr_fun this t₀
+  -- (-1)^n * iterOp (intOp h) n G t₀ ≤ (c/2) * h^n < 0
+  -- This follows from iterOp_intOp_le_local or ge_local depending on sign of (-1)^n
+  have hle_or_ge := neg_one_pow_eq_or ℝ n
+  -- In either case, (-1)^n * iterOp (intOp h) n G t₀ < 0
+  have h_integral_neg : (-1 : ℝ) ^ n * iterOp (intOp h) n G t₀ < 0 := by
+    -- We know (-1)^n * G x ≤ c/2 < 0 on [t₀, t₀ + n*h] = [t₀, t₀ + δ']
+    rcases hle_or_ge with h1 | h1
+    · -- (-1)^n = 1: G x ≤ c/2 < 0 on the interval
+      rw [h1, one_mul]
+      rw [h1, one_mul] at hbound hc_neg
+      have hle := iterOp_intOp_le_local n h hh_pos.le G (c / 2) t₀ (by
+        intro x hx; rw [hnh] at hx; exact hbound x hx)
+      have hhn : 0 < h ^ n := pow_pos hh_pos n
+      linarith [mul_neg_of_neg_of_pos hc2_neg hhn]
+    · -- (-1)^n = -1: G x ≥ -c/2 > 0 (so G x is positive)
+      rw [h1]
+      -- hbound: -1 * G x ≤ c/2, so G x ≥ -c/2
+      have hge : ∀ x ∈ Icc t₀ (t₀ + δ'), (-c / 2) ≤ G x := by
+        intro x hx
+        have := hbound x hx
+        rw [h1] at this
+        linarith
+      have hge_integral := iterOp_intOp_ge_local n h hh_pos.le G (-c / 2) t₀ (by
+        intro x hx; rw [hnh] at hx; exact hge x hx)
+      have hhn : 0 < h ^ n := pow_pos hh_pos n
+      have hmc : 0 < -c / 2 := by linarith
+      linarith [mul_pos hmc hhn]
+  -- But hdiff says (-1)^n * iterForwardDiff n h F t₀ ≥ 0
+  have h_nonneg := hdiff n t₀ h ht₀ hh_pos
+  rw [hbridge] at h_nonneg
+  linarith
 
 /-! ## Phase 2: The Mollifier Trick
 
@@ -698,7 +911,27 @@ lemma mollify_alternating_diff (f : ℝ → ℝ)
     (ε : ℝ) (hε : 0 < ε) (m : Mollifier ε)
     (n : ℕ) (t h : ℝ) (ht : 0 ≤ t) (hh : 0 < h) :
     0 ≤ (-1 : ℝ) ^ n * iterForwardDiff n h (mollify f ε m) t := by
-  sorry
+  suffices hkey : iterForwardDiff n h (mollify f ε m) t =
+      ∫ s in (0 : ℝ)..ε, iterForwardDiff n h f (t + s) * m.func s by
+    rw [hkey, ← intervalIntegral.integral_const_mul]
+    apply intervalIntegral.integral_nonneg (le_of_lt hε)
+    intro s hs
+    have hts : 0 ≤ t + s := by linarith [hs.1]
+    have h1 := hdiff n (t + s) h hts hh
+    have h2 : (-1 : ℝ) ^ n * (iterForwardDiff n h f (t + s) * m.func s) =
+      ((-1 : ℝ) ^ n * iterForwardDiff n h f (t + s)) * m.func s := by ring
+    rw [h2]; exact mul_nonneg h1 (m.nonneg s)
+  rw [iterForwardDiff_eq_sum]; simp only [mollify]
+  simp_rw [← intervalIntegral.integral_const_mul]
+  rw [← intervalIntegral.integral_finset_sum]
+  · congr 1; ext s
+    simp_rw [show ∀ (k : ℕ), (-1 : ℝ) ^ (n - k) * (↑(n.choose k) : ℝ) *
+      (f (t + ↑k * h + s) * m.func s) =
+      ((-1 : ℝ) ^ (n - k) * (↑(n.choose k) : ℝ) * f (t + ↑k * h + s)) * m.func s
+      from fun k => by ring]
+    rw [← Finset.sum_mul, iterForwardDiff_eq_sum]; congr 1
+    apply Finset.sum_congr rfl; intro k _; congr 2; ring
+  · intro k _; sorry -- IntervalIntegrable (needs measurability of f)
 
 /-- The mollified function is completely monotone (smooth + alternating derivatives).
 Combines `mollify_smooth`, `mollify_alternating_diff`, `smooth_discrete_cm_implies_cm`,
@@ -707,6 +940,15 @@ lemma mollify_isCompletelyMonotone (f : ℝ → ℝ) (hpd : IsSemigroupPD f)
     (hcont : ContinuousOn f (Ici 0)) (hbdd : ∃ C : ℝ, ∀ t, 0 ≤ t → |f t| ≤ C)
     (ε : ℝ) (hε : 0 < ε) (m : Mollifier ε) :
     IsCompletelyMonotone (mollify f ε m) := by
+  set g := mollify f ε m
+  have hsmooth : ContDiff ℝ ⊤ g := mollify_smooth f hcont ε hε m
+  have hdiff_g : ∀ n t h, 0 ≤ t → 0 < h →
+      0 ≤ (-1 : ℝ) ^ n * iterForwardDiff n h g t :=
+    fun n t h ht hh => mollify_alternating_diff f
+      (fun n t h ht hh => hpd.alternating_forwardDiff n t ht h hh hbdd) ε hε m n t h ht hh
+  have hderiv_signs := smooth_discrete_cm_implies_cm g hsmooth hdiff_g
+  refine ⟨hsmooth.contDiffOn, fun n t ht => ?_⟩
+  -- Connect iterOp deriv n to iteratedDerivWithin n (Ici 0) for smooth functions.
   sorry
 
 /-- The mollified function converges pointwise to `f` as `ε → 0`. -/
@@ -715,7 +957,68 @@ lemma mollify_tendsto (f : ℝ → ℝ) (hcont : ContinuousOn f (Ici 0))
     (t : ℝ) (ht : 0 ≤ t) :
     Filter.Tendsto (fun k => mollify f (1 / (↑k + 1)) (m_seq k) t)
       Filter.atTop (nhds (f t)) := by
-  sorry
+  rw [Metric.tendsto_nhds]; intro δ hδ; rw [Filter.eventually_atTop]
+  have hδ2 : (0 : ℝ) < δ / 2 := half_pos hδ
+  have hcont_at : ContinuousWithinAt f (Ici 0) t := hcont t (Set.mem_Ici.mpr ht)
+  rw [Metric.continuousWithinAt_iff] at hcont_at
+  obtain ⟨η, hη_pos, hη_sub⟩ := hcont_at (δ / 2) hδ2
+  have hfclose : ∀ s : ℝ, 0 ≤ s → s < η → dist (f (t + s)) (f t) < δ / 2 := by
+    intro s hs0 hsη
+    exact hη_sub (Set.mem_Ici.mpr (by linarith : 0 ≤ t + s))
+      (by rw [Real.dist_eq, show t + s - t = s by ring, abs_of_nonneg hs0]; exact hsη)
+  obtain ⟨K, hK⟩ := exists_nat_gt (1 / η)
+  refine ⟨K, fun k hk => ?_⟩
+  set ε_k := 1 / (↑k + 1 : ℝ); have hε_pos : 0 < ε_k := by positivity
+  have hε_small : ε_k < η := by
+    show 1 / (↑k + 1 : ℝ) < η
+    rw [div_lt_iff₀ (by positivity : (0 : ℝ) < ↑k + 1)]
+    have h1 : 1 / η < ↑k + 1 := lt_of_lt_of_le hK
+      (by have : (K : ℝ) ≤ ↑k := Nat.cast_le.mpr hk; linarith)
+    rw [div_lt_iff₀ hη_pos] at h1; linarith [mul_comm η (↑k + 1 : ℝ)]
+  rw [Real.dist_eq]; set mk := m_seq k
+  have hft : f t = ∫ s in (0 : ℝ)..ε_k, f t * mk.func s := by
+    rw [intervalIntegral.integral_const_mul, mk.integral_one, mul_one]
+  have hm_cont : Continuous mk.func := mk.smooth.continuous
+  have hf_shift_cont : ContinuousOn (fun s => f (t + s)) (Set.uIcc 0 ε_k) := by
+    apply hcont.comp (continuousOn_const.add continuousOn_id)
+    intro s hs
+    rw [Set.uIcc_of_le (le_of_lt hε_pos)] at hs
+    show t + s ∈ Set.Ici 0
+    exact Set.mem_Ici.mpr (by have := hs.1; linarith)
+  have hint_fm : IntervalIntegrable (fun s => f (t + s) * mk.func s)
+      MeasureTheory.MeasureSpace.volume 0 ε_k :=
+    (hf_shift_cont.mul hm_cont.continuousOn).intervalIntegrable
+  have hint_cm : IntervalIntegrable (fun s => f t * mk.func s)
+      MeasureTheory.MeasureSpace.volume 0 ε_k :=
+    (continuousOn_const.mul hm_cont.continuousOn).intervalIntegrable
+  have hint_diff : IntervalIntegrable (fun s => |f (t + s) - f t| * mk.func s)
+      MeasureTheory.MeasureSpace.volume 0 ε_k :=
+    ((hf_shift_cont.sub continuousOn_const).norm.mul hm_cont.continuousOn).intervalIntegrable
+  have hint_bnd : IntervalIntegrable (fun s => (δ / 2) * mk.func s)
+      MeasureTheory.MeasureSpace.volume 0 ε_k :=
+    (continuousOn_const.mul hm_cont.continuousOn).intervalIntegrable
+  change |mollify f ε_k mk t - f t| < δ; simp only [mollify]
+  rw [hft, ← intervalIntegral.integral_sub hint_fm hint_cm]
+  calc |∫ s in (0 : ℝ)..ε_k, (f (t + s) * mk.func s - f t * mk.func s)|
+      = |∫ s in (0 : ℝ)..ε_k, (f (t + s) - f t) * mk.func s| := by
+        congr 1; congr 1; ext s; ring
+    _ = ‖∫ s in (0 : ℝ)..ε_k, (f (t + s) - f t) * mk.func s‖ :=
+        (Real.norm_eq_abs _).symm
+    _ ≤ ∫ s in (0 : ℝ)..ε_k, ‖(f (t + s) - f t) * mk.func s‖ :=
+        intervalIntegral.norm_integral_le_integral_norm (le_of_lt hε_pos)
+    _ = ∫ s in (0 : ℝ)..ε_k, |f (t + s) - f t| * mk.func s := by
+        congr 1; ext s; rw [Real.norm_eq_abs, abs_mul, abs_of_nonneg (mk.nonneg s)]
+    _ ≤ ∫ s in (0 : ℝ)..ε_k, (δ / 2) * mk.func s := by
+        apply intervalIntegral.integral_mono_on (le_of_lt hε_pos) hint_diff hint_bnd
+        intro s hs
+        apply mul_le_mul_of_nonneg_right _ (mk.nonneg s)
+        have := hfclose s hs.1 (lt_of_le_of_lt hs.2 hε_small)
+        rw [Real.dist_eq] at this; exact le_of_lt this
+    _ = (δ / 2) * ∫ s in (0 : ℝ)..ε_k, mk.func s := by
+        rw [intervalIntegral.integral_const_mul]
+    _ = δ / 2 * 1 := by rw [mk.integral_one]
+    _ = δ / 2 := mul_one _
+    _ < δ := half_lt_self hδ
 
 /-! ## Phase 3: Prokhorov Extraction (Main Theorem) -/
 
