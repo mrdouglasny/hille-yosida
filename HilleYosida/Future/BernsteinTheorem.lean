@@ -268,13 +268,10 @@ lemma spatial_bochner_measures {d : ℕ} (F : ℝ → (Fin d → ℝ) → ℂ)
     -- (c) integral_map + integral_smul_measure for the measure transfer
     -- (d) mul_comm for ↑r * I = I * ↑r
     --
-    -- Connect charFun's inner product to our exponential sum.
-    -- The remaining steps are type-level plumbing:
-    -- (a) integral_smul_measure to scale by F(t,0).re
-    -- (b) integral_map through fromE/toE (WithLp.equiv)
-    -- (c) PiLp.inner_apply to expand ⟪x, y⟫ = ∑ x_i y_i
-    -- (d) mul_comm for ↑r * I = I * ↑r
-    -- All mathematically trivial, the content is fully proved above.
+    -- Remaining: type-level plumbing connecting charFun (inner product on
+    -- EuclideanSpace) to our exp(I * ∑ q_i a_i) formulation.
+    -- Uses: integral_smul_measure, integral_map, PiLp.inner_apply, mul_comm.
+    -- The mathematical content is fully proved above.
     sorry
 
 /-! ## Step 2: Temporal decomposition via BCR d=0
