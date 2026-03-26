@@ -30,29 +30,13 @@ measure μ is supported on `[0,∞) × ℝ^d`, and the Fourier integral
 -/
 
 import HilleYosida.StronglyContinuousSemigroup
-import HilleYosida.Bernstein
 import HilleYosida.FourierPD
-import Mathlib.MeasureTheory.Integral.Bochner.Basic
-import Mathlib.Analysis.InnerProductSpace.Basic
+import HilleYosida.SemigroupGroupDefs
+import HilleYosida.Future.BernsteinTheorem
 
 noncomputable section
 
 open MeasureTheory Complex Set Filter
-
-/-! ## Positive-Definite Functions on Involutive Semigroups -/
-
-/-- A function on `[0,∞) × ℝ^d` is positive-definite with respect to the
-involutive semigroup structure `(t, a)^* = (t, -a)`.
-
-This is the condition arising from OS reflection positivity (E2). -/
-def IsSemigroupGroupPD (d : ℕ)
-    (F : ℝ → (Fin d → ℝ) → ℂ) : Prop :=
-  ∀ (n : ℕ) (c : Fin n → ℂ) (ts : Fin n → ℝ) (as : Fin n → (Fin d → ℝ)),
-    (∀ i, 0 ≤ ts i) →
-    let q := ∑ i : Fin n, ∑ j : Fin n,
-      star (c i) * c j *
-        F (ts i + ts j) (as j - as i)
-    q.im = 0 ∧ 0 ≤ q.re
 
 /-! ## Bochner Representation Theorem (BCR 4.1.13) -/
 
@@ -85,11 +69,7 @@ theorem semigroupGroupBochner (d : ℕ)
           Complex.exp (-(↑(t * p.1) : ℂ)) *
             Complex.exp (Complex.I * ↑(∑ i : Fin d, p.2 i * a i))
           ∂μ := by
-  -- Proved in Future/BernsteinTheorem.lean as `semigroupGroupBochner_proof`.
-  -- Cannot import here due to circular dependency (BernsteinTheorem imports this file).
-  -- To verify: `lake build HilleYosida.Future.BernsteinTheorem` (0 sorrys).
-  -- Restructuring imports to eliminate this sorry is a TODO.
-  sorry
+  simpa using semigroupGroupBochner_proof d F hcont hbdd hpd
 
 /-! ## Group Extension from Bochner Representation
 

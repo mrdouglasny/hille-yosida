@@ -20,6 +20,8 @@ Proof route:
 -/
 
 import HilleYosida.Bernstein
+import Mathlib.Analysis.Calculus.BumpFunction.InnerProduct
+import Mathlib.Analysis.Calculus.BumpFunction.Normed
 import Mathlib.Analysis.Calculus.ContDiff.Convolution
 import Mathlib.Analysis.Calculus.IteratedDeriv.Defs
 import Mathlib.Data.Nat.Choose.Vandermonde
@@ -934,11 +936,42 @@ structure Mollifier (ε : ℝ) where
   nonneg : ∀ s, 0 ≤ func s
   integral_one : ∫ s in (0 : ℝ)..ε, func s = 1
 
-/-- Standard smooth bump functions exist for every `ε > 0`.
-
-Axiomatized: the construction (e.g., `exp(-1/(x(ε-x)))` normalized)
-is classical analysis infrastructure orthogonal to the PD theory. -/
-axiom mollifier_exists : ∀ (ε : ℝ), Mollifier ε
+/-- Standard smooth bump functions exist for every `ε > 0`. -/
+noncomputable def mollifier_exists (ε : ℝ) (hε : 0 < ε) : Mollifier ε := by
+  let φ : ContDiffBump (ε / 2 : ℝ) :=
+    ⟨ε / 4, ε / 2, by positivity, by nlinarith [hε]⟩
+  refine ⟨φ.normed volume, ?_, ?_, ?_, ?_⟩
+  · simpa using (φ.contDiff_normed (μ := volume) :
+      ContDiff ℝ (↑(⊤ : ℕ∞)) (φ.normed volume))
+  · intro s hs
+    have hs_not_mem_ball : s ∉ Metric.ball (ε / 2) (ε / 2) := by
+      intro hs_ball
+      have hs_abs : |s - ε / 2| < ε / 2 := by
+        simpa [Metric.mem_ball, Real.dist_eq] using hs_ball
+      apply hs
+      constructor
+      · have := abs_lt.mp hs_abs
+        nlinarith
+      · have := abs_lt.mp hs_abs
+        nlinarith
+    rw [← Function.notMem_support, φ.support_normed_eq (μ := volume)]
+    exact hs_not_mem_ball
+  · intro s
+    exact φ.nonneg_normed (μ := volume) s
+  · have hsupp : Function.support (φ.normed volume) ⊆ Set.Ioc 0 ε := by
+      intro s hs
+      rw [φ.support_normed_eq (μ := volume)] at hs
+      have hs_abs : |s - ε / 2| < ε / 2 := by
+        simpa [Metric.mem_ball, Real.dist_eq] using hs
+      constructor
+      · have := abs_lt.mp hs_abs
+        nlinarith
+      · have := abs_lt.mp hs_abs
+        nlinarith
+    calc
+      ∫ s in (0 : ℝ)..ε, φ.normed volume s = ∫ s, φ.normed volume s := by
+        exact intervalIntegral.integral_eq_integral_of_support_subset hsupp
+      _ = 1 := by simpa using (φ.integral_normed (μ := volume))
 
 /-- Convolution of `f` with a mollifier. Since `s ≥ 0`, `f` is only
 evaluated on `[0, ∞)`. -/
@@ -1246,7 +1279,7 @@ theorem semigroup_pd_laplace (f : ℝ → ℝ)
     fun n t ht h hh => hpd.alternating_forwardDiff n t ht h hh hbdd
   -- Step 2: Mollifier sequence (axiomatized: standard bump function construction)
   let m_seq : ∀ k : ℕ, Mollifier (1 / (↑k + 1 : ℝ)) :=
-    fun k => mollifier_exists (1 / (↑k + 1 : ℝ))
+    fun k => mollifier_exists (1 / (↑k + 1 : ℝ)) (by positivity)
   -- Step 3: Each mollified function is completely monotone
   let f_k := fun k => mollify f (1 / (↑k + 1)) (m_seq k)
   have hcm_k : ∀ k, IsCompletelyMonotone (f_k k) := fun k =>

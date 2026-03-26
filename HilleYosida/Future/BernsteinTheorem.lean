@@ -17,7 +17,7 @@ mrdouglasny/bochner) for the spatial decomposition.
 * Bernstein, "Sur les fonctions absolument monotones" (1928)
 -/
 
-import HilleYosida.SemigroupGroupExtension
+import HilleYosida.SemigroupGroupDefs
 import HilleYosida.BCR_d0
 import Bochner.Main
 import Mathlib.Analysis.Normed.Lp.MeasurableSpace
