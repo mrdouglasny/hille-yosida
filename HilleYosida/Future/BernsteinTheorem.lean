@@ -20,6 +20,7 @@ mrdouglasny/bochner) for the spatial decomposition.
 import HilleYosida.SemigroupGroupExtension
 import HilleYosida.BCR_d0
 import Bochner.Main
+import Mathlib.Analysis.Normed.Lp.MeasurableSpace
 
 noncomputable section
 
@@ -39,6 +40,80 @@ lemma spatial_slice_continuous {d : ℕ} {F : ℝ → (Fin d → ℝ) → ℂ}
   hcont.comp_continuous (continuous_const.prodMk continuous_id')
     (fun a => ⟨mem_Ici.mpr ht, mem_univ _⟩)
 
+/-- The spatial slice `a ↦ F(t, a)` is positive definite (group PD on ℝ^d).
+
+Proved by specializing `IsSemigroupGroupPD` with all times equal to `t/2`:
+then `tᵢ + tⱼ = t` and the quadratic form becomes the PD condition for `F(t, ·)`. -/
+lemma spatial_slice_pd {d : ℕ} {F : ℝ → (Fin d → ℝ) → ℂ}
+    (hpd : IsSemigroupGroupPD d F) (t : ℝ) (ht : 0 ≤ t) :
+    IsPositiveDefinite (fun a : Fin d → ℝ => F t a) where
+  hermitian := by
+    intro x
+    -- Need: F(t, -x) = conj(F(t, x))
+    -- Strategy: use IsSemigroupGroupPD with n=2, ts=[t/2,t/2], as=[0,x]
+    -- with c=[1,1] and c=[1,I] to extract Im and Re conditions.
+    --
+    -- First show F(t,0) is real
+    have h0_im : (F t 0).im = 0 := by
+      have h := hpd 1 ![1] ![t / 2] ![0] (by intro i; fin_cases i; simp; linarith)
+      simp only [Fin.sum_univ_one, Matrix.cons_val_zero, star_one, one_mul,
+        add_halves, sub_self] at h
+      exact h.1
+    -- Use n=2, ts=[t/2,t/2], as=[0,x], c=[1,1] for imaginary part
+    have h1 := hpd 2 ![1, 1] ![t / 2, t / 2] ![0, x]
+      (by intro i; fin_cases i <;> simp <;> linarith)
+    simp only [Fin.sum_univ_two, Matrix.cons_val_zero, Matrix.cons_val_one,
+      star_one, one_mul, add_halves] at h1
+    -- h1.1: Im(F(t,x-0) + F(t,0-x) + F(t,0) + F(t,0)) = 0
+    -- i.e., Im(F(t,x)) + Im(F(t,-x)) + 2·Im(F(t,0)) = 0
+    -- Since Im(F(t,0)) = 0: Im(F(t,x)) = -Im(F(t,-x))
+    -- Use n=2, ts=[t/2,t/2], as=[0,x], c=[1,I] for real part
+    have h2 := hpd 2 ![1, I] ![t / 2, t / 2] ![0, x]
+      (by intro i; fin_cases i <;> simp <;> linarith)
+    simp only [Fin.sum_univ_two, Matrix.cons_val_zero, Matrix.cons_val_one,
+      star_one, one_mul, add_halves] at h2
+    -- h2.1 gives: Im(... involving I * F terms ...) = 0
+    -- which extracts Re(F(t,x)) = Re(F(t,-x))
+    apply Complex.ext
+    · -- Real parts: Re(F(t,-x)) = Re(conj(F(t,x))) = Re(F(t,x))
+      rw [starRingEnd_apply, star_def, Complex.conj_re]
+      -- Work directly with h2.1:
+      -- (F t (0-0) + I * F t (x-0) + (star I * 1 * F t (0-x) + star I * I * F t (x-x))).im = 0
+      have key := h2.1
+      simp only [sub_zero, sub_self, mul_one] at key
+      rw [show (star I : ℂ) = -I from conj_I] at key
+      -- Now: (F t 0 + I * F t x + (-I * F t (-x) + -I * I * F t 0)).im = 0
+      have hII : -I * I = (1 : ℂ) := by rw [neg_mul, I_mul_I, neg_neg]
+      rw [hII, one_mul] at key
+      -- (F t 0 + I * F t x + (-I * F t (-x) + F t 0)).im = 0
+      -- Im(F t 0) + Im(I * F t x) + Im(-I * F t (-x)) + Im(F t 0) = 0
+      -- 0 + (F t x).re + (-(F t (-x)).re) + 0 = 0
+      -- So (F t x).re = (F t (-x)).re
+      have h_im_I_mul : ∀ z : ℂ, (I * z).im = z.re := by
+        intro z; simp [Complex.mul_im, I_re, I_im]
+      have h_im_negI_mul : ∀ z : ℂ, (-I * z).im = -z.re := by
+        intro z; simp [Complex.mul_im, I_re, I_im, neg_re, neg_im]
+      rw [show (0 : Fin d → ℝ) - x = -x from zero_sub x] at key
+      rw [Complex.add_im, Complex.add_im, Complex.add_im,
+        h_im_I_mul, h_im_negI_mul] at key
+      linarith [h0_im]
+    · -- Imaginary parts: Im(F(t,-x)) = Im(conj(F(t,x))) = -Im(F(t,x))
+      rw [starRingEnd_apply, star_def, Complex.conj_im]
+      -- From h1.1: (F t (0-0) + F t (x-0) + (F t (0-x) + F t (x-x))).im = 0
+      have key := h1.1
+      simp only [sub_zero, sub_self] at key
+      rw [show (0 : Fin d → ℝ) - x = -x from zero_sub x] at key
+      -- (F t 0 + F t x + (F t (-x) + F t 0)).im = 0
+      rw [Complex.add_im, Complex.add_im, Complex.add_im] at key
+      linarith [h0_im]
+  nonneg := by
+    intro m xs c
+    -- IsSemigroupGroupPD sums F(t, as_j - as_i); IsPositiveDefinite sums F(t, xs_i - xs_j).
+    -- Fix: use as = -xs, so as_j - as_i = (-xs_j) - (-xs_i) = xs_i - xs_j.
+    have h := hpd m c (fun _ => t / 2) (fun i => -xs i) (by intro i; linarith)
+    simp only [add_halves, neg_sub_neg] at h
+    exact h.2
+
 /-- Spatial Bochner measures exist with the Fourier property.
 
 For each t ≥ 0, there is a finite measure ν_t on ℝ^d such that
@@ -53,7 +128,167 @@ lemma spatial_bochner_measures {d : ℕ} (F : ℝ → (Fin d → ℝ) → ℂ)
     (hpd : IsSemigroupGroupPD d F) :
     ∀ t, 0 ≤ t → ∃ (ν : Measure (Fin d → ℝ)), IsFiniteMeasure ν ∧
       ∀ a, F t a = ∫ q, exp (I * ↑(∑ i : Fin d, q i * a i)) ∂ν := by
-  sorry
+  intro t ht
+  -- Step 1: The spatial slice is PD
+  have hpd_slice := spatial_slice_pd hpd t ht
+  have hcont_slice := spatial_slice_continuous hcont t ht
+  -- Step 2: Case split on F(t, 0)
+  by_cases h0 : F t 0 = 0
+  · -- Case F(t,0) = 0: by bounded_by_zero, F(t,·) ≡ 0. Take ν = 0.
+    refine ⟨0, inferInstance, fun a => ?_⟩
+    have : ‖F t a‖ ≤ (F t 0).re := hpd_slice.bounded_by_zero a
+    rw [h0] at this; simp at this
+    simp [this, integral_zero_measure]
+  · -- Case F(t,0) ≠ 0: normalize φ(a) = F(t,a)/F(t,0), then apply bochner_theorem.
+    -- F(t,0) is real and positive (from PD: re ≥ 0, im = 0, and ≠ 0)
+    have h0_re_pos : 0 < (F t 0).re := by
+      have hre := hpd_slice.eval_zero_nonneg
+      have him := hpd_slice.eval_zero_real
+      by_contra h_not_pos
+      push_neg at h_not_pos
+      have hre0 : (F t 0).re = 0 := le_antisymm h_not_pos hre
+      exfalso; apply h0
+      apply Complex.ext <;> simp [him, hre0]
+    have h0_ne : (F t 0) ≠ 0 := h0
+    -- F(t,0) is real: F(t,0) = ↑(F(t,0).re)
+    have h0_eq : F t 0 = ↑(F t 0).re := by
+      apply Complex.ext
+      · simp
+      · exact hpd_slice.eval_zero_real
+    -- F(t,0).re ≠ 0
+    have h0_re_ne : (F t 0).re ≠ 0 := ne_of_gt h0_re_pos
+    -- Define normalized PD function on EuclideanSpace
+    let toE : (Fin d → ℝ) → EuclideanSpace ℝ (Fin d) := WithLp.toLp 2
+    let fromE : EuclideanSpace ℝ (Fin d) → (Fin d → ℝ) := WithLp.equiv 2 _
+    let φ : EuclideanSpace ℝ (Fin d) → ℂ := fun a => F t (fromE a) / F t 0
+    -- φ is continuous
+    have hφ_cont : Continuous φ := by
+      exact (hcont_slice.comp (PiLp.continuousLinearEquiv 2 ℝ
+        (fun _ : Fin d => ℝ)).continuous).div_const _
+    -- φ is PD
+    have hφ_pd : IsPositiveDefinite φ := by
+      have hpd_fromE : IsPositiveDefinite (fun a : Fin d → ℝ => F t a) := hpd_slice
+      -- PD is preserved by composition with linear maps and by scalar multiplication
+      -- φ = (1/F(t,0)) * (F t ∘ fromE), and fromE is a linear equiv (in fact, id)
+      constructor
+      · intro x
+        show F t (fromE (-x)) / F t 0 = starRingEnd ℂ (F t (fromE x) / F t 0)
+        rw [map_div₀]
+        congr 1
+        · show F t (fromE (-x)) = (starRingEnd ℂ) (F t (fromE x))
+          rw [show fromE (-x) = -fromE x from rfl]
+          exact hpd_fromE.hermitian (fromE x)
+        · rw [show (starRingEnd ℂ) (F t 0) = F t 0 from by
+            rw [starRingEnd_apply, star_def]
+            rw [h0_eq]; simp [Complex.conj_ofReal]]
+      · intro m xs c
+        -- φ(xᵢ-xⱼ) = F(t, fromE(xᵢ-xⱼ))/F(t,0) = F(t, fromE xᵢ - fromE xⱼ)/F(t,0)
+        -- The PD sum is (1/F(t,0)) · ∑ c̄ᵢ cⱼ F(t, fromE xᵢ - fromE xⱼ)
+        -- PD of F(t,·) gives nonneg re; dividing by F(t,0).re > 0 preserves sign
+        -- Use IsPositiveDefinite.nonneg for the F t function
+        have h_pd_base := hpd_fromE.nonneg m (fun i => fromE (xs i)) c
+        -- The sum with φ = sum with F / F(t,0)
+        -- show: (∑ c̄ᵢ cⱼ φ(xᵢ-xⱼ)).re = (∑ c̄ᵢ cⱼ F(t,...)).re / |F(t,0)|²  * F(t,0).re
+        -- Since F(t,0) is real positive: simpler
+        -- ∑ c̄ᵢ cⱼ (F(t,...)/F(t,0)) = (∑ c̄ᵢ cⱼ F(t,...)) / F(t,0)
+        -- Rewrite with explicit unfolding of φ
+        -- φ(xs i - xs j) = F t (fromE(xs i) - fromE(xs j)) / F t 0
+        -- φ(xs i - xs j) = F(t, fromE(xs i - xs j)) / F(t, 0)
+        -- = F(t, fromE(xs i) - fromE(xs j)) / F(t, 0)
+        -- Pull (F t 0)⁻¹ out of the double sum
+        have hφ_unfold : ∀ i j : Fin m,
+            (starRingEnd ℂ) (c i) * c j * (φ (xs i - xs j)) =
+            (starRingEnd ℂ) (c i) * c j *
+              F t (fromE (xs i) - fromE (xs j)) * (F t 0)⁻¹ := by
+          intro i j
+          show _ * (F t _ / F t 0) = _
+          rw [show fromE (xs i - xs j) = fromE (xs i) - fromE (xs j) from rfl]
+          rw [div_eq_mul_inv]; ring
+        simp_rw [hφ_unfold]
+        simp_rw [← Finset.sum_mul]
+        -- Goal: (∑ᵢ (∑ⱼ c̄ᵢ cⱼ F(t,...)) * (F t 0)⁻¹).re ≥ 0
+        rw [h0_eq]
+        rw [show (↑(F t 0).re : ℂ)⁻¹ = (↑((F t 0).re⁻¹) : ℂ) from by push_cast; ring]
+        -- (z * ↑r).re = z.re * r
+        simp only [Complex.mul_re, Complex.ofReal_re, Complex.ofReal_im, mul_zero, sub_zero]
+        exact mul_nonneg h_pd_base (le_of_lt (inv_pos.mpr h0_re_pos))
+    -- φ(0) = 1
+    have hφ_zero : φ 0 = 1 := div_self h0
+    -- Apply bochner_theorem to get probability measure on EuclideanSpace
+    obtain ⟨μ_prob, hμ⟩ := bochner_theorem φ hφ_cont hφ_pd hφ_zero
+    obtain ⟨hμ_eq, _⟩ := hμ
+    -- hμ_eq : ∀ ξ, charFun (↑μ_prob) ξ = φ ξ
+    -- i.e., ∫ exp(⟪q, ξ⟫ * I) dμ_prob(q) = F(t, fromE ξ) / F(t, 0)
+    -- Transfer measure to Fin d → ℝ and scale by F(t,0).re
+    -- ν := F(t,0).re • μ_prob.map(fromE)
+    let μ_base : Measure (Fin d → ℝ) :=
+      (↑μ_prob : Measure (EuclideanSpace ℝ (Fin d))).map fromE
+    let ν_val : Measure (Fin d → ℝ) :=
+      ENNReal.ofReal (F t 0).re • μ_base
+    -- ν_val is a finite measure (probability measure mapped and scaled)
+    haveI : IsFiniteMeasure (↑μ_prob : Measure (EuclideanSpace ℝ (Fin d))) := inferInstance
+    have hν_fin : IsFiniteMeasure ν_val := by
+      constructor
+      show ENNReal.ofReal (F t 0).re • μ_base Set.univ < ⊤
+      apply ENNReal.mul_lt_top ENNReal.ofReal_lt_top
+      exact (measure_lt_top _ _)
+    refine ⟨ν_val, hν_fin, fun a => ?_⟩
+    -- Need: F t a = ∫ q, exp (I * ↑(∑ i, q i * a i)) ∂ν_val
+    -- Step 1: F t a = F(t,0) * φ(toE a)
+    have step1 : F t a = F t 0 * φ (toE a) := by
+      show F t a = F t 0 * (F t (fromE (toE a)) / F t 0)
+      rw [show fromE (toE a) = a from rfl]
+      rw [mul_div_cancel₀ _ h0_ne]
+    -- Step 2: φ(toE a) = charFun μ_prob (toE a)
+    have step2 : φ (toE a) = charFun (↑μ_prob : Measure _) (toE a) := (hμ_eq (toE a)).symm
+    -- Step 3: charFun uses inner product on EuclideanSpace
+    -- charFun μ ξ = ∫ x, exp (⟪x, ξ⟫ * I) ∂μ
+    -- For EuclideanSpace ℝ (Fin d): ⟪x, ξ⟫ = ∑ i, x i * ξ i (PiLp.inner_apply)
+    -- and (toE a) i = a i, (fromE x) i = x i
+    --
+    -- So charFun μ_prob (toE a) = ∫_E exp((∑ i, x i * a i) * I) dμ_prob(x)
+    -- The change of variables x = toE q, q = fromE x gives:
+    -- = ∫_{Fin d → ℝ} exp((∑ i, q i * a i) * I) dμ_base(q)
+    -- And (∑ q_i a_i) * I = I * (∑ q_i a_i) by commutativity.
+    --
+    -- Then F t a = F(t,0) * ∫ exp(I * ↑(∑ q_i a_i)) dμ_base
+    --            = ∫ exp(I * ↑(∑ q_i a_i)) d(F(t,0).re • μ_base)
+    -- since F(t,0) = ↑(F(t,0).re) and ∫ f d(c • μ) = c * ∫ f dμ.
+    --
+    -- Combine steps
+    rw [step1, step2, charFun_apply]
+    -- Goal: F t 0 * ∫ x : E, exp (⟪x, toE a⟫ * I) ∂↑μ_prob =
+    --       ∫ q, exp (I * ↑(∑ i, q i * a i)) ∂ν_val
+    -- Rewrite the integrand: ⟪x, toE a⟫ * I = I * ↑(∑ i, fromE x i * a i)
+    have h_integrand : ∀ x : EuclideanSpace ℝ (Fin d),
+        exp (@inner ℝ _ _ x (toE a) * I) =
+        exp (I * ↑(∑ i : Fin d, fromE x i * a i)) := by
+      intro x
+      congr 1
+      rw [PiLp.inner_apply]
+      simp only [RCLike.inner_apply, conj_trivial]
+      push_cast
+      ring
+    simp_rw [h_integrand]
+    -- Goal: F t 0 * ∫ x : E, exp (I * ↑(∑ i, fromE x i * a i)) ∂↑μ_prob =
+    --       ∫ q, exp (I * ↑(∑ i, q i * a i)) ∂ν_val
+    -- Change of variables: ∫_E f(x) dμ = ∫ f(toE q) d(μ.map fromE)
+    rw [show (fun x : EuclideanSpace ℝ (Fin d) =>
+        exp (I * ↑(∑ i : Fin d, fromE x i * a i))) =
+      (fun q : Fin d → ℝ => exp (I * ↑(∑ i : Fin d, q i * a i))) ∘ fromE from by
+        ext x; rfl]
+    rw [← integral_map (WithLp.measurable_ofLp 2 (Fin d → ℝ))
+      (by exact (Continuous.aestronglyMeasurable (by fun_prop)))]
+    -- Goal: F t 0 * ∫ q, exp (I * ...) dμ_base = ∫ q, exp (I * ...) dν_val
+    -- Scale: ν_val = ENNReal.ofReal (F t 0).re • μ_base
+    -- ∫ f d(c • μ) = c • ∫ f dμ  (for ENNReal scalar)
+    -- F(t,0) = ↑(F(t,0).re), so F(t,0) * ∫ = ↑(F(t,0).re) * ∫ = ∫ d(scaled)
+    show F t 0 * ∫ q, exp (I * ↑(∑ i, q i * a i)) ∂μ_base =
+      ∫ q, exp (I * ↑(∑ i, q i * a i)) ∂(ENNReal.ofReal (F t 0).re • μ_base)
+    rw [integral_smul_measure]
+    rw [h0_eq]
+    simp only [Complex.ofReal_re, ENNReal.toReal_ofReal h0_re_pos.le]
+    ring
 
 /-! ## Step 2: Temporal decomposition via BCR d=0
 
@@ -78,6 +313,20 @@ lemma spatial_measures_pd {d : ℕ} (F : ℝ → (Fin d → ℝ) → ℂ)
       F t a = ∫ q, exp (I * ↑(∑ i : Fin d, q i * a i)) ∂(ν t))
     (B : Set (Fin d → ℝ)) (hB : MeasurableSet B) :
     IsSemigroupPD (fun t => ((ν t) B).toReal) := by
+  -- The proof requires showing that for all n, c, ts with ts ≥ 0:
+  -- 0 ≤ Re(∑ᵢⱼ c̄ᵢ cⱼ ν_{tᵢ+tⱼ}(B))
+  --
+  -- For B = univ: ν_t(univ) = F(t, 0).re (from the Fourier representation with a=0),
+  -- and the semigroup PD of F gives the result directly.
+  --
+  -- For general B: the PD condition on F combined with the Fourier representation
+  -- F(t,a) = ∫ e^{i⟨a,q⟩} dν_t(q) gives, for any finite collection of test vectors:
+  --   ∑ᵢⱼ c̄ᵢ cⱼ F(tᵢ+tⱼ, aⱼ-aᵢ) = ∑ᵢⱼ c̄ᵢ cⱼ ∫ e^{i⟨aⱼ-aᵢ,q⟩} dν_{tᵢ+tⱼ}(q) ≥ 0
+  -- By choosing test functions a_k that approximate 1_B via Fourier inversion
+  -- (or by the Bochner integral characterization), one obtains PD for ν_t(B).
+  --
+  -- This approximation argument (Fourier characters → indicator functions) is
+  -- standard but requires significant measure-theoretic machinery. We defer it.
   sorry
 
 /-! ## Step 3: Product measure assembly
@@ -112,9 +361,25 @@ lemma product_measure_assembly {d : ℕ} (F : ℝ → (Fin d → ℝ) → ℂ)
           exp (-(↑(t * p.1) : ℂ)) *
             exp (I * ↑(∑ i : Fin d, p.2 i * a i))
           ∂μ := by
-  -- For each Borel B, semigroup_pd_laplace gives the Laplace decomposition:
-  -- ν_t(B) = ∫ e^{-tp} dσ_B(p)
-  -- The family {σ_B} defines a measure kernel, assembled into μ.
+  -- For each Borel B, `semigroup_pd_laplace` (from BCR_d0.lean) gives
+  -- a measure σ_B on [0,∞) with ν_t(B).toReal = ∫ e^{-tp} dσ_B(p).
+  --
+  -- The family {σ_B : B Borel} is a measure kernel from ([0,∞), Borel) to ℝ^d,
+  -- and defines a product measure μ on [0,∞) × ℝ^d via
+  --   μ(A × B) = σ_B(A) = ∫_A dσ_B
+  --
+  -- The Fourier-Laplace representation follows:
+  --   F(t,a) = ∫_q e^{i⟨a,q⟩} dν_t(q)           (spatial Bochner)
+  --          = ∫_q e^{i⟨a,q⟩} (∫_p e^{-tp} dσ_{δ_q}(p)) dν_t(q)  (temporal)
+  --          = ∫∫ e^{-tp} e^{i⟨a,q⟩} dμ(p,q)     (Fubini)
+  --
+  -- This requires:
+  -- (1) Continuity + boundedness of t ↦ ν_t(B).toReal (from spatial measure continuity)
+  -- (2) Measurability of the kernel construction
+  -- (3) Fubini-Tonelli to swap the integrals
+  --
+  -- The kernel construction from a consistent family of measures is standard
+  -- but requires Mathlib's measure kernel API. Deferred.
   sorry
 
 /-! ## Main theorem -/
