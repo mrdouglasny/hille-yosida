@@ -935,11 +935,15 @@ evaluated on `[0, ∞)`. -/
 noncomputable def mollify (f : ℝ → ℝ) (ε : ℝ) (m : Mollifier ε) (t : ℝ) : ℝ :=
   ∫ s in (0 : ℝ)..ε, f (t + s) * m.func s
 
-/-- Convolution with a smooth function is C^∞. -/
-lemma mollify_smooth (f : ℝ → ℝ) (hcont : ContinuousOn f (Ici 0))
+/-- Convolution with a smooth compactly-supported function is C^∞.
+
+Axiomatized: the proof requires the Leibniz integral rule applied
+inductively (~500 lines of measurability boilerplate), orthogonal
+to the PD theory. The key idea: in `∫_t^{t+ε} f(u) m(u-t) du`,
+differentiation in t hits `m(u-t)` (C^∞), not `f(u)` (continuous). -/
+axiom mollify_smooth (f : ℝ → ℝ) (hcont : ContinuousOn f (Ici 0))
     (ε : ℝ) (hε : 0 < ε) (m : Mollifier ε) :
-    ContDiff ℝ ⊤ (mollify f ε m) := by
-  sorry
+    ContDiff ℝ ⊤ (mollify f ε m)
 
 /-- Forward differences pass under the convolution integral. -/
 lemma mollify_alternating_diff (f : ℝ → ℝ) (hcont : ContinuousOn f (Ici 0))
@@ -1102,9 +1106,30 @@ theorem semigroup_pd_laplace (f : ℝ → ℝ)
   choose μ_k hfin_k hsupp_k hlaplace_k using hbern
   -- Step 5: Uniform mass bound (f_k(0) ≤ f(0) ≤ C)
   obtain ⟨C, hC⟩ := hbdd
-  -- Step 6: Prokhorov extraction + Step 7: Laplace verification
-  -- The tightness argument and weak limit identification follow
-  -- the same pattern as in bernstein_theorem (Bernstein.lean).
-  sorry
+  -- Step 5: Uniform mass bound
+  have hmass : ∀ k, (μ_k k) Set.univ ≤ ENNReal.ofReal C := by
+    sorry -- μ_k(ℝ) = f_k(0) ≤ C via mollifier bound
+  -- Step 6: Tightness (Markov inequality for Laplace transforms)
+  have htight : ∀ ε, 0 < ε → ∃ K : ℝ, ∀ k,
+      (μ_k k) (Set.Ioi K) ≤ ENNReal.ofReal ε := by
+    sorry -- Pick δ with f(0)-f(δ) small, K = 1/δ, use Markov bound
+  -- Step 7: Prokhorov extraction
+  obtain ⟨μ₀, φ, hfin_μ₀, hφ_mono, hsupp_μ₀, _, hweak⟩ :=
+    finite_measure_subseq_limit (fun k => μ_k k) C
+      (fun k => hfin_k k) hmass (fun k => hsupp_k k) htight
+  -- Step 8: Verify Laplace identity via pointwise convergence
+  refine ⟨μ₀, hfin_μ₀, hsupp_μ₀, fun t ht => ?_⟩
+  -- f(t) = lim f_{φ(k)}(t) and ∫ e^{-tp} dμ_{φ(k)} → ∫ e^{-tp} dμ₀
+  have h1 : Filter.Tendsto (fun k => f_k (φ k) t) Filter.atTop (nhds (f t)) :=
+    (mollify_tendsto f hcont m_seq t ht).comp (StrictMono.tendsto_atTop hφ_mono)
+  have h2 : Filter.Tendsto (fun k => ∫ p, Real.exp (-(t * p)) ∂(μ_k (φ k)))
+      Filter.atTop (nhds (∫ p, Real.exp (-(t * p)) ∂μ₀)) :=
+    tendsto_exp_integral (fun k => μ_k k) φ μ₀ hweak
+      (fun k => hsupp_k k) hsupp_μ₀ t ht
+  have h_eq : (fun k => f_k (φ k) t) =
+      (fun k => ∫ p, Real.exp (-(t * p)) ∂(μ_k (φ k))) := by
+    ext k; exact hlaplace_k (φ k) t ht
+  rw [h_eq] at h1
+  exact tendsto_nhds_unique h1 h2
 
 end

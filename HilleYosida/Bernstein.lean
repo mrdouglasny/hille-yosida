@@ -1345,7 +1345,7 @@ private lemma integral_exp_bcf_eq {μ : Measure ℝ} (hsupp : μ (Set.Iio 0) = 0
   by_contra h; push_neg at h
   exact hp (exp_bcf_eq x hx p h)
 
-private lemma finite_measure_subseq_limit
+lemma finite_measure_subseq_limit
     (σ : ℕ → Measure ℝ) (C : ℝ)
     (hfin : ∀ n, IsFiniteMeasure (σ n))
     (hmass : ∀ n, (σ n) Set.univ ≤ ENNReal.ofReal C)
@@ -1844,7 +1844,7 @@ private lemma finite_measure_subseq_limit
 
 /-- Weak convergence of `e^{-xp}` integrals for measures supported on `[0,∞)`,
 via the bounded continuous surrogate `exp_bcf`. -/
-private lemma tendsto_exp_integral
+lemma tendsto_exp_integral
     (σ : ℕ → Measure ℝ) (φ : ℕ → ℕ) (μ₀ : Measure ℝ)
     (hweak : ∀ (g : BoundedContinuousFunction ℝ ℝ),
       Tendsto (fun k => ∫ p, g p ∂(σ (φ k))) atTop (nhds (∫ p, g p ∂μ₀)))
