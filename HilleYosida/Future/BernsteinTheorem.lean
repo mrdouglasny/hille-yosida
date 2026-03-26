@@ -22,6 +22,7 @@ import HilleYosida.BCR_d0
 import Bochner.Main
 import Mathlib.Analysis.Normed.Lp.MeasurableSpace
 import Mathlib.MeasureTheory.Integral.RieszMarkovKakutani.Real
+import Mathlib.MeasureTheory.Measure.HasOuterApproxClosed
 import Mathlib.Topology.ContinuousMap.Weierstrass
 
 noncomputable section
@@ -196,6 +197,191 @@ private lemma laplacePushforwardUnit_eq_map_onIci
       congr 1
       ext x
       simp [Function.comp, expNegOnIci, expNegToUnitInterval]
+
+  private lemma unitInterval_measure_unique_of_moments_eq
+    (μ ν : Measure (Set.Icc (0 : ℝ) 1)) [IsFiniteMeasure μ] [IsFiniteMeasure ν]
+    (hm : ∀ n : ℕ,
+      ∫ x : Set.Icc (0 : ℝ) 1, (x : ℝ) ^ n ∂μ =
+        ∫ x : Set.Icc (0 : ℝ) 1, (x : ℝ) ^ n ∂ν) :
+    μ = ν := by
+  apply MeasureTheory.ext_of_forall_integral_eq_of_IsFiniteMeasure
+  intro g
+  let f : C(Set.Icc (0 : ℝ) 1, ℝ) := g.toContinuousMap
+  apply eq_of_forall_dist_le
+  intro ε hε
+  let M : ℝ := μ.real Set.univ + ν.real Set.univ + 1
+  have hM_pos : 0 < M := by
+    dsimp [M]
+    positivity
+  obtain ⟨p, hp⟩ :=
+    exists_polynomial_near_continuousMap 0 1 f (ε / (2 * M)) (by positivity)
+  let gp : BoundedContinuousFunction (Set.Icc (0 : ℝ) 1) ℝ :=
+    (ContinuousMap.equivBoundedOfCompact (Set.Icc (0 : ℝ) 1) ℝ)
+      (p.toContinuousMapOn (Set.Icc (0 : ℝ) 1))
+  have hg_eq :
+      (ContinuousMap.equivBoundedOfCompact (Set.Icc (0 : ℝ) 1) ℝ) f = g := by
+    ext x
+    rfl
+  have hnorm' :
+      ‖gp - g‖ < ε / (2 * M) := by
+    rw [← hg_eq]
+    simpa [gp, f] using hp
+  have hnorm :
+      ‖g - gp‖ < ε / (2 * M) := by
+    simpa [norm_sub_rev] using hnorm'
+  have hpoly :
+      ∫ x, gp x ∂μ = ∫ x, gp x ∂ν := by
+    simpa [gp] using poly_integral_eq_of_moments_eq μ ν hm p
+  have hμdist :
+      dist (∫ x, g x ∂μ) (∫ x, gp x ∂μ) ≤ μ.real Set.univ * ‖g - gp‖ := by
+    have h0 := BoundedContinuousFunction.norm_integral_le_mul_norm (μ := μ) (g - gp)
+    simpa [Real.dist_eq, integral_sub (g.integrable μ) (gp.integrable μ)] using h0
+  have hνdist :
+      dist (∫ x, g x ∂ν) (∫ x, gp x ∂ν) ≤ ν.real Set.univ * ‖g - gp‖ := by
+    have h0 := BoundedContinuousFunction.norm_integral_le_mul_norm (μ := ν) (g - gp)
+    simpa [Real.dist_eq, integral_sub (g.integrable ν) (gp.integrable ν)] using h0
+  have hμlt : dist (∫ x, g x ∂μ) (∫ x, gp x ∂μ) < ε / 2 := by
+    have hmass : μ.real Set.univ ≤ M := by
+      dsimp [M]
+      have hν_nonneg : 0 ≤ ν.real Set.univ := by positivity
+      linarith
+    have hmul :
+        M * ‖g - gp‖ < M * (ε / (2 * M)) := by
+      exact mul_lt_mul_of_pos_left hnorm hM_pos
+    have hbound : μ.real Set.univ * ‖g - gp‖ ≤ M * ‖g - gp‖ := by
+      exact mul_le_mul_of_nonneg_right hmass (norm_nonneg _)
+    calc
+      dist (∫ x, g x ∂μ) (∫ x, gp x ∂μ) ≤ μ.real Set.univ * ‖g - gp‖ := hμdist
+      _ ≤ M * ‖g - gp‖ := hbound
+      _ < M * (ε / (2 * M)) := hmul
+      _ = ε / 2 := by
+        field_simp [hM_pos.ne']
+  have hνlt : dist (∫ x, g x ∂ν) (∫ x, gp x ∂ν) < ε / 2 := by
+    have hmass : ν.real Set.univ ≤ M := by
+      dsimp [M]
+      have hμ_nonneg : 0 ≤ μ.real Set.univ := by positivity
+      linarith
+    have hmul :
+        M * ‖g - gp‖ < M * (ε / (2 * M)) := by
+      exact mul_lt_mul_of_pos_left hnorm hM_pos
+    have hbound : ν.real Set.univ * ‖g - gp‖ ≤ M * ‖g - gp‖ := by
+      exact mul_le_mul_of_nonneg_right hmass (norm_nonneg _)
+    calc
+      dist (∫ x, g x ∂ν) (∫ x, gp x ∂ν) ≤ ν.real Set.univ * ‖g - gp‖ := hνdist
+      _ ≤ M * ‖g - gp‖ := hbound
+      _ < M * (ε / (2 * M)) := hmul
+      _ = ε / 2 := by
+        field_simp [hM_pos.ne']
+  exact le_of_lt <| calc
+    dist (∫ x, g x ∂μ) (∫ x, g x ∂ν)
+        ≤ dist (∫ x, g x ∂μ) (∫ x, gp x ∂μ) + dist (∫ x, gp x ∂μ) (∫ x, g x ∂ν) :=
+          dist_triangle _ _ _
+    _ = dist (∫ x, g x ∂μ) (∫ x, gp x ∂μ) + dist (∫ x, gp x ∂ν) (∫ x, g x ∂ν) := by
+          rw [hpoly]
+    _ < ε / 2 + ε / 2 := add_lt_add hμlt (by simpa [dist_comm] using hνlt)
+    _ = ε := by ring
+
+private lemma laplace_measure_unique
+    (μ ν : Measure ℝ) [IsFiniteMeasure μ] [IsFiniteMeasure ν]
+    (hμsupp : μ (Set.Iio 0) = 0) (hνsupp : ν (Set.Iio 0) = 0)
+    (h_eq : ∀ t, 0 ≤ t → ∫ p : ℝ, Real.exp (-(t * p)) ∂μ =
+      ∫ p : ℝ, Real.exp (-(t * p)) ∂ν) :
+    μ = ν := by
+  haveI : IsFiniteMeasure (laplacePushforwardUnit μ) := by
+    unfold laplacePushforwardUnit
+    infer_instance
+  haveI : IsFiniteMeasure (laplacePushforwardUnit ν) := by
+    unfold laplacePushforwardUnit
+    infer_instance
+  have hpush :
+      laplacePushforwardUnit μ = laplacePushforwardUnit ν :=
+    unitInterval_measure_unique_of_moments_eq
+      (laplacePushforwardUnit μ) (laplacePushforwardUnit ν)
+      (laplacePushforwardUnit_moments_eq_of_laplace_eq μ ν hμsupp hνsupp h_eq)
+  have hcomap :
+      μ.comap (fun x : Set.Ici (0 : ℝ) => (x : ℝ)) =
+        ν.comap (fun x : Set.Ici (0 : ℝ) => (x : ℝ)) := by
+    apply (MeasurableEmbedding.map_injective measurableEmbedding_expNegOnIci)
+    simpa [laplacePushforwardUnit_eq_map_onIci μ hμsupp,
+      laplacePushforwardUnit_eq_map_onIci ν hνsupp] using hpush
+  have hrestrict :
+      μ.restrict (Set.Ici 0) = ν.restrict (Set.Ici 0) := by
+    have hmap := congrArg (Measure.map (fun x : Set.Ici (0 : ℝ) => (x : ℝ))) hcomap
+    rw [map_comap_subtype_coe measurableSet_Ici, map_comap_subtype_coe measurableSet_Ici] at hmap
+    exact hmap
+  calc
+    μ = μ.restrict (Set.Ici 0) := (restrict_eq_self_of_support_nonneg μ hμsupp).symm
+    _ = ν.restrict (Set.Ici 0) := hrestrict
+    _ = ν := restrict_eq_self_of_support_nonneg ν hνsupp
+
+private lemma laplace_kernel_integrable
+    (μ : Measure ℝ) [IsFiniteMeasure μ] (hμsupp : μ (Set.Iio 0) = 0)
+    {t : ℝ} (ht : 0 ≤ t) :
+    Integrable (fun p : ℝ => Real.exp (-(t * p))) μ := by
+  refine MeasureTheory.Integrable.mono' (integrable_const (1 : ℝ)) ?_ ?_
+  · exact (Real.continuous_exp.comp (continuous_const.mul continuous_id').neg).aestronglyMeasurable
+  · have h_nonneg_ae : ∀ᵐ p ∂μ, 0 ≤ p := by
+      refine ae_iff.2 ?_
+      simpa [not_le] using hμsupp
+    filter_upwards [h_nonneg_ae] with p hp
+    have hle : Real.exp (-(t * p)) ≤ 1 := by
+      apply (Real.exp_le_one_iff).2
+      nlinarith [mul_nonneg ht hp]
+    have hnonneg : 0 ≤ Real.exp (-(t * p)) := by positivity
+    rw [Real.norm_eq_abs, abs_of_nonneg hnonneg]
+    exact hle
+
+private structure TemporalSliceRep {d : ℕ}
+    (ν : ℝ → Measure (Fin d → ℝ)) (B : Set (Fin d → ℝ)) where
+  σ : Measure ℝ
+  finite : IsFiniteMeasure σ
+  support : σ (Set.Iio 0) = 0
+  laplace : ∀ t, 0 ≤ t → ((ν t) B).toReal = ∫ p, Real.exp (-(t * p)) ∂σ
+
+attribute [instance] TemporalSliceRep.finite
+
+private noncomputable def temporalSliceRepOf {d : ℕ}
+    (ν : ℝ → Measure (Fin d → ℝ)) (B : Set (Fin d → ℝ))
+    (hpdB : IsSemigroupPD (fun t => ((ν t) B).toReal))
+    (hcontB : ContinuousOn (fun t => ((ν t) B).toReal) (Set.Ici 0))
+    (hbddB : ∃ C : ℝ, ∀ t, 0 ≤ t → |((ν t) B).toReal| ≤ C) :
+    TemporalSliceRep ν B := by
+  classical
+  let hslice := semigroup_pd_laplace (fun t => ((ν t) B).toReal) hpdB hcontB hbddB
+  refine ⟨Classical.choose hslice, ?_, ?_, ?_⟩
+  · exact (Classical.choose_spec hslice).1
+  · exact (Classical.choose_spec hslice).2.1
+  · exact (Classical.choose_spec hslice).2.2
+
+private lemma TemporalSliceRep.measure_eq {d : ℕ}
+    {ν : ℝ → Measure (Fin d → ℝ)} {B : Set (Fin d → ℝ)}
+    (r₁ r₂ : TemporalSliceRep ν B) :
+    r₁.σ = r₂.σ := by
+  haveI := r₁.finite
+  haveI := r₂.finite
+  exact laplace_measure_unique r₁.σ r₂.σ r₁.support r₂.support (fun t ht => by
+    rw [← r₁.laplace t ht, ← r₂.laplace t ht])
+
+private lemma TemporalSliceRep.union_eq {d : ℕ}
+    {ν : ℝ → Measure (Fin d → ℝ)}
+    (hν : ∀ t, 0 ≤ t → IsFiniteMeasure (ν t))
+    {B₁ B₂ : Set (Fin d → ℝ)} (hB₂ : MeasurableSet B₂) (hdisj : Disjoint B₁ B₂)
+    (r₁ : TemporalSliceRep ν B₁) (r₂ : TemporalSliceRep ν B₂)
+    (r₁₂ : TemporalSliceRep ν (B₁ ∪ B₂)) :
+    r₁₂.σ = r₁.σ + r₂.σ := by
+  haveI := r₁.finite
+  haveI := r₂.finite
+  haveI : IsFiniteMeasure (r₁.σ + r₂.σ) := by infer_instance
+  apply laplace_measure_unique r₁₂.σ (r₁.σ + r₂.σ) r₁₂.support
+  · simp [Measure.add_apply, measurableSet_Iio, r₁.support, r₂.support]
+  · intro t ht
+    haveI := hν t ht
+    rw [← r₁₂.laplace t ht, integral_add_measure
+      (laplace_kernel_integrable r₁.σ r₁.support ht)
+      (laplace_kernel_integrable r₂.σ r₂.support ht),
+      ← r₁.laplace t ht, ← r₂.laplace t ht]
+    rw [measure_union hdisj hB₂, ENNReal.toReal_add]
+    all_goals simp [measure_ne_top]
 
 /-! ## Step 1: Spatial Bochner measures
 
@@ -1252,6 +1438,47 @@ theorem spatial_measures_pd {d : ℕ} (F : ℝ → (Fin d → ℝ) → ℂ)
     spatial_measures_pd_real F hpd ν hν hνF B (fun i => (c i).im) ts hts
   rw [hsplit, hsplit']
   linarith
+
+private lemma spatial_measure_total_mass_eq_re_zero {d : ℕ}
+    (F : ℝ → (Fin d → ℝ) → ℂ)
+    (ν : ℝ → Measure (Fin d → ℝ))
+    (hν : ∀ t, 0 ≤ t → IsFiniteMeasure (ν t))
+    (hνF : ∀ t, 0 ≤ t → ∀ a,
+      F t a = ∫ q, exp (I * ↑(∑ i : Fin d, q i * a i)) ∂(ν t))
+    {t : ℝ} (ht : 0 ≤ t) :
+    ((ν t) Set.univ).toReal = (F t 0).re := by
+  haveI := hν t ht
+  have h0 := hνF t ht 0
+  simp [Measure.real] at h0
+  have h0re : (F t 0).re = ((ν t) Set.univ).toReal := by
+    have h0re' : (F t 0).re = (((ν t) Set.univ).toReal • (1 : ℂ)).re := by
+      exact congrArg Complex.re h0
+    simpa using h0re'
+  exact h0re.symm
+
+private lemma spatial_slice_bounded {d : ℕ}
+    (F : ℝ → (Fin d → ℝ) → ℂ)
+    (hbdd : ∃ C : ℝ, ∀ t a, 0 ≤ t → ‖F t a‖ ≤ C)
+    (ν : ℝ → Measure (Fin d → ℝ))
+    (hν : ∀ t, 0 ≤ t → IsFiniteMeasure (ν t))
+    (hνF : ∀ t, 0 ≤ t → ∀ a,
+      F t a = ∫ q, exp (I * ↑(∑ i : Fin d, q i * a i)) ∂(ν t))
+    (B : Set (Fin d → ℝ)) :
+    ∃ C : ℝ, ∀ t, 0 ≤ t → |((ν t) B).toReal| ≤ C := by
+  obtain ⟨C, hC⟩ := hbdd
+  refine ⟨C, ?_⟩
+  intro t ht
+  haveI := hν t ht
+  have hmono :
+      ((ν t) B).toReal ≤ ((ν t) Set.univ).toReal := by
+    exact (ENNReal.toReal_le_toReal (measure_ne_top (ν t) B)
+      (measure_ne_top (ν t) Set.univ)).2 (measure_mono (Set.subset_univ B))
+  calc
+    |((ν t) B).toReal| = ((ν t) B).toReal := abs_of_nonneg ENNReal.toReal_nonneg
+    _ ≤ ((ν t) Set.univ).toReal := hmono
+    _ = (F t 0).re := spatial_measure_total_mass_eq_re_zero F ν hν hνF ht
+    _ ≤ ‖F t 0‖ := Complex.re_le_norm _
+    _ ≤ C := hC t 0 ht
 
 /-! ## Step 3: Product measure assembly
 
