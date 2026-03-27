@@ -1,4 +1,4 @@
-# `Bernstein.lean` — Informal Summary
+# `Bernstein.lean` -- Informal Summary
 
 > **Source**: [`HilleYosida/Bernstein.lean`](../../HilleYosida/Bernstein.lean)
 > **Generated**: 2026-03-27
@@ -6,48 +6,90 @@
 
 ## Overview
 
-This file proves **Bernstein's theorem** (1928): every completely monotone function on $[0,\infty)$ is the Laplace transform of a finite positive measure on $[0,\infty)$. The proof follows the Chafai (2013) approach: Taylor integral remainders produce approximating measures $\tilde\sigma_n$ whose kernels $(1 - xp/(n{-}1))_+^{n-1}$ converge pointwise to $e^{-xp}$; Prokhorov's theorem extracts a weak limit $\mu$, and diagonal convergence yields $f(x) = \int e^{-xp}\,d\mu(p)$.
+Main results of Bernstein's theorem (1928): every completely monotone function on $[0,\infty)$ is the Laplace transform of a finite positive measure on $[0,\infty)$. The proof follows Chafai (2013). Taylor integral remainders produce approximating measures $\tilde\sigma_n$ whose kernels $(1 - xp/(n{-}1))_+^{n-1}$ converge pointwise to $e^{-xp}$; Prokhorov's theorem extracts a weak limit $\mu$, and diagonal convergence yields $f(x) = \int e^{-xp}\,\mathrm{d}\mu(p)$. This file re-exports and combines lemmas from `BernsteinBasic`, `BernsteinMeasures`, and `BernsteinChafai`.
 
 ## Status
 
-**Main result**: Fully proven (0 `sorry`'s in proof terms)
-None --- file is sorry-free.
-**Length**: 2454 lines, 5 definitions + 50 theorems/lemmas
+| Metric | Value |
+|--------|-------|
+| Lines | 132 |
+| Definitions | 0 |
+| Theorems/lemmas | 3 |
+| `sorry` count | 0 |
 
 ---
 
-## Key declarations
+## Declarations (source order)
 
-### `IsCompletelyMonotone` (line 39) --- Definition
-A function $f : \mathbb{R} \to \mathbb{R}$ is completely monotone on $[0,\infty)$ if it is $C^\infty$ on $[0,\infty)$ and $(-1)^n f^{(n)}(t) \ge 0$ for all $n \in \mathbb{N}$, $t \ge 0$. Widder's definition.
+### [`cm_prokhorov_and_verify`](../../HilleYosida/Bernstein.lean#L48) -- Lemma
 
-### `taylor_integral_remainder` (line 104) --- Theorem
-For $f \in C^{n+1}([a,b])$: $f(b) - T_n(a,b) = \int_a^b \frac{(b-t)^n}{n!} f^{(n+1)}(t)\,dt$. Sorry-free; key ingredient for the Taylor-based measure construction.
+**Prokhorov extraction + Laplace verification** (Chafai 2013). Given a completely monotone function $f$ with $f(t)\to L\ge 0$, assuming finite-mass bounds and support conditions on the approximating measures $\tilde\sigma_n$, produces a finite positive measure $\mu_0$ supported on $[0,\infty)$ with
+$$f(t) = L + \int_0^\infty e^{-tp}\,\mathrm{d}\mu_0(p)$$
+for all $t\ge 0$.
 
-### `IsCompletelyMonotone.tendsto_atTop` (line 140) --- Lemma
-A CM function has a limit $L \ge 0$ at infinity (antitone + bounded below).
+**Signature**:
+```
+lemma cm_prokhorov_and_verify (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
+    (L : ℝ) (hL : Filter.Tendsto f Filter.atTop (nhds L))
+    (hL_nn : 0 ≤ L)
+    (hmass : ∀ n, 2 ≤ n → IsFiniteMeasure (cm_measure f n) ∧
+      (cm_measure f n) Set.univ ≤ ENNReal.ofReal (f 0 - L))
+    (hsupp : ∀ n, 2 ≤ n → (cm_rescaled f n) (Set.Iio 0) = 0) :
+    ∃ (μ₀ : Measure ℝ), IsFiniteMeasure μ₀ ∧ μ₀ (Set.Iio 0) = 0 ∧
+      ∀ t, 0 ≤ t →
+        f t = L + ∫ p, Real.exp (-(t * p)) ∂μ₀
+```
 
-### `bernstein_kernel` (line 420) --- Definition
-$\varphi_n(x,p) = \max(1 - xp/(n{-}1),\, 0)^{n-1}$ for $n \ge 2$; the rescaled Taylor kernel.
-
-### `bernstein_kernel_tendsto` (line 430) --- Lemma
-$\varphi_n(x,p) \to e^{-xp}$ as $n \to \infty$ for $x, p \ge 0$, via `Real.tendsto_one_add_div_pow_exp`.
-
-### `cm_measure_finite_mass` (line 620) --- Lemma
-The $n$-th approximating measure $\sigma_n$ has total mass $\le f(0) - L$, proved by IBP recursion with nonpositive boundary terms from the CM sign condition.
-
-### `chafai_identity` (line 1260) --- Lemma
-$f(x) - L = \int \varphi_n(x,p)\,d\tilde\sigma_n(p)$ for each fixed $n \ge 2$ and $x \ge 0$. Combines `chafai_kernel_density_eq` (change of variables) with `chafai_repeated_ibp` (boundary decay).
-
-### `finite_measure_subseq_limit` (line 1358) --- Lemma
-Prokhorov extraction: a sequence of finite measures on $[0,\infty)$ with uniformly bounded mass admits a weakly convergent subsequence.
-
-### `cm_laplace_representation` (line 2409) --- Theorem
-For a CM function $f$ with $f(t) \to L \ge 0$: there exists a finite positive measure $\mu_0$ on $[0,\infty)$ with $f(t) = L + \int e^{-tp}\,d\mu_0(p)$.
-
-### `bernstein_theorem` (line 2429) --- Theorem
-**Main result.** Every completely monotone $f$ on $[0,\infty)$ is $f(t) = \int e^{-tp}\,d\mu(p)$ for a finite positive measure $\mu$ supported on $[0,\infty)$. Packages `cm_laplace_representation` with $\mu = \mu_0 + L \cdot \delta_0$.
+**Proof uses**:
+[`chafai_identity`](../../HilleYosida/BernsteinChafai.lean#L575),
+[`prokhorov_limit_identification`](../../HilleYosida/BernsteinChafai.lean#L1447).
 
 ---
 
-*This file has **5** definitions and **50** theorems/lemmas (0 with sorry).*
+### [`cm_laplace_representation`](../../HilleYosida/Bernstein.lean#L87) -- Theorem
+
+**CM Laplace representation.** For a completely monotone function $f$ with $f(t)\to L\ge 0$ at infinity, there exists a finite positive measure $\mu_0$ on $[0,\infty)$ such that
+$$f(t) = L + \int_0^\infty e^{-tp}\,\mathrm{d}\mu_0(p)$$
+for all $t\ge 0$. Discharges the mass and support hypotheses of `cm_prokhorov_and_verify` using [`cm_measure_finite_mass`](../../HilleYosida/BernsteinMeasures.lean#L405) and `cm_rescaled_Iio_zero`.
+
+**Signature**:
+```
+theorem cm_laplace_representation (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
+    (L : ℝ) (hL : Filter.Tendsto f Filter.atTop (nhds L)) (hL_nn : 0 ≤ L) :
+    ∃ (μ₀ : Measure ℝ), IsFiniteMeasure μ₀ ∧ μ₀ (Set.Iio 0) = 0 ∧
+      ∀ t, 0 ≤ t → f t = L + ∫ p, Real.exp (-(t * p)) ∂μ₀
+```
+
+**Proof uses**:
+[`cm_measure_finite_mass`](../../HilleYosida/BernsteinMeasures.lean#L405),
+`cm_rescaled_Iio_zero`,
+[`cm_prokhorov_and_verify`](../../HilleYosida/Bernstein.lean#L48).
+
+---
+
+### [`bernstein_theorem`](../../HilleYosida/Bernstein.lean#L107) -- Theorem
+
+**Main result.** Every completely monotone function $f$ on $[0,\infty)$ admits a representation
+$$f(t) = \int_0^\infty e^{-tp}\,\mathrm{d}\mu(p)$$
+for a finite positive measure $\mu$ supported on $[0,\infty)$. The proof first obtains $L\ge 0$ and the decomposition $f = L + \mathcal{L}[\mu_0]$ from `cm_laplace_representation`, then packages $\mu = \mu_0 + L\cdot\delta_0$ via [`bernstein_packaging`](../../HilleYosida/BernsteinMeasures.lean#L146).
+
+**Signature**:
+```
+theorem bernstein_theorem (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f) :
+    ∃ (μ : Measure ℝ),
+      IsFiniteMeasure μ ∧
+      μ (Set.Iio 0) = 0 ∧
+      ∀ (t : ℝ), 0 ≤ t →
+        f t = ∫ p, Real.exp (-(t * p)) ∂μ
+```
+
+**Proof uses**:
+[`IsCompletelyMonotone.tendsto_atTop`](../../HilleYosida/BernsteinBasic.lean#L137),
+`IsCompletelyMonotone.neg_deriv_integrableOn`,
+`IsCompletelyMonotone.integral_Ioi_neg_deriv`,
+[`cm_laplace_representation`](../../HilleYosida/Bernstein.lean#L87),
+[`bernstein_packaging`](../../HilleYosida/BernsteinMeasures.lean#L146).
+
+---
+
+*This file has **0** definitions and **3** theorems/lemmas (0 with sorry).*
