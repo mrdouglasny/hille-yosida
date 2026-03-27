@@ -1603,17 +1603,91 @@ formalization infrastructure not yet available.
 The old monolithic `product_measure_assembly` axiom is therefore reduced
 to the two narrower axioms below. -/
 
-/-- Continuity of measurable spatial slices from continuity of `F` and
-Fourier uniqueness of the spatial Bochner measures. -/
-axiom spatial_slice_measure_continuous {d : ℕ} (F : ℝ → (Fin d → ℝ) → ℂ)
-    (hcont : ContinuousOn (fun p : ℝ × (Fin d → ℝ) => F p.1 p.2)
-      (Ici (0 : ℝ) ×ˢ univ))
+private lemma antitone_sum_dist_le {f g S : ℝ → ℝ} {t s a : ℝ}
+    (ht : a ≤ t) (hs : a ≤ s)
+    (hf : AntitoneOn f (Ici a)) (hg : AntitoneOn g (Ici a))
+    (hS : ∀ x ≥ a, f x + g x = S x) :
+    |f t - f s| ≤ |S t - S s| := by
+  by_cases h : t ≤ s
+  · have hf_le : f s ≤ f t := hf ht hs h
+    have hg_le : g s ≤ g t := hg ht hs h
+    have hS_eq : S t - S s = (f t - f s) + (g t - g s) := by
+      rw [← hS t ht, ← hS s hs]; ring
+    have h1 : |f t - f s| = f t - f s := abs_of_nonneg (by linarith)
+    have h2 : |S t - S s| = S t - S s := abs_of_nonneg (by linarith)
+    rw [h1, h2, hS_eq]; linarith
+  · push_neg at h
+    have hle : s ≤ t := le_of_lt h
+    have hf_le : f t ≤ f s := hf hs ht hle
+    have hg_le : g t ≤ g s := hg hs ht hle
+    have hS_eq : S s - S t = (f s - f t) + (g s - g t) := by
+      rw [← hS s hs, ← hS t ht]; ring
+    have h1 : |f t - f s| = f s - f t := by rw [abs_sub_comm, abs_of_nonneg (by linarith)]
+    have h2 : |S t - S s| = S s - S t := by rw [abs_sub_comm, abs_of_nonneg (by linarith)]
+    rw [h1, h2, hS_eq]; linarith
+
+/-- Continuity of measurable spatial slices via the monotone squeeze trick:
+t ↦ ν_t(B) and t ↦ ν_t(Bᶜ) are both decreasing (from semigroup PD),
+and their sum ν_t(ℝ^d) = Re(F(t,0)) is continuous. Two decreasing functions
+with continuous sum must both be continuous. -/
+lemma spatial_slice_measure_continuous {d : ℕ} (F : ℝ → (Fin d → ℝ) → ℂ)
+    (hcont : ContinuousOn (fun p : ℝ × (Fin d → ℝ) => F p.1 p.2) (Ici (0 : ℝ) ×ˢ univ))
+    (hbdd : ∃ C : ℝ, ∀ t a, 0 ≤ t → ‖F t a‖ ≤ C)
     (ν : ℝ → Measure (Fin d → ℝ))
     (hν : ∀ t, 0 ≤ t → IsFiniteMeasure (ν t))
-    (hνF : ∀ t, 0 ≤ t → ∀ a,
-      F t a = ∫ q, exp (I * ↑(∑ i : Fin d, q i * a i)) ∂(ν t))
+    (hνF : ∀ t, 0 ≤ t → ∀ a, F t a = ∫ q, exp (I * ↑(∑ i : Fin d, q i * a i)) ∂(ν t))
+    (hνPD : ∀ B, MeasurableSet B → IsSemigroupPD (fun t => ((ν t) B).toReal))
     (B : Set (Fin d → ℝ)) (hB : MeasurableSet B) :
-    ContinuousOn (fun t => ((ν t) B).toReal) (Ici (0 : ℝ))
+    ContinuousOn (fun t => ((ν t) B).toReal) (Ici (0 : ℝ)) := by
+  let f := fun t => ((ν t) B).toReal
+  let g := fun t => ((ν t) Bᶜ).toReal
+  let S := fun t => (F t 0).re
+  have hbdd_f := spatial_slice_bounded F hbdd ν hν hνF B
+  have hbdd_g := spatial_slice_bounded F hbdd ν hν hνF Bᶜ
+  have hf_anti : AntitoneOn f (Ici 0) := by
+    intro t ht s hs hts
+    by_cases heq : t = s; · rw [heq]
+    have h_pos : 0 < s - t := sub_pos.mpr (lt_of_le_of_ne hts heq)
+    have hdiff := (hνPD B hB).alternating_forwardDiff 1 t ht (s - t) h_pos hbdd_f
+    simp only [pow_one, iterForwardDiff, forwardDiff] at hdiff
+    have h_add : t + (s - t) = s := by ring
+    rw [h_add] at hdiff; linarith
+  have hg_anti : AntitoneOn g (Ici 0) := by
+    intro t ht s hs hts
+    by_cases heq : t = s; · rw [heq]
+    have h_pos : 0 < s - t := sub_pos.mpr (lt_of_le_of_ne hts heq)
+    have hdiff := (hνPD Bᶜ hB.compl).alternating_forwardDiff 1 t ht (s - t) h_pos hbdd_g
+    simp only [pow_one, iterForwardDiff, forwardDiff] at hdiff
+    have h_add : t + (s - t) = s := by ring
+    rw [h_add] at hdiff; linarith
+  have hS_eq : ∀ x ≥ 0, f x + g x = S x := by
+    intro x hx
+    dsimp [f, g, S]
+    haveI := hν x hx
+    rw [← ENNReal.toReal_add (measure_ne_top _ _) (measure_ne_top _ _)]
+    rw [← measure_union (@disjoint_compl_right _ _ B) hB.compl, union_compl_self]
+    exact spatial_measure_total_mass_eq_re_zero F ν hν hνF hx
+  have hS_cont : ContinuousOn S (Ici 0) := by
+    have : ContinuousOn (fun t => F t 0) (Ici 0) := by
+      have h_emb : ContinuousOn (fun x : ℝ => (x, (0 : Fin d → ℝ))) (Ici 0) :=
+        (continuous_id'.prodMk continuous_const).continuousOn
+      have h_maps : MapsTo (fun x : ℝ => (x, (0 : Fin d → ℝ))) (Ici 0)
+          (Ici (0 : ℝ) ×ˢ Set.univ) :=
+        fun x hx => ⟨hx, Set.mem_univ _⟩
+      exact hcont.comp h_emb h_maps
+    exact (Complex.continuous_re.comp_continuousOn this)
+  rw [Metric.continuousOn_iff]
+  intro t ht ε hε
+  rw [Metric.continuousOn_iff] at hS_cont
+  obtain ⟨δ, hδ, hS_bound⟩ := hS_cont t ht ε hε
+  refine ⟨δ, hδ, fun s hs hdist => ?_⟩
+  have h_squeeze := antitone_sum_dist_le ht hs hf_anti hg_anti hS_eq
+  have hS_dist : |S t - S s| < ε := by
+    have := hS_bound s hs hdist
+    rw [Real.dist_eq] at this
+    rwa [abs_sub_comm] at this
+  rw [Real.dist_eq, abs_sub_comm]
+  linarith
 
 /-- Assembly of a joint measure from an already-constructed temporal slice family.
 
@@ -1664,7 +1738,7 @@ theorem product_measure_assembly {d : ℕ} (F : ℝ → (Fin d → ℝ) → ℂ)
   let slice : ∀ B : {B : Set (Fin d → ℝ) // MeasurableSet B}, TemporalSliceRep ν B.1 :=
     fun B => temporalSliceRepOf ν B.1
       (hνPD B.1 B.2)
-      (spatial_slice_measure_continuous F hcont ν hν hνF B.1 B.2)
+      (spatial_slice_measure_continuous F hcont hbdd ν hν hνF hνPD B.1 B.2)
       (spatial_slice_bounded F hbdd ν hν hνF B.1)
   let σ : {B : Set (Fin d → ℝ) // MeasurableSet B} → Measure ℝ := fun B => (slice B).σ
   have hσfin : ∀ B, IsFiniteMeasure (σ B) := by
