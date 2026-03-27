@@ -32,7 +32,7 @@ measure μ is supported on `[0,∞) × ℝ^d`, and the Fourier integral
 import HilleYosida.StronglyContinuousSemigroup
 import HilleYosida.FourierPD
 import HilleYosida.SemigroupGroupDefs
-import HilleYosida.Future.BernsteinTheorem
+import HilleYosida.BCR_General
 
 noncomputable section
 
