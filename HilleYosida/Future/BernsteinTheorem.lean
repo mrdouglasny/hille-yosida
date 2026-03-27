@@ -383,6 +383,51 @@ private lemma TemporalSliceRep.union_eq {d : ℕ}
     rw [measure_union hdisj hB₂, ENNReal.toReal_add]
     all_goals simp [measure_ne_top]
 
+private lemma TemporalSliceRep.mass_eq_zero {d : ℕ}
+    {ν : ℝ → Measure (Fin d → ℝ)} {B : Set (Fin d → ℝ)}
+    (hν0 : IsFiniteMeasure (ν 0)) (r : TemporalSliceRep ν B) :
+    r.σ Set.univ = (ν 0) B := by
+  haveI := hν0
+  have h0 : ((ν 0) B).toReal = (r.σ Set.univ).toReal := by
+    simpa [Measure.real] using r.laplace 0 le_rfl
+  exact (ENNReal.toReal_eq_toReal_iff'
+    (measure_ne_top r.σ Set.univ) (measure_ne_top (ν 0) B)).1 h0.symm
+
+private lemma TemporalSliceRep.iUnion_eq {d : ℕ}
+    {ν : ℝ → Measure (Fin d → ℝ)}
+    (hν : ∀ t, 0 ≤ t → IsFiniteMeasure (ν t))
+    (B : ℕ → Set (Fin d → ℝ)) (hB : ∀ n, MeasurableSet (B n))
+    (hdisj : Pairwise (Function.onFun Disjoint B))
+    (r : ∀ n, TemporalSliceRep ν (B n))
+    (rU : TemporalSliceRep ν (⋃ n, B n)) :
+    rU.σ = Measure.sum (fun n => (r n).σ) := by
+  haveI hν0 : IsFiniteMeasure (ν 0) := hν 0 le_rfl
+  have hsum_univ :
+      (Measure.sum (fun n => (r n).σ)) Set.univ = (ν 0) (⋃ n, B n) := by
+    rw [Measure.sum_apply _ MeasurableSet.univ, measure_iUnion hdisj hB]
+    simp_rw [TemporalSliceRep.mass_eq_zero hν0]
+  have hsum_ne_top : (Measure.sum (fun n => (r n).σ)) Set.univ ≠ ⊤ := by
+    rw [hsum_univ]
+    exact measure_ne_top (ν 0) _
+  haveI hsum_fin : IsFiniteMeasure (Measure.sum (fun n => (r n).σ)) := by
+    constructor
+    simpa [lt_top_iff_ne_top] using hsum_ne_top
+  have hsum_support : (Measure.sum (fun n => (r n).σ)) (Set.Iio 0) = 0 := by
+    have hzero : ∀ n, (r n).σ (Set.Iio 0) = 0 := fun n => (r n).support
+    rw [Measure.sum_apply _ measurableSet_Iio]
+    simp [hzero]
+  apply laplace_measure_unique rU.σ (Measure.sum (fun n => (r n).σ)) rU.support hsum_support
+  intro t ht
+  haveI := hν t ht
+  have hLap : ∀ n, ∫ p, Real.exp (-(t * p)) ∂((r n).σ) = ((ν t) (B n)).toReal := by
+    intro n
+    rw [← (r n).laplace t ht]
+  rw [← rU.laplace t ht, integral_sum_measure
+    (laplace_kernel_integrable (Measure.sum (fun n => (r n).σ)) hsum_support ht)]
+  simp_rw [hLap]
+  rw [measure_iUnion hdisj hB,
+    ENNReal.tsum_toReal_eq (fun n => measure_ne_top (ν t) (B n))]
+
 /-! ## Step 1: Spatial Bochner measures
 
 For each `t ≥ 0`, `spatial_slice_pd` (proved below) gives
@@ -1487,7 +1532,7 @@ Given spatial measures ν_t and their temporal Laplace decomposition
 construct a single measure μ on [0,∞) × ℝ^d reproducing the
 Fourier-Laplace transform. -/
 
-/-- Product measure assembly: combine the spatial Bochner measures
+/- Product measure assembly: combine the spatial Bochner measures
 and their temporal Laplace decompositions into a single product
 measure μ on [0,∞) × ℝ^d.
 
@@ -1549,26 +1594,55 @@ By construction and Fubini:
 These are standard results in measure theory but require substantial
 formalization infrastructure not yet available.
 
-**Axiom: Product measure assembly from temporal Laplace decomposition.**
+**Remaining external inputs** after the formalized slice analysis:
 
-Given spatial Bochner measures ν_t with semigroup-PD mass functions,
-construct a single product measure μ on [0,∞) × ℝ^d reproducing the
-Fourier-Laplace transform.
+1. continuity of `t ↦ ((ν t) B).toReal` from continuity of `F` and Fourier uniqueness;
+2. extension of the resulting countably additive temporal slice family
+   to a joint measure on `ℝ × ℝ^d`, together with the Fubini identity.
 
-**Proof route** (not formalized):
-1. For each Borel B, apply `semigroup_pd_laplace` to `t ↦ ν_t(B).toReal`
-   (requires: continuity from Fourier uniqueness, boundedness from ν_t(B) ≤ F(t,0) ≤ C)
-   to get σ_B on [0,∞) with `ν_t(B) = ∫ e^{-tp} dσ_B(p)`
-2. The family B ↦ σ_B is a measure kernel: for fixed Borel A ⊆ [0,∞),
-   B ↦ σ_B(A) is countably additive (from countable additivity of ν_t
-   + uniqueness of Laplace transforms)
-3. Define μ via Carathéodory: μ(A × B) = σ_B(A) on measurable rectangles
-4. Verify F(t,a) = ∫∫ e^{-tp} e^{i⟨a,q⟩} dμ(p,q) via Fubini
+The old monolithic `product_measure_assembly` axiom is therefore reduced
+to the two narrower axioms below. -/
 
-**Mathlib dependencies**: Transition kernel construction from consistent
-set functions, Fubini-Tonelli for transition kernels, uniqueness of
-Laplace transform on [0,∞). -/
-axiom product_measure_assembly {d : ℕ} (F : ℝ → (Fin d → ℝ) → ℂ)
+/-- Continuity of measurable spatial slices from continuity of `F` and
+Fourier uniqueness of the spatial Bochner measures. -/
+axiom spatial_slice_measure_continuous {d : ℕ} (F : ℝ → (Fin d → ℝ) → ℂ)
+    (hcont : ContinuousOn (fun p : ℝ × (Fin d → ℝ) => F p.1 p.2)
+      (Ici (0 : ℝ) ×ˢ univ))
+    (ν : ℝ → Measure (Fin d → ℝ))
+    (hν : ∀ t, 0 ≤ t → IsFiniteMeasure (ν t))
+    (hνF : ∀ t, 0 ≤ t → ∀ a,
+      F t a = ∫ q, exp (I * ↑(∑ i : Fin d, q i * a i)) ∂(ν t))
+    (B : Set (Fin d → ℝ)) (hB : MeasurableSet B) :
+    ContinuousOn (fun t => ((ν t) B).toReal) (Ici (0 : ℝ))
+
+/-- Assembly of a joint measure from an already-constructed temporal slice family.
+
+This is the remaining measure-theoretic extension step after slice existence,
+support, and countable additivity have been formalized in this file. -/
+axiom joint_measure_from_temporal_slices {d : ℕ}
+    (ν : ℝ → Measure (Fin d → ℝ))
+    (hν : ∀ t, 0 ≤ t → IsFiniteMeasure (ν t))
+    (σ : {B : Set (Fin d → ℝ) // MeasurableSet B} → Measure ℝ)
+    (hσfin : ∀ B, IsFiniteMeasure (σ B))
+    (hσsupp : ∀ B, σ B (Set.Iio 0) = 0)
+    (hσlaplace : ∀ B t, 0 ≤ t → ((ν t) B.1).toReal = ∫ p, Real.exp (-(t * p)) ∂(σ B))
+    (hσiUnion : ∀ (B : ℕ → Set (Fin d → ℝ)) (hB : ∀ n, MeasurableSet (B n))
+      (hdisj : Pairwise (Function.onFun Disjoint B)),
+      σ ⟨⋃ n, B n, MeasurableSet.iUnion hB⟩ =
+        Measure.sum (fun n => σ ⟨B n, hB n⟩)) :
+    ∃ (μ : Measure (ℝ × (Fin d → ℝ))),
+      IsFiniteMeasure μ ∧
+      μ ((Set.Iio 0).prod Set.univ) = 0 ∧
+      ∀ (t : ℝ) (a : Fin d → ℝ), 0 ≤ t →
+        (∫ q, exp (I * ↑(∑ i : Fin d, q i * a i)) ∂(ν t)) =
+          ∫ p : ℝ × (Fin d → ℝ),
+            exp (-(↑(t * p.1) : ℂ)) *
+              exp (I * ↑(∑ i : Fin d, p.2 i * a i))
+            ∂μ
+
+/-- Product measure assembly from the formalized temporal slice analysis,
+plus the two remaining external inputs above. -/
+theorem product_measure_assembly {d : ℕ} (F : ℝ → (Fin d → ℝ) → ℂ)
     (hcont : ContinuousOn (fun p : ℝ × (Fin d → ℝ) => F p.1 p.2)
       (Ici (0 : ℝ) ×ˢ univ))
     (hbdd : ∃ C : ℝ, ∀ t a, 0 ≤ t → ‖F t a‖ ≤ C)
@@ -1586,7 +1660,36 @@ axiom product_measure_assembly {d : ℕ} (F : ℝ → (Fin d → ℝ) → ℂ)
         F t a = ∫ p : ℝ × (Fin d → ℝ),
           exp (-(↑(t * p.1) : ℂ)) *
             exp (I * ↑(∑ i : Fin d, p.2 i * a i))
-          ∂μ
+          ∂μ := by
+  let slice : ∀ B : {B : Set (Fin d → ℝ) // MeasurableSet B}, TemporalSliceRep ν B.1 :=
+    fun B => temporalSliceRepOf ν B.1
+      (hνPD B.1 B.2)
+      (spatial_slice_measure_continuous F hcont ν hν hνF B.1 B.2)
+      (spatial_slice_bounded F hbdd ν hν hνF B.1)
+  let σ : {B : Set (Fin d → ℝ) // MeasurableSet B} → Measure ℝ := fun B => (slice B).σ
+  have hσfin : ∀ B, IsFiniteMeasure (σ B) := by
+    intro B
+    dsimp [σ]
+    infer_instance
+  have hσsupp : ∀ B, σ B (Set.Iio 0) = 0 := by
+    intro B
+    exact (slice B).support
+  have hσlaplace : ∀ B t, 0 ≤ t → ((ν t) B.1).toReal = ∫ p, Real.exp (-(t * p)) ∂(σ B) := by
+    intro B t ht
+    exact (slice B).laplace t ht
+  have hσiUnion : ∀ (B : ℕ → Set (Fin d → ℝ)) (hB : ∀ n, MeasurableSet (B n))
+      (hdisj : Pairwise (Function.onFun Disjoint B)),
+      σ ⟨⋃ n, B n, MeasurableSet.iUnion hB⟩ =
+        Measure.sum (fun n => σ ⟨B n, hB n⟩) := by
+    intro B hB hdisj
+    exact TemporalSliceRep.iUnion_eq hν B hB hdisj
+      (fun n => slice ⟨B n, hB n⟩)
+      (slice ⟨⋃ n, B n, MeasurableSet.iUnion hB⟩)
+  obtain ⟨μ, hμfin, hμsupp, hμrepr⟩ :=
+    joint_measure_from_temporal_slices ν hν σ hσfin hσsupp hσlaplace hσiUnion
+  refine ⟨μ, hμfin, hμsupp, ?_⟩
+  intro t a ht
+  exact (hνF t ht a).trans (hμrepr t a ht)
 
 /-! ## Main theorem -/
 
