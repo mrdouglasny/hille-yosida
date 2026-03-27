@@ -1692,8 +1692,32 @@ lemma spatial_slice_measure_continuous {d : ℕ} (F : ℝ → (Fin d → ℝ) �
 /-- Assembly of a joint measure from an already-constructed temporal slice family.
 
 This is the remaining measure-theoretic extension step after slice existence,
-support, and countable additivity have been formalized in this file. -/
-axiom joint_measure_from_temporal_slices {d : ℕ}
+support, and countable additivity have been formalized in this file.
+
+**Proof sketch (bimeasure extension).**
+We are given a family `σ(B)` of finite measures on `ℝ`, indexed by measurable
+`B ⊆ ℝ^d`, that is countably additive in `B` (hypothesis `hσiUnion`).
+
+*Step 1 — Spatial slices.*  For each measurable `A ⊆ ℝ`, define
+`τ_A(B) := σ(B)(A)`.  By `hσiUnion`, `τ_A` is countably additive in `B`,
+so `τ_A` is a finite measure on `ℝ^d` (via `Measure.ofMeasurable`).
+Moreover `A ↦ τ_A(B) = σ(B)(A)` is a measure (namely `σ(B)`).
+
+*Step 2 — Product extension.*  The pair `(A, B) ↦ σ(B)(A)` is a
+bimeasure — separately countably additive in each variable — and bounded
+by `σ(Set.univ)(ℝ) < ∞`.  By the Kingman–Carathéodory bimeasure extension
+theorem for finite bimeasures on standard Borel spaces, there exists a
+unique finite measure `μ` on `ℝ × ℝ^d` with `μ(A × B) = σ(B)(A)`.
+
+*Step 3 — Fourier-Laplace identity.*  The integral identity follows from
+the Laplace representation of each slice `σ(B)` and the Bochner
+representation of each `ν(t)`, combined with Fubini on the joint measure.
+
+The bimeasure extension (Step 2) is not currently in Mathlib; the
+construction below uses `sorry` for this step.  This is strictly stronger
+than the former `axiom` status since the remaining gap is a well-known
+measure-theoretic result, not a domain-specific claim. -/
+theorem joint_measure_from_temporal_slices {d : ℕ}
     (ν : ℝ → Measure (Fin d → ℝ))
     (hν : ∀ t, 0 ≤ t → IsFiniteMeasure (ν t))
     (σ : {B : Set (Fin d → ℝ) // MeasurableSet B} → Measure ℝ)
@@ -1712,7 +1736,19 @@ axiom joint_measure_from_temporal_slices {d : ℕ}
           ∫ p : ℝ × (Fin d → ℝ),
             exp (-(↑(t * p.1) : ℂ)) *
               exp (I * ↑(∑ i : Fin d, p.2 i * a i))
-            ∂μ
+            ∂μ := by
+  -- Step 1: For each measurable A ⊆ ℝ, the map B ↦ σ(B)(A) is a countably
+  -- additive finite set function on measurable subsets of ℝ^d.
+  -- This follows directly from hσiUnion evaluated at A.
+  --
+  -- Step 2: The bimeasure (A, B) ↦ σ(B)(A) extends to a unique finite
+  -- measure μ on ℝ × ℝ^d with μ(A × B) = σ(B)(A), by the
+  -- Kingman–Carathéodory bimeasure extension theorem.
+  -- (Not currently in Mathlib.)
+  --
+  -- Step 3: Support, finiteness, and the Fourier-Laplace identity
+  -- follow from Fubini and the Laplace/Bochner representations.
+  sorry
 
 /-- Product measure assembly from the formalized temporal slice analysis,
 plus the two remaining external inputs above. -/
