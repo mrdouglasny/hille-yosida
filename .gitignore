@@ -1,5 +1,6 @@
 /.lake
 .env
+.mcp.json
 .mcp/
 .claude/
 config/

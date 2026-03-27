@@ -25,16 +25,16 @@ The proof decomposes into:
 
 ## File Structure
 
-| File | Contents | Status |
-|------|----------|--------|
-| `StronglyContinuousSemigroup.lean` | C₀-semigroups, generators, resolvent, Hille-Yosida | **Fully proved** (0 axioms, 0 sorry's) |
-| `Bernstein.lean` | Completely monotone functions, Bernstein's theorem | **Fully proved** (0 axioms, 0 sorry's) |
-| `FourierPD.lean` | `pd_quadratic_form_of_measure`: Fourier PD | **Fully proved** (0 axioms, 0 sorry's) |
-| `BCR_d0.lean` | BCR 4.1.13 for d=0: `semigroup_pd_laplace` | **Fully proved** (0 axioms, 0 sorry's) |
-| `BCR_General.lean` | BCR 4.1.13 for general d: `semigroupGroupBochner_proof` | **Fully proved** (0 axioms, 0 sorry's) |
-| `SemigroupGroupExtension.lean` | `semigroupGroupBochner` + group extension | **Fully proved** (0 axioms, 0 sorry's) |
-| `SemigroupGroupDefs.lean` | `IsSemigroupGroupPD` definition | Definition file |
-| `Future/GenerationTheorem.lean` | HY converse (Lumer-Phillips) | 2 axioms (future work, not used by BCR) |
+| File | Contents |
+|------|----------|
+| [StronglyContinuousSemigroup.lean](HilleYosida/StronglyContinuousSemigroup.lean) | [C₀-semigroups, generators, resolvent, Hille-Yosida](summary/HilleYosida/StronglyContinuousSemigroup.md) |
+| [Bernstein.lean](HilleYosida/Bernstein.lean) | [Completely monotone functions, Bernstein's theorem](summary/HilleYosida/Bernstein.md) |
+| [FourierPD.lean](HilleYosida/FourierPD.lean) | [Fourier PD: `pd_quadratic_form_of_measure`](summary/HilleYosida/FourierPD.md) |
+| [BCR_d0.lean](HilleYosida/BCR_d0.lean) | [BCR 4.1.13 for d=0: `semigroup_pd_laplace`](summary/HilleYosida/BCR_d0.md) |
+| [BCR_General.lean](HilleYosida/BCR_General.lean) | [BCR 4.1.13 for general d: `semigroupGroupBochner_proof`](summary/HilleYosida/BCR_General.md) |
+| [SemigroupGroupExtension.lean](HilleYosida/SemigroupGroupExtension.lean) | [`semigroupGroupBochner` + group extension](summary/HilleYosida/SemigroupGroupExtension.md) |
+| [SemigroupGroupDefs.lean](HilleYosida/SemigroupGroupDefs.lean) | [`IsSemigroupGroupPD` definition](summary/HilleYosida/SemigroupGroupDefs.md) |
+| [Future/GenerationTheorem.lean](HilleYosida/Future/GenerationTheorem.lean) | [HY converse (Lumer-Phillips)](summary/HilleYosida/Future/GenerationTheorem.md) |
 
 ## Axiom Inventory
 
