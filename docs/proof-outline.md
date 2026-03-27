@@ -18,7 +18,7 @@ For a contraction semigroup $\{S(t)\}_{t \geq 0}$ on a Banach space $X$:
 
 ## 2. Bernstein's Theorem
 
-**File:** `Bernstein.lean` (2444 lines)
+**Files:** `BernsteinBasic.lean` (236) + `BernsteinMeasures.lean` (498) + `BernsteinChafai.lean` (1660) + `Bernstein.lean` (132)
 
 **Statement:** If $f : [0,\infty) \to \mathbb{R}$ is completely monotone, then $f(t) = \int_0^\infty e^{-tp}\, d\mu(p)$ for a unique finite positive measure $\mu$.
 

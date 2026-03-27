@@ -27,7 +27,10 @@ $$F(t, a) = \int_{[0,\infty) \times \mathbb{R}^d} e^{-tp} \, e^{i\langle a, q\ra
 | File | Contents |
 |------|----------|
 | [StronglyContinuousSemigroup.lean](HilleYosida/StronglyContinuousSemigroup.lean) | [C₀-semigroups, generators, resolvent, Hille-Yosida](summary/HilleYosida/StronglyContinuousSemigroup.md) |
-| [Bernstein.lean](HilleYosida/Bernstein.lean) | [Completely monotone functions, Bernstein's theorem](summary/HilleYosida/Bernstein.md) |
+| [BernsteinBasic.lean](HilleYosida/BernsteinBasic.lean) | `IsCompletelyMonotone`, `taylor_integral_remainder` |
+| [BernsteinMeasures.lean](HilleYosida/BernsteinMeasures.lean) | Density, IBP, kernel, packaging |
+| [BernsteinChafai.lean](HilleYosida/BernsteinChafai.lean) | Chafaï identity, Prokhorov extraction |
+| [Bernstein.lean](HilleYosida/Bernstein.lean) | [`bernstein_theorem`](summary/HilleYosida/Bernstein.md) |
 | [FourierPD.lean](HilleYosida/FourierPD.lean) | [Fourier PD: `pd_quadratic_form_of_measure`](summary/HilleYosida/FourierPD.md) |
 | [BCR_d0.lean](HilleYosida/BCR_d0.lean) | [BCR 4.1.13 for d=0: `semigroup_pd_laplace`](summary/HilleYosida/BCR_d0.md) |
 | [BCR_General.lean](HilleYosida/BCR_General.lean) | [BCR 4.1.13: `semigroupGroupBochner_proof` + `laplaceFourier_unique`](summary/HilleYosida/BCR_General.md) |

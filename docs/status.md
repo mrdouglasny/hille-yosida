@@ -14,7 +14,10 @@
 | File | Contents | Status |
 |------|----------|--------|
 | `StronglyContinuousSemigroup.lean` | C0-semigroups, Hille-Yosida forward | **Fully proved** (0 axioms, 0 sorry's) |
-| `Bernstein.lean` | Completely monotone → Laplace | **Fully proved** (0 axioms, 0 sorry's) |
+| `BernsteinBasic.lean` | `IsCompletelyMonotone`, `taylor_integral_remainder` | **Fully proved** (0 axioms, 0 sorry's) |
+| `BernsteinMeasures.lean` | Density, IBP, kernel, packaging | **Fully proved** (0 axioms, 0 sorry's) |
+| `BernsteinChafai.lean` | Chafaï identity, Prokhorov extraction | **Fully proved** (0 axioms, 0 sorry's) |
+| `Bernstein.lean` | `bernstein_theorem` (main result) | **Fully proved** (0 axioms, 0 sorry's) |
 | `FourierPD.lean` | `pd_quadratic_form_of_measure` | **Fully proved** (0 axioms, 0 sorry's) |
 | `BCR_d0.lean` | `semigroup_pd_laplace` (BCR d=0) | **Fully proved** (0 axioms, 0 sorry's) |
 | `BCR_General.lean` | `semigroupGroupBochner_proof` (BCR general d) | **Fully proved** (0 axioms, 0 sorry's) |
@@ -66,13 +69,16 @@ semigroupGroupBochnerExtension [PROVED]
 |------|-------|-------------|--------|---------|
 | `StronglyContinuousSemigroup.lean` | 867 | `hilleYosidaResolventBound` | 0 | 0 |
 | `SemigroupGroupDefs.lean` | 26 | `IsSemigroupGroupPD` | 0 | 0 |
-| `Bernstein.lean` | 2444 | `bernstein_theorem` | 0 | 0 |
+| `BernsteinBasic.lean` | 236 | `IsCompletelyMonotone`, `taylor_integral_remainder` | 0 | 0 |
+| `BernsteinMeasures.lean` | 498 | `bernstein_packaging`, `bernstein_kernel` | 0 | 0 |
+| `BernsteinChafai.lean` | 1660 | `chafai_identity`, `finite_measure_subseq_limit` | 0 | 0 |
+| `Bernstein.lean` | 132 | `bernstein_theorem` | 0 | 0 |
 | `FourierPD.lean` | 72 | `pd_quadratic_form_of_measure` | 0 | 0 |
 | `BCR_d0.lean` | 1503 | `semigroup_pd_laplace` | 0 | 0 |
 | `BCR_General.lean` | 3077 | `semigroupGroupBochner_proof`, `laplaceFourier_unique` | 0 | 0 |
 | `SemigroupGroupExtension.lean` | 271 | `semigroupGroupBochner`, `semigroupGroupBochnerExtension` | 0 | 0 |
 | `Future/GenerationTheorem.lean` | 109 | — | 2 | 0 |
-| **Total** | **~8350** | | **0 (main)** | **0** |
+| **Total** | **~8470** | | **0 (main)** | **0** |
 
 ---
 
