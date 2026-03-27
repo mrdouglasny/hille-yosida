@@ -189,6 +189,69 @@ theorem bimeasureContentFun_sUnion
     (h_dis : PairwiseDisjoint (I : Set (Set (X × Y))) id)
     (h_mem : ⋃₀ ↑I ∈ measurableRect X Y) :
     bimeasureContentFun σ (⋃₀ ↑I) = ∑ u ∈ I, bimeasureContentFun σ u := by
+  classical
+  -- We prove a stronger statement by strong induction on |I|,
+  -- generalizing over A, B, and I.
+  suffices key : ∀ (m : ℕ) (J : Finset (Set (X × Y)))
+      (_ : J.card = m) (_ : ↑J ⊆ measurableRect X Y)
+      (_ : PairwiseDisjoint (J : Set (Set (X × Y))) id)
+      (_ : ⋃₀ ↑J ∈ measurableRect X Y),
+      bimeasureContentFun σ (⋃₀ ↑J) = ∑ u ∈ J, bimeasureContentFun σ u from
+    key I.card I rfl h_ss h_dis h_mem
+  intro m
+  induction m using Nat.strongRecOn with
+  | _ m ih =>
+  intro J hJ_card hJ_ss hJ_dis hJ_mem
+  -- Extract the rectangle decomposition of the union
+  obtain ⟨A', B', hA', hB', hAB'⟩ := mem_measurableRect.mp hJ_mem
+  rw [hAB', bimeasureContentFun_rect σ hfin h_empty hA' hB']
+  -- Case |J| = 0
+  rcases Nat.eq_zero_or_pos m with rfl | hm
+  · have : J = ∅ := Finset.card_eq_zero.mp hJ_card
+    subst this
+    simp only [Finset.sum_empty, Finset.coe_empty, Set.sUnion_empty] at *
+    rw [eq_comm, Set.prod_eq_empty_iff] at hAB'
+    rcases hAB' with rfl | rfl
+    · simp
+    · rw [show σ ⟨∅, hB'⟩ = σ ⟨∅, MeasurableSet.empty⟩ from by congr, h_empty]; simp
+  -- Case |J| = 1
+  by_cases hm1 : m = 1
+  · rw [hm1] at hJ_card
+    rw [Finset.card_eq_one] at hJ_card
+    obtain ⟨u₀, rfl⟩ := hJ_card
+    simp only [Finset.sum_singleton, Finset.coe_singleton, Set.sUnion_singleton] at *
+    rw [hAB', bimeasureContentFun_rect σ hfin h_empty hA' hB']
+  -- Case |J| ≥ 2.
+  have hm2 : 2 ≤ m := by omega
+  -- Pick u₀ ∈ J
+  obtain ⟨u₀, hu₀⟩ := J.nonempty_of_ne_empty (by intro h; simp [h] at hJ_card; omega)
+  -- u₀ is a measurable rectangle
+  obtain ⟨A₀, B₀, hA₀, hB₀, hAB₀⟩ := mem_measurableRect.mp (hJ_ss hu₀)
+  let J' := J.erase u₀
+  have hJ'_card : J'.card = m - 1 := by
+    simp [J', Finset.card_erase_of_mem hu₀, hJ_card]
+  have hJ'_lt : J'.card < m := by omega
+  have hJ'_ss : ↑J' ⊆ measurableRect X Y := fun u hu =>
+    hJ_ss (Finset.mem_of_mem_erase hu)
+  have hJ'_dis : PairwiseDisjoint (J' : Set (Set (X × Y))) id := by
+    exact Set.PairwiseDisjoint.subset hJ_dis (Finset.coe_subset.mpr (Finset.erase_subset _ _))
+  -- The sum splits: ∑ J = bimeasureContentFun σ u₀ + ∑ J'
+  have sum_split : ∑ u ∈ J, bimeasureContentFun σ u =
+      bimeasureContentFun σ u₀ + ∑ u ∈ J', bimeasureContentFun σ u := by
+    rw [← Finset.add_sum_erase J _ hu₀]
+  rw [sum_split, hAB₀, bimeasureContentFun_rect σ hfin h_empty hA₀ hB₀]
+  -- Goal: σ⟨B'⟩(A') = σ⟨B₀⟩(A₀) + ∑ u ∈ J', bimeasureContentFun σ u
+  -- Step 1: σ⟨B'⟩(A') = σ⟨B'⟩(A' \ A₀) + σ⟨B'⟩(A₀)  [measure additivity]
+  -- Step 2: σ⟨B'⟩(A₀) = σ⟨B₀⟩(A₀) + σ⟨B'\B₀⟩(A₀)    [h_iUnion]
+  -- Step 3: σ⟨B'⟩(A'\A₀) = IH on piece 1              [strong induction]
+  -- Step 4: σ⟨B'\B₀⟩(A₀) = IH on piece 2              [strong induction]
+  -- Step 5: Recombine sums
+  --
+  -- Each step involves substantial Lean scaffolding (building new finsets,
+  -- proving subset/disjointness/union conditions, splitting rectangle sums).
+  -- The full formalization requires ~200 lines of Lean code.
+  -- The mathematical argument is the standard "rectangle splitting" technique
+  -- from Kingman (1967) / Kallenberg §1.9.
   sorry
 
 /-- The `AddContent` on measurable rectangles defined by a bimeasure family. -/
