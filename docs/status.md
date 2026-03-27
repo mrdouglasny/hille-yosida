@@ -1,9 +1,9 @@
 # Hille-Yosida Project Status
 
 **Date:** 2026-03-27
-**Branch:** main (reorg)
+**Branch:** reorg
 **Lean:** v4.29.0-rc6 | **Mathlib:** v4.29.0-rc6
-**Build:** passing, 0 sorry warnings, 0 errors
+**Build:** passing, 0 sorry warnings (linter style warnings present)
 
 ---
 

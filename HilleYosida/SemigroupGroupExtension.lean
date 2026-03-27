@@ -51,11 +51,10 @@ Fourier-Laplace transforms of finite positive measures supported on
 Ref: Berg-Christensen-Ressel, "Harmonic Analysis on Semigroups" Thm 4.1.13.
 Verified correct by Gemini Deep Think (2026-03-23).
 
-**Proof:** See `semigroupGroupBochner_proof` in `Future/BernsteinTheorem.lean`.
+**Proof:** See `semigroupGroupBochner_proof` in `BCR_General.lean`.
 The proof decomposes into spatial Bochner (each time slice) + temporal
-Laplace (BCR d=0 via `semigroup_pd_laplace` in `BCR_d0.lean`) + product
-measure assembly. Modulo 4 classical analysis axioms (bump functions,
-convolution smoothness, Fourier approximation of indicators, measure kernels). -/
+Laplace (BCR d=0 via `semigroup_pd_laplace` in `BCR_d0.lean`) +
+product measure assembly. Fully proved (0 axioms, 0 sorry's). -/
 theorem semigroupGroupBochner (d : ℕ)
     (F : ℝ → (Fin d → ℝ) → ℂ)
     (hcont : ContinuousOn (fun p : ℝ × (Fin d → ℝ) => F p.1 p.2) (Set.Ici 0 ×ˢ Set.univ))

@@ -12,7 +12,7 @@ For a contraction semigroup $\{S(t)\}_{t \geq 0}$ on a Banach space, the resolve
 
 A completely monotone function on $[0,\infty)$ is the Laplace transform of a unique finite positive measure supported on $[0,\infty)$.
 
-### BCR Theorem 4.1.13 -- Semigroup Bochner (proved, 4 classical axioms)
+### BCR Theorem 4.1.13 -- Semigroup Bochner (fully proved, 0 axioms)
 
 Bounded continuous positive-definite functions on $[0,\infty) \times \mathbb{R}^d$ are Fourier-Laplace transforms of finite positive measures:
 
@@ -27,27 +27,25 @@ The proof decomposes into:
 
 | File | Contents | Status |
 |------|----------|--------|
-| `StronglyContinuousSemigroup.lean` | C0-semigroups, generators, resolvent, Hille-Yosida | **Fully proved** (0 axioms, 0 sorrys) |
-| `Bernstein.lean` | Completely monotone functions, Bernstein's theorem | **Fully proved** (0 axioms, 0 sorrys) |
-| `FourierPD.lean` | `pd_quadratic_form_of_measure`: Fourier PD | **Fully proved** (0 axioms, 0 sorrys) |
-| `BCR_d0.lean` | BCR 4.1.13 for d=0: `semigroup_pd_laplace` | **Proved** (2 classical axioms) |
-| `SemigroupGroupExtension.lean` | BCR 4.1.13 general d, group extension | **Proved** (references BCR_d0 + 2 axioms) |
-| `Future/BernsteinTheorem.lean` | BCR proof assembly | **Proved** (0 sorrys, wires everything) |
+| `StronglyContinuousSemigroup.lean` | C₀-semigroups, generators, resolvent, Hille-Yosida | **Fully proved** (0 axioms, 0 sorry's) |
+| `Bernstein.lean` | Completely monotone functions, Bernstein's theorem | **Fully proved** (0 axioms, 0 sorry's) |
+| `FourierPD.lean` | `pd_quadratic_form_of_measure`: Fourier PD | **Fully proved** (0 axioms, 0 sorry's) |
+| `BCR_d0.lean` | BCR 4.1.13 for d=0: `semigroup_pd_laplace` | **Fully proved** (0 axioms, 0 sorry's) |
+| `BCR_General.lean` | BCR 4.1.13 for general d: `semigroupGroupBochner_proof` | **Fully proved** (0 axioms, 0 sorry's) |
+| `SemigroupGroupExtension.lean` | `semigroupGroupBochner` + group extension | **Fully proved** (0 axioms, 0 sorry's) |
+| `SemigroupGroupDefs.lean` | `IsSemigroupGroupPD` definition | Definition file |
+| `Future/GenerationTheorem.lean` | HY converse (Lumer-Phillips) | 2 axioms (future work, not used by BCR) |
 
 ## Axiom Inventory
 
-The core theorems (Hille-Yosida, Bernstein, `pd_quadratic_form_of_measure`) are **fully proved with 0 axioms**. The BCR 4.1.13 proof relies on 4 axioms, all standard analysis facts orthogonal to the PD/semigroup theory:
+**All main theorems are fully proved with 0 axioms and 0 sorry's.** The only axioms in the project are in `Future/GenerationTheorem.lean` for the converse Hille-Yosida theorem (future work, not imported by the BCR proof chain):
 
-| Axiom | File | What it says |
-|-------|------|-------------|
-| `mollifier_exists` | `BCR_d0.lean` | Smooth bump functions exist (standard construction) |
-| `mollify_smooth` | `BCR_d0.lean` | Convolution with smooth bump is C^infinity (Leibniz integral rule) |
-| `spatial_measures_pd` | `Future/BernsteinTheorem.lean` | nu_t(B) is PD for Borel B (Fourier approximation of indicators) |
-| `product_measure_assembly` | `Future/BernsteinTheorem.lean` | Measure kernel construction from Laplace family |
+| Axiom | File | Purpose |
+|-------|------|---------|
+| `domain_isDense` | `Future/GenerationTheorem.lean` | Generator domain dense in X |
+| `hilleYosidaGeneration` | `Future/GenerationTheorem.lean` | Lumer-Phillips generation theorem |
 
-Two additional axioms in `Future/GenerationTheorem.lean` (`domain_isDense`, `hilleYosidaGeneration`) are for future work on the generation theorem and are not used by the BCR proof.
-
-## BCR d=0: Proof Architecture (1326 lines)
+## BCR d=0: Proof Architecture (1503 lines)
 
 The core engine `semigroup_pd_laplace` in `BCR_d0.lean` proves that bounded continuous semigroup-PD functions on $[0,\infty)$ are Laplace transforms. The proof:
 
