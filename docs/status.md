@@ -1,7 +1,7 @@
 # Hille-Yosida Project Status
 
 **Date:** 2026-03-27
-**Branch:** reorg
+**Branch:** main
 **Lean:** v4.29.0-rc6 | **Mathlib:** v4.29.0-rc6
 **Build:** passing, 0 sorry warnings (linter style warnings present)
 
@@ -48,6 +48,11 @@ semigroupGroupBochner_proof [PROVED, 2822 lines]
 
 semigroupGroupBochner [PROVED, delegates to semigroupGroupBochner_proof]
 
+laplaceFourier_unique [PROVED]
+  ├── Fourier uniqueness on weighted spatial slices
+  ├── Laplace uniqueness on temporal slices
+  └── ext_prod on measurable rectangles
+
 semigroupGroupBochnerExtension [PROVED]
   ├── Bounded, continuous, PD from Fourier-Laplace representation
   └── Uses pd_quadratic_form_of_measure [PROVED]
@@ -64,10 +69,10 @@ semigroupGroupBochnerExtension [PROVED]
 | `Bernstein.lean` | 2444 | `bernstein_theorem` | 0 | 0 |
 | `FourierPD.lean` | 72 | `pd_quadratic_form_of_measure` | 0 | 0 |
 | `BCR_d0.lean` | 1503 | `semigroup_pd_laplace` | 0 | 0 |
-| `BCR_General.lean` | 2822 | `semigroupGroupBochner_proof` | 0 | 0 |
+| `BCR_General.lean` | 3077 | `semigroupGroupBochner_proof`, `laplaceFourier_unique` | 0 | 0 |
 | `SemigroupGroupExtension.lean` | 271 | `semigroupGroupBochner`, `semigroupGroupBochnerExtension` | 0 | 0 |
 | `Future/GenerationTheorem.lean` | 109 | — | 2 | 0 |
-| **Total** | **~8100** | | **0 (main)** | **0** |
+| **Total** | **~8350** | | **0 (main)** | **0** |
 
 ---
 
