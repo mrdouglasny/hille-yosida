@@ -19,7 +19,6 @@ mrdouglasny/bochner) for the spatial decomposition.
 
 import HilleYosida.SemigroupGroupDefs
 import HilleYosida.BCR_d0
-import HilleYosida.GeneralResults.BimeasureExtension
 import Bochner.Main
 import Mathlib.Analysis.Normed.Lp.MeasurableSpace
 import Mathlib.MeasureTheory.Integral.RieszMarkovKakutani.Real
