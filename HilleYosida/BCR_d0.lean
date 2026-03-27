@@ -46,7 +46,8 @@ def IsSemigroupPD (f : ℝ → ℝ) : Prop :=
 /-- `f(0) ≥ 0` (n=1, c=[1], t=[0]). -/
 lemma IsSemigroupPD.nonneg_zero (hpd : IsSemigroupPD f) : 0 ≤ f 0 := by
   have h := hpd 1 ![1] ![0] (by intro i; fin_cases i; simp)
-  simp [Fin.sum_univ_one, Matrix.cons_val_zero, star_one, one_mul, add_zero] at h
+  simp only [Fin.sum_univ_one, star_one, one_mul, add_zero,
+    Matrix.cons_val_zero, Complex.ofReal_re] at h
   exact_mod_cast h
 
 /-- `f(t) ≥ 0` for all `t ≥ 0` (from PD with n=1, c=[1], ts=[t/2]). -/
@@ -54,7 +55,8 @@ lemma IsSemigroupPD.nonneg (hpd : IsSemigroupPD f) (t : ℝ) (ht : 0 ≤ t) :
     0 ≤ f t := by
   -- PD with n=1, c=[1], ts=[t/2]: 0 ≤ |1|² f(t/2 + t/2) = f(t)
   have h := hpd 1 ![1] ![t / 2] (by intro i; fin_cases i; simp; linarith)
-  simp [Fin.sum_univ_one, add_halves] at h
+  simp only [Fin.sum_univ_one, add_halves, star_one, one_mul,
+    Matrix.cons_val_zero, Complex.ofReal_re] at h
   exact_mod_cast h
 
 /-- Subadditivity: `f(s) ≤ (f(0) + f(2*s))/2` from PD with c=[1,-1], ts=[0,s]. -/
@@ -257,12 +259,12 @@ private lemma forwardDiff_sum_recurrence (n : ℕ) (g : ℕ → ℝ) :
   by_cases hk0 : k = 0
   · -- k = 0: LHS = 0 - (-1)^n * C(n,0) = -(-1)^n = (-1)^{n+1}
     subst hk0
-    simp [Nat.choose_zero_right, Nat.sub_zero]
+    simp [Nat.choose_zero_right]
     ring
   · by_cases hkn1 : k = n + 1
     · -- k = n+1: LHS = (-1)^0 * C(n,n) - 0 = 1
       subst hkn1
-      simp [Nat.choose_self, Nat.sub_self]
+      simp [Nat.choose_self]
     · -- 1 ≤ k ≤ n: use Pascal's identity
       have hkle : k ≤ n := by omega
       simp only [if_neg hk0, if_neg hkn1]
@@ -294,12 +296,12 @@ lemma iterForwardDiff_eq_sum (n : ℕ) (h : ℝ) (f : ℝ → ℝ) (t : ℝ) :
     -- LHS: ∑ k, (-1)^(n-k) C(n,k) f(t+h+k*h) - ∑ k, (-1)^(n-k) C(n,k) f(t+k*h)
     -- We need f(t+h+k*h) = f(t+(k+1)*h)
     have key : ∀ (k : ℕ), f (t + h + ↑k * h) = (fun j => f (t + ↑j * h)) (k + 1) := by
-      intro k; congr 1; push_cast; ring
+      intro k; congr 1; ring
     simp_rw [key]
     -- Goal should now match forwardDiff_sum_recurrence
     have := forwardDiff_sum_recurrence n (fun k => f (t + ↑k * h))
     convert this using 1
-    · congr 1 <;> (apply Finset.sum_congr rfl; intro k _; push_cast; ring)
+    · (congr 1; apply Finset.sum_congr rfl; intro k _; push_cast; ring)
 
 /-- The Vandermonde convolution identity for signed binomial coefficients:
 `∑_i ∑_j (-1)^{i+j} C(m,i) C(m,j) g(i+j) = ∑_p (-1)^p C(2m,p) g(p)`.
@@ -388,7 +390,7 @@ private lemma IsSemigroupPD.pd_real_coeffs (hpd : IsSemigroupPD f)
     ((∑ i : Fin n, ∑ j : Fin n, c i * c j * f (ts i + ts j) : ℝ) : ℂ) := by
     push_cast
     congr 1; ext i; congr 1; ext j
-    simp [Complex.conj_ofReal, mul_comm, mul_assoc]
+    simp [Complex.conj_ofReal, mul_comm]
   rw [hkey, Complex.ofReal_re] at h
   exact h
 
@@ -507,7 +509,7 @@ private lemma IsSemigroupPD.odd_forwardDiff (hpd : IsSemigroupPD f)
   obtain ⟨C, hC⟩ := hbdd
   have hg_bdd : ∃ B : ℝ, ∀ s, 0 ≤ s → g s ≤ B := by
     refine ⟨(2 : ℝ) ^ (2 * m) * C, fun s hs => ?_⟩
-    show iterForwardDiff (2 * m) h f s ≤ _
+    change iterForwardDiff (2 * m) h f s ≤ _
     rw [iterForwardDiff_eq_sum]
     calc ∑ k ∈ Finset.range (2 * m + 1),
           (-1 : ℝ) ^ (2 * m - k) * ((2 * m).choose k : ℝ) * f (s + ↑k * h)
@@ -553,10 +555,10 @@ private lemma IsSemigroupPD.odd_forwardDiff (hpd : IsSemigroupPD f)
   -- Convexity: a(n+2) - 2*a(n+1) + a(n) ≥ 0
   have ha_convex : ∀ n : ℕ, a (n + 2) - 2 * a (n + 1) + a n ≥ 0 := by
     intro n
-    show g (t + ↑(n + 2) * h) - 2 * g (t + ↑(n + 1) * h) + g (t + ↑n * h) ≥ 0
+    change g (t + ↑(n + 2) * h) - 2 * g (t + ↑(n + 1) * h) + g (t + ↑n * h) ≥ 0
     have hs : 0 ≤ t + ↑n * h := by positivity
     have hconv := hg_convex (t + ↑n * h) hs
-    convert hconv using 2 <;> push_cast <;> ring
+    convert hconv using 2; all_goals (push_cast; ring_nf)
   -- By induction: a(n+1) - a(n) ≥ a(1) - a(0) for all n
   have hincr : ∀ n : ℕ, a (n + 1) - a n ≥ d := by
     intro n
@@ -671,7 +673,7 @@ private lemma iterOp_shift (op : (ℝ → ℝ) → (ℝ → ℝ)) (n : ℕ) (F :
   induction n with
   | zero => rfl
   | succ n ih =>
-    show op (iterOp op (n + 1) F) = op (iterOp op n (op F))
+    change op (iterOp op (n + 1) F) = op (iterOp op n (op F))
     rw [ih]
 
 lemma iterOp_fd_eq_iterForwardDiff (n : ℕ) (h : ℝ) (F : ℝ → ℝ) (t : ℝ) :
@@ -712,7 +714,8 @@ private lemma forwardDiff_eq_intOp_deriv (h : ℝ) (G : ℝ → ℝ)
   have hFTC : ∫ y in t..(t + h), deriv G y = G (t + h) - G t := by
     apply intervalIntegral.integral_eq_sub_of_hasDerivAt
     · intro x _
-      exact (hG.differentiable (WithTop.coe_ne_zero.mpr ENat.top_ne_zero)).differentiableAt.hasDerivAt
+      exact (hG.differentiable
+        (WithTop.coe_ne_zero.mpr ENat.top_ne_zero)).differentiableAt.hasDerivAt
     · exact (hG.continuous_deriv (WithTop.coe_le_coe.mpr le_top)).intervalIntegrable t (t + h)
   linarith
 
@@ -728,7 +731,7 @@ private lemma forwardDiff_intOp_comm (h : ℝ) (G : ℝ → ℝ)
     (hG.comp (continuous_const.add continuous_id')).intervalIntegrable 0 h
   rw [← intervalIntegral.integral_sub hint1 hint2]
   congr 1; ext s
-  show G (t + h + s) - G (t + s) = G (t + s + h) - G (t + s)
+  change G (t + h + s) - G (t + s) = G (t + s + h) - G (t + s)
   ring_nf
 
 -- forwardDiff h (iterOp (intOp h) n G) = intOp h (iterOp (intOp h) n (deriv G))
@@ -1081,8 +1084,7 @@ private lemma mollifyGlobal_eq_mollify (f : ℝ → ℝ)
       symm
       exact intervalIntegral.integral_eq_integral_of_support_subset hsupp
     _ = ∫ s in (0 : ℝ)..ε, h (s + t) := by
-      simpa [add_comm, add_left_comm, add_assoc] using
-        (intervalIntegral.integral_comp_add_right h t).symm
+      simp [add_comm]
     _ = ∫ s in (0 : ℝ)..ε, iciConstExtend f (t + s) * m.func s := by
       apply intervalIntegral.integral_congr_ae
       filter_upwards with s hs
@@ -1204,7 +1206,7 @@ lemma mollify_tendsto (f : ℝ → ℝ) (hcont : ContinuousOn f (Ici 0))
   refine ⟨K, fun k hk => ?_⟩
   set ε_k := 1 / (↑k + 1 : ℝ); have hε_pos : 0 < ε_k := by positivity
   have hε_small : ε_k < η := by
-    show 1 / (↑k + 1 : ℝ) < η
+    change 1 / (↑k + 1 : ℝ) < η
     rw [div_lt_iff₀ (by positivity : (0 : ℝ) < ↑k + 1)]
     have h1 : 1 / η < ↑k + 1 := lt_of_lt_of_le hK
       (by have : (K : ℝ) ≤ ↑k := Nat.cast_le.mpr hk; linarith)
@@ -1217,7 +1219,7 @@ lemma mollify_tendsto (f : ℝ → ℝ) (hcont : ContinuousOn f (Ici 0))
     apply hcont.comp (continuousOn_const.add continuousOn_id)
     intro s hs
     rw [Set.uIcc_of_le (le_of_lt hε_pos)] at hs
-    show t + s ∈ Set.Ici 0
+    change t + s ∈ Set.Ici 0
     exact Set.mem_Ici.mpr (by have := hs.1; linarith)
   have hint_fm : IntervalIntegrable (fun s => f (t + s) * mk.func s)
       MeasureTheory.MeasureSpace.volume 0 ε_k :=

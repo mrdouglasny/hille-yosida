@@ -305,6 +305,7 @@ lemma IsCompletelyMonotone.tendsto_total_mass
     (Filter.Tendsto.sub tendsto_const_nhds hL)
 
 set_option maxHeartbeats 800000 in
+-- Extra heartbeats for ae norm computation in integrableOn_Ioi_of_intervalIntegral_norm_tendsto.
 /-- `-f'` is integrable on `(0, ∞)` for CM functions (total mass = `f(0) - L`).
 Uses `integrableOn_Ioi_of_intervalIntegral_norm_tendsto` with the norm bound
 from `tendsto_total_mass`. Extra heartbeats for ae norm computation. -/
@@ -401,9 +402,9 @@ lemma bernstein_packaging {f : ℝ → ℝ} {L : ℝ} (hL : 0 ≤ L)
         constructor; simp only [ν, Measure.smul_apply, smul_eq_mul,
           Measure.dirac_apply, Set.indicator_univ, Pi.one_apply, mul_one]
         exact ENNReal.ofReal_lt_top
-      apply exp_int; simp [ν, Measure.smul_apply, Measure.dirac_apply,
-        Set.indicator, Set.mem_Iio, lt_irrefl]
-    show L + ∫ p, Real.exp (-(t * p)) ∂μ₀ = ∫ p, Real.exp (-(t * p)) ∂(μ₀ + ν)
+      apply exp_int; simp [ν, Measure.smul_apply,
+        Set.indicator, Set.mem_Iio]
+    change L + ∫ p, Real.exp (-(t * p)) ∂μ₀ = ∫ p, Real.exp (-(t * p)) ∂(μ₀ + ν)
     rw [integral_add_measure h1 h2]
     suffices h : ∫ p, Real.exp (-(t * p)) ∂ν = L by linarith
     rw [@integral_smul_measure ℝ ℝ _ _ _ (Measure.dirac 0)
@@ -503,6 +504,7 @@ lemma cm_rescaled_mass_eq (f : ℝ → ℝ) (n : ℕ) :
     Set.preimage_univ]
 
 set_option maxHeartbeats 3200000 in
+-- IBP proof involves factorial/field_simp reasoning with many intermediate terms.
 /-- **IBP identity** for the CM density:
 `∫₀ᵀ ρ_{m+2}(t) dt = B_{m+2}(T) + ∫₀ᵀ ρ_{m+1}(t) dt`
 where `B_{m+2}(T) = (-1)^{m+2} T^{m+1}/(m+1)! · f^{(m+1)}(T)`.
@@ -529,7 +531,7 @@ private lemma cm_density_ibp_identity (f : ℝ → ℝ) (hcm : IsCompletelyMonot
     have hda := (hcm.1.differentiableOn_iteratedDerivWithin
       (nat_lt_coe_top (m + 1))
       (uniqueDiffOn_Ici 0)).hasDerivAt hmem
-    show HasDerivAt g (g' t) t; convert hda using 1; show g' t = deriv g t
+    change HasDerivAt g (g' t) t; convert hda using 1; change g' t = deriv g t
     simp only [g, g']
     rw [show m + 2 = (m + 1) + 1 from by omega, iteratedDerivWithin_succ,
       derivWithin_of_mem_nhds hmem]
@@ -742,6 +744,7 @@ The boundary decay integral is in `chafai_repeated_ibp` (sorry).
 
 The kernel-density simplification needs extra heartbeats for field_simp. -/
 set_option maxHeartbeats 3200000 in
+-- Kernel-density simplification requires extra heartbeats for field_simp reasoning.
 private lemma chafai_kernel_density_eq (f : ℝ → ℝ) (_hcm : IsCompletelyMonotone f)
     (n : ℕ) (hn : 2 ≤ n) (x : ℝ) (hx : 0 ≤ x) :
     ∫ t in Set.Ioi 0, bernstein_kernel n x (((n : ℝ) - 1) / t) *
@@ -848,7 +851,7 @@ private lemma ibp_finite_interval (f : ℝ → ℝ) (hcm : IsCompletelyMonotone 
       ∫ t in x..T, (-1 : ℝ) ^ (k + 1) / ↑(k - 1).factorial * (t - x) ^ (k - 1) *
         iteratedDerivWithin k f (Set.Ici 0) t :=
     intervalIntegral.integral_congr_ae (ae_of_all _ fun t _ => by
-      change u' t * g t = _; rw [hu'_eq])
+      rw [hu'_eq])
   linarith
 
 /-- Tail set integral of an integrable function on `(a, ∞)` tends to 0. -/
@@ -877,8 +880,9 @@ private lemma tail_setIntegral_tendsto_zero {g : ℝ → ℝ} {a : ℝ}
 
 /- Boundary decay: `(-1)^{k+1}/k! (T-x)^k D^k f(T) → 0` as `T → ∞` for CM functions.
 This follows from the integrability of the k-th CM density on `(0, ∞)`. -/
--- Boundary-term squeeze uses repeated interval/set-integral comparisons and needs extra heartbeats.
 set_option maxHeartbeats 6400000 in
+-- Boundary-term squeeze uses repeated interval/set-integral comparisons.
+-- Needs extra heartbeats for nested integrable/antitone/tail reasoning chains.
 private lemma boundary_term_decay (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
     (k : ℕ) (hk : k ≠ 0) (x : ℝ) (hx : 0 ≤ x)
     (L : ℝ) (hL : Filter.Tendsto f Filter.atTop (nhds L)) :
@@ -900,7 +904,8 @@ private lemma boundary_term_decay (f : ℝ → ℝ) (hcm : IsCompletelyMonotone 
         have hdiff :
             DifferentiableAt ℝ (iteratedDerivWithin k f (Ici 0)) T :=
           (hcm.1.differentiableOn_iteratedDerivWithin (nat_lt_coe_top _)
-            (uniqueDiffOn_Ici 0)) T (Set.mem_Ici.mpr (le_of_lt hT)) |>.differentiableAt (Ici_mem_nhds hT)
+            (uniqueDiffOn_Ici 0)) T (Set.mem_Ici.mpr (le_of_lt hT))
+            |>.differentiableAt (Ici_mem_nhds hT)
         exact (hdiff.const_mul ((-1 : ℝ) ^ k)).differentiableWithinAt
       · rw [interior_Ici]
         intro T hT
@@ -999,7 +1004,9 @@ private lemma boundary_term_decay (f : ℝ → ℝ) (hcm : IsCompletelyMonotone 
               (1 / ↑((k - 1).factorial)) * (T / 2) ^ (k - 1) * h T
                   ≤ ((1 / ↑((k - 1).factorial)) * t ^ (k - 1)) * h T := by
                     simpa [mul_assoc] using
-                      mul_le_mul_of_nonneg_right (mul_le_mul_of_nonneg_left hpow hcoeff_nonneg) hhT_nonneg
+                      mul_le_mul_of_nonneg_right
+                        (mul_le_mul_of_nonneg_left hpow hcoeff_nonneg)
+                        hhT_nonneg
               _ ≤ ((1 / ↑((k - 1).factorial)) * t ^ (k - 1)) * h t := by
                     exact mul_le_mul_of_nonneg_left hh_le hright_nonneg
           simpa [h_density_eq t] using hmul
@@ -1177,6 +1184,7 @@ private lemma ibp_kernel_integrableOn (f : ℝ → ℝ) (hcm : IsCompletelyMonot
           iteratedDerivWithin k f (Ici 0) t := by field_simp
 
 set_option maxHeartbeats 6400000 in
+-- Repeated IBP induction with boundary decay requires many integrable/limit steps.
 private lemma chafai_repeated_ibp (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
     (n : ℕ) (hn : 1 ≤ n) (x : ℝ) (hx : 0 ≤ x)
     (L : ℝ) (hL : Filter.Tendsto f Filter.atTop (nhds L)) :
@@ -1377,8 +1385,7 @@ lemma finite_measure_subseq_limit
     have htop : (σ n) Set.univ + 1 ≠ (⊤ : ENNReal) :=
       ENNReal.add_ne_top.2 ⟨measure_ne_top (σ n) Set.univ, by simp⟩
     have hle : (1 : ENNReal) ≤ (σ n) Set.univ + 1 := by
-      simpa [add_comm, add_left_comm, add_assoc] using
-        add_le_add_right (zero_le ((σ n) Set.univ)) (1 : ENNReal)
+      simp [add_comm]
     simpa using ENNReal.toNNReal_mono htop hle
   have h_mass_le : ∀ n, ((ν n).mass : ℝ) ≤ max C 0 + 1 := by
     intro n
@@ -1423,7 +1430,7 @@ lemma finite_measure_subseq_limit
               simpa [Set.mem_Iio] using (lt_trans hx (by norm_num : (-1 : ℝ) < 0))
             _ = 0 := hsupp n
         have hδ : (Measure.dirac (-1) : Measure ℝ) (Set.Iio (-1)) = 0 := by
-          simp [Measure.dirac_apply]
+          simp
         simp [hσ, hδ]
       have htail : ((ν n : FiniteMeasure ℝ) : Measure ℝ) (Set.Ioi K') = σ n (Set.Ioi K') := by
         change (σ n + Measure.dirac (-1) : Measure ℝ) (Set.Ioi K') = σ n (Set.Ioi K')
@@ -1431,7 +1438,7 @@ lemma finite_measure_subseq_limit
         have hδ : (Measure.dirac (-1) : Measure ℝ) (Set.Ioi K') = 0 := by
           have hnot : (-1 : ℝ) ∉ Set.Ioi K' := by
             exact not_lt_of_ge (le_max_right K (-1))
-          simp [Measure.dirac_apply, hnot]
+          simp [hnot]
         simp [hδ]
       have hsubset : (Set.Icc (-1) K')ᶜ ⊆ Set.Iio (-1) ∪ Set.Ioi K' := by
         intro x hx
@@ -1442,7 +1449,8 @@ lemma finite_measure_subseq_limit
         ((π n : ProbabilityMeasure ℝ) : Measure ℝ) (Set.Icc (-1) K')ᶜ
             ≤ ((ν n : FiniteMeasure ℝ) : Measure ℝ) (Set.Icc (-1) K')ᶜ := by
               simpa using normalize_le (ν n) hν_nonzero (h_mass_ge_one n) ((Set.Icc (-1) K')ᶜ)
-        _ ≤ ((ν n : FiniteMeasure ℝ) : Measure ℝ) (Set.Iio (-1) ∪ Set.Ioi K') := measure_mono hsubset
+        _ ≤ ((ν n : FiniteMeasure ℝ) : Measure ℝ) (Set.Iio (-1) ∪ Set.Ioi K') :=
+            measure_mono hsubset
         _ ≤ ((ν n : FiniteMeasure ℝ) : Measure ℝ) (Set.Iio (-1)) +
               ((ν n : FiniteMeasure ℝ) : Measure ℝ) (Set.Ioi K') :=
             measure_union_le _ _
@@ -1692,7 +1700,7 @@ lemma finite_measure_subseq_limit
       simp [hσ, hδ]
     simp_rw [hχ_sigma] at hχ_seq
     have hχ_neg_ae : χ =ᵐ[ν₀m.restrict (Set.Iio 0)] 0 := by
-      show ∀ᵐ p ∂(ν₀m.restrict (Set.Iio 0)), χ p = 0
+      change ∀ᵐ p ∂(ν₀m.restrict (Set.Iio 0)), χ p = 0
       rw [ae_restrict_iff' measurableSet_Iio]
       filter_upwards [hν₀_ae_zero_f, hν₀_ae_zero_h] with p hp_f hp_h hp_neg
       by_cases hp_eq : p = -1
@@ -1708,8 +1716,7 @@ lemma finite_measure_subseq_limit
               · simpa [Set.mem_Iio] using hp_neg
             exact lt_max_of_lt_right hmin
           have hp_f0 : f_cut p = 0 := by simpa using hp_f
-          have : (0 : ℝ) < 0 := by simpa [hp_f0] using hpos
-          exact (lt_irrefl 0) this
+          simp [hp_f0] at hpos
         · exfalso
           have hp_le : p ≤ -1 := le_of_not_gt hp_gt
           have hp_lt : p < -1 := lt_of_le_of_ne hp_le hp_eq
@@ -1721,8 +1728,7 @@ lemma finite_measure_subseq_limit
               · linarith [hp_lt]
             exact lt_max_of_lt_right hmin
           have hp_h0 : h_cut p = 0 := by simpa using hp_h
-          have : (0 : ℝ) < 0 := by simpa [hp_h0] using hpos
-          exact (lt_irrefl 0) this
+          simp [hp_h0] at hpos
     have hχ_ν₀ : ∫ p, χ p ∂ν₀m = (μ₀ Set.univ).toReal := by
       have hsplit := MeasureTheory.setIntegral_union (Set.disjoint_left.mpr (by
         intro x hx1 hx2
@@ -1755,7 +1761,8 @@ lemma finite_measure_subseq_limit
       intro k
       exact ENNReal.toReal_le_of_le_ofReal (by positivity)
         (le_trans (hmass (Φ k)) (ENNReal.ofReal_le_ofReal (le_max_left C 0)))
-    have hlimit : (μ₀ Set.univ).toReal ≤ max C 0 := le_of_tendsto hχ_seq (Filter.Eventually.of_forall hle_real)
+    have hlimit : (μ₀ Set.univ).toReal ≤ max C 0 :=
+      le_of_tendsto hχ_seq (Filter.Eventually.of_forall hle_real)
     have htop : μ₀ Set.univ ≠ (⊤ : ENNReal) := measure_ne_top μ₀ Set.univ
     rw [← ENNReal.ofReal_toReal htop]
     refine le_trans (ENNReal.ofReal_le_ofReal hlimit) ?_
@@ -1788,7 +1795,7 @@ lemma finite_measure_subseq_limit
     have hlim := h_int_lim gχ
     simp_rw [← hσ_eq] at hlim
     have hχ_neg_ae : χ =ᵐ[ν₀m.restrict (Set.Iio 0)] 0 := by
-      show ∀ᵐ p ∂(ν₀m.restrict (Set.Iio 0)), χ p = 0
+      change ∀ᵐ p ∂(ν₀m.restrict (Set.Iio 0)), χ p = 0
       rw [ae_restrict_iff' measurableSet_Iio]
       filter_upwards [hν₀_ae_zero_f, hν₀_ae_zero_h] with p hp_f hp_h hp_neg
       by_cases hp_eq : p = -1
@@ -1804,8 +1811,7 @@ lemma finite_measure_subseq_limit
               · simpa [Set.mem_Iio] using hp_neg
             exact lt_max_of_lt_right hmin
           have hp_f0 : f_cut p = 0 := by simpa using hp_f
-          have : (0 : ℝ) < 0 := by simpa [hp_f0] using hpos
-          exact (lt_irrefl 0) this
+          simp [hp_f0] at hpos
         · exfalso
           have hp_le : p ≤ -1 := le_of_not_gt hp_gt
           have hp_lt : p < -1 := lt_of_le_of_ne hp_le hp_eq
@@ -1817,8 +1823,7 @@ lemma finite_measure_subseq_limit
               · linarith [hp_lt]
             exact lt_max_of_lt_right hmin
           have hp_h0 : h_cut p = 0 := by simpa using hp_h
-          have : (0 : ℝ) < 0 := by simpa [hp_h0] using hpos
-          exact (lt_irrefl 0) this
+          simp [hp_h0] at hpos
     have hν₀_eq : ∫ p, gχ p ∂ν₀m = ∫ p, g p ∂μ₀ := by
       have hsplit := MeasureTheory.setIntegral_union (Set.disjoint_left.mpr (by
         intro x hx1 hx2
@@ -1902,7 +1907,7 @@ private lemma kernel_uniform_conv (x : ℝ) (hx : 0 < x) (ε : ℝ) (hε : 0 < �
             have : (↑(n - 1) : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr (by omega)
             field_simp
   have hkernel_nn : ∀ n p, 0 ≤ bernstein_kernel n x p := by
-    intro n p; simp [bernstein_kernel]; split_ifs <;> positivity
+    intro n p; simp only [bernstein_kernel]; split_ifs <;> positivity
   have htail : Tendsto (fun R => Real.exp (-(x * R))) atTop (nhds 0) := by
     apply Filter.Tendsto.comp Real.tendsto_exp_neg_atTop_nhds_zero
     exact Filter.tendsto_id.const_mul_atTop hx
@@ -1988,7 +1993,8 @@ private lemma kernel_uniform_conv (x : ℝ) (hx : 0 < x) (ε : ℝ) (hε : 0 < �
     have h1 := hkernel_le n hn2 p hp
     rw [abs_of_nonpos (by linarith)]
     have h2 : Real.exp (-(x * p)) ≤ Real.exp (-(x * R)) := by
-        apply Real.exp_le_exp_of_le; linarith [mul_le_mul_of_nonneg_left (le_of_lt hpR) (le_of_lt hx)]
+        apply Real.exp_le_exp_of_le
+        linarith [mul_le_mul_of_nonneg_left (le_of_lt hpR) (le_of_lt hx)]
     linarith [hkernel_nn n p]
 
 -- **Kernel approximation error → 0**: For measures `σ_n` supported on `[0,∞)`
@@ -1999,6 +2005,7 @@ private lemma kernel_uniform_conv (x : ℝ) (hx : 0 < x) (ε : ℝ) (hε : 0 < �
 -- `φ_n(x,p) → e^{-xp}` is UNIFORM in `p ∈ [0,∞)` (both functions have exponential
 -- tail decay), so `|∫(φ_n - e^{-xp})dσ_n| ≤ sup|φ_n - e^{-xp}| · σ_n(ℝ) → 0`.
 set_option maxHeartbeats 3200000 in
+-- Uniform convergence bound involves quantitative estimates needing extra heartbeats.
 private lemma kernel_approx_error_tendsto
     (σ : ℕ → Measure ℝ) (φ : ℕ → ℕ) (hφ : StrictMono φ)
     (hfin : ∀ n, IsFiniteMeasure (σ n))
@@ -2131,7 +2138,7 @@ private lemma diagonal_convergence
   exact tendsto_nhds_unique (tendsto_const_nhds.congr (fun k => (hconst k).symm)) htends
 
 private lemma prokhorov_limit_identification (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
-    (L : ℝ) (hL : Filter.Tendsto f Filter.atTop (nhds L)) (hL_nn : 0 ≤ L)
+    (L : ℝ) (_hL : Filter.Tendsto f Filter.atTop (nhds L)) (_hL_nn : 0 ≤ L)
     (hmass_bound : ∀ n, 2 ≤ n →
       (cm_rescaled f n) Set.univ ≤ ENNReal.ofReal (f 0 - L))
     (hsupp : ∀ n, 2 ≤ n → (cm_rescaled f n) (Set.Iio 0) = 0)
@@ -2175,7 +2182,9 @@ private lemma prokhorov_limit_identification (f : ℝ → ℝ) (hcm : IsComplete
     have hmass_real : ∀ n, (σ n Set.univ).toReal = f 0 - L := by
       intro n; haveI := hfin_σ n
       have h1 := hident_σ n (by omega) 0 le_rfl
-      simp [bernstein_kernel, show ¬(n + 2 ≤ 1) from by omega] at h1
+      simp only [bernstein_kernel, show ¬(n + 2 ≤ 1) from by omega,
+        ite_false, zero_mul, zero_div, sub_zero, zero_le_one, max_eq_left,
+        one_pow, MeasureTheory.integral_const, smul_eq_mul, mul_one] at h1
       -- h1 : f 0 - L = ∫ 1 dσ_n = (σ_n).real univ
       rw [show (σ n).real Set.univ = (σ n Set.univ).toReal from by
         simp [Measure.real]] at h1
@@ -2366,7 +2375,6 @@ Given the correct identity, the proof concludes:
 2. **Diagonal convergence**: `∫ φ_{n_k} dσ̃_{n_k} → ∫ e^{-xp} dμ₀` using
    `bernstein_kernel_tendsto` + weak convergence + dominated convergence.
 3. **Conclusion**: `f(x) - L = ∫ e^{-xp} dμ₀`. -/
-
 lemma cm_prokhorov_and_verify (f : ℝ → ℝ) (hcm : IsCompletelyMonotone f)
     (L : ℝ) (hL : Filter.Tendsto f Filter.atTop (nhds L))
     (hL_nn : 0 ≤ L)

@@ -51,7 +51,7 @@ private lemma continuous_expNegToUnitInterval : Continuous expNegToUnitInterval 
       · have hmax : 0 ≤ max p 0 := le_max_right _ _
         have h' : Real.exp (-max p 0) ≤ 1 := by
           exact Real.exp_le_one_iff.mpr (by linarith)
-        simpa using h')
+        simp using h')
 
 private lemma measurable_expNegToUnitInterval : Measurable expNegToUnitInterval :=
   continuous_expNegToUnitInterval.measurable
@@ -185,7 +185,8 @@ private lemma laplacePushforwardUnit_eq_map_onIci
   calc
     laplacePushforwardUnit μ = Measure.map expNegToUnitInterval (μ.restrict (Set.Ici 0)) := by
       simpa [laplacePushforwardUnit] using
-        congrArg (Measure.map expNegToUnitInterval) (restrict_eq_self_of_support_nonneg μ hsupp).symm
+          congrArg (Measure.map expNegToUnitInterval)
+          (restrict_eq_self_of_support_nonneg μ hsupp).symm
     _ =
         Measure.map expNegToUnitInterval
           (Measure.map (fun x : Set.Ici (0 : ℝ) => (x : ℝ))
@@ -200,7 +201,7 @@ private lemma laplacePushforwardUnit_eq_map_onIci
       ext x
       simp [Function.comp, expNegOnIci, expNegToUnitInterval]
 
-  private lemma unitInterval_measure_unique_of_moments_eq
+private lemma unitInterval_measure_unique_of_moments_eq
     (μ ν : Measure (Set.Icc (0 : ℝ) 1)) [IsFiniteMeasure μ] [IsFiniteMeasure ν]
     (hm : ∀ n : ℕ,
       ∫ x : Set.Icc (0 : ℝ) 1, (x : ℝ) ^ n ∂μ =
@@ -375,7 +376,7 @@ private lemma TemporalSliceRep.union_eq {d : ℕ}
   haveI := r₂.finite
   haveI : IsFiniteMeasure (r₁.σ + r₂.σ) := by infer_instance
   apply laplace_measure_unique r₁₂.σ (r₁.σ + r₂.σ) r₁₂.support
-  · simp [Measure.add_apply, measurableSet_Iio, r₁.support, r₂.support]
+  · simp [Measure.add_apply, r₁.support, r₂.support]
   · intro t ht
     haveI := hν t ht
     rw [← r₁₂.laplace t ht, integral_add_measure
@@ -528,7 +529,7 @@ When F(t, 0) = 0, F(t, ·) ≡ 0 by Cauchy-Schwarz for PD. -/
 lemma spatial_bochner_measures {d : ℕ} (F : ℝ → (Fin d → ℝ) → ℂ)
     (hcont : ContinuousOn (fun p : ℝ × (Fin d → ℝ) => F p.1 p.2)
       (Ici (0 : ℝ) ×ˢ univ))
-    (hbdd : ∃ C : ℝ, ∀ t a, 0 ≤ t → ‖F t a‖ ≤ C)
+    (_hbdd : ∃ C : ℝ, ∀ t a, 0 ≤ t → ‖F t a‖ ≤ C)
     (hpd : IsSemigroupGroupPD d F) :
     ∀ t, 0 ≤ t → ∃ (ν : Measure (Fin d → ℝ)), IsFiniteMeasure ν ∧
       ∀ a, F t a = ∫ q, exp (I * ↑(∑ i : Fin d, q i * a i)) ∂ν := by
@@ -677,7 +678,8 @@ lemma spatial_bochner_measures {d : ℕ} (F : ℝ → (Fin d → ℝ) → ℂ)
     calc
       F t 0 * ∫ x : EuclideanSpace ℝ (Fin d), exp (↑(inner ℝ x (toE a)) * I) ∂↑μ_prob
           = ((F t 0).re : ℂ) *
-              ∫ x : EuclideanSpace ℝ (Fin d), exp (I * ↑(∑ i : Fin d, (fromE x) i * a i)) ∂↑μ_prob := by
+              ∫ x : EuclideanSpace ℝ (Fin d),
+                exp (I * ↑(∑ i : Fin d, (fromE x) i * a i)) ∂↑μ_prob := by
             rw [h0_eq]
             congr 1
             apply integral_congr_ae
@@ -912,7 +914,7 @@ private lemma fourier_integral_continuous {d : ℕ} (μ : Measure (Fin d → ℝ
     refine ae_of_all _ fun q => ?_
     exact le_of_eq (by simpa [mul_comm] using
       Complex.norm_exp_ofReal_mul_I (∑ i : Fin d, q i * a i))
-  · simpa using (integrable_const (1 : ℝ))
+  · simp using (integrable_const (1 : ℝ))
   · refine ae_of_all _ ?_
     intro q
     apply Continuous.cexp
@@ -1198,7 +1200,9 @@ private lemma weighted_sum_positive_definite {d n : ℕ} (F : ℝ → (Fin d →
     have : 0 ≤
         (∑ i : Fin m, ∑ j : Fin m,
           star (c i) * c j *
-            (∑ r : Fin n, ∑ s : Fin n, ((x r * x s : ℝ) : ℂ) * F (ts r + ts s) (as i - as j))).re := by
+            (∑ r : Fin n, ∑ s : Fin n,
+              ((x r * x s : ℝ) : ℂ) *
+                F (ts r + ts s) (as i - as j))).re := by
       rw [h_complex]
       exact hPD
     simpa using this
@@ -1284,7 +1288,7 @@ private lemma weighted_measure_eval {d n : ℕ}
     exact (ENNReal.sum_ne_top).2 (fun s _ => h_term_top r s)
   rw [show ((∑ r : Fin n, ∑ s : Fin n, ENNReal.ofReal (w r s) • ν (ts r + ts s)) B).toReal =
       (∑ r : Fin n, ∑ s : Fin n, term r s).toReal by
-      simp [term, Measure.smul_apply, mul_comm, mul_left_comm, mul_assoc]]
+      simp [term]]
   rw [show (∑ r : Fin n, ∑ s : Fin n, term r s).toReal =
       ∑ r : Fin n, (row r).toReal by
       simpa [row] using (ENNReal.toReal_sum (s := (Finset.univ : Finset (Fin n)))
@@ -1297,7 +1301,8 @@ private lemma weighted_measure_eval {d n : ℕ}
         (fun s hs => h_term_top r s))]
   apply Finset.sum_congr rfl
   intro s hs
-  simp [term, ENNReal.toReal_mul, ENNReal.toReal_ofReal (hw r s), mul_assoc, mul_left_comm, mul_comm]
+  simp [term, ENNReal.toReal_mul,
+    ENNReal.toReal_ofReal (hw r s)]
 
 private lemma spatial_measures_pd_real {d n : ℕ} (F : ℝ → (Fin d → ℝ) → ℂ)
     (hpd : IsSemigroupGroupPD d F)
@@ -1396,7 +1401,7 @@ private lemma spatial_measures_pd_real {d n : ℕ} (F : ℝ → (Fin d → ℝ) 
                 ring
       _ = (∑ r : Fin n, ∑ s : Fin n, ((wminus r s : ℝ) : ℂ) * F (ts r + ts s) a) +
             ∑ r : Fin n, ∑ s : Fin n, ((x r * x s : ℝ) : ℂ) * F (ts r + ts s) a := by
-                simpa [add_mul, Finset.sum_add_distrib]
+                simp [add_mul, Finset.sum_add_distrib]
       _ = (∑ r : Fin n, ∑ s : Fin n, ((wminus r s : ℝ) : ℂ) * F (ts r + ts s) a) + G a := by
                 rfl
   have hμ_eq : μPlus = μMinus + η :=
@@ -1462,7 +1467,7 @@ theorem spatial_measures_pd {d : ℕ} (F : ℝ → (Fin d → ℝ) → ℂ)
     (hν : ∀ t, 0 ≤ t → IsFiniteMeasure (ν t))
     (hνF : ∀ t, 0 ≤ t → ∀ a,
       F t a = ∫ q, exp (I * ↑(∑ i : Fin d, q i * a i)) ∂(ν t))
-    (B : Set (Fin d → ℝ)) (hB : MeasurableSet B) :
+    (B : Set (Fin d → ℝ)) (_hB : MeasurableSet B) :
     IsSemigroupPD (fun t => ((ν t) B).toReal) := by
   intro n c ts hts
   let M : Fin n → Fin n → ℝ := fun i j => ((ν (ts i + ts j)) B).toReal
@@ -1496,7 +1501,8 @@ private lemma spatial_measure_total_mass_eq_re_zero {d : ℕ}
     ((ν t) Set.univ).toReal = (F t 0).re := by
   haveI := hν t ht
   have h0 := hνF t ht 0
-  simp [Measure.real] at h0
+  simp only [Pi.zero_apply, mul_zero, sum_const_zero, ofReal_zero, exp_zero,
+    integral_const, Measure.real] at h0
   have h0re : (F t 0).re = ((ν t) Set.univ).toReal := by
     have h0re' : (F t 0).re = (((ν t) Set.univ).toReal • (1 : ℂ)).re := by
       exact congrArg Complex.re h0
@@ -1743,9 +1749,9 @@ private lemma abs_sub_gridStep_coord_lt_one {d : ℕ} (n : ℕ) (q : Fin d → �
     |gridStep (d := d) n q i - q i| < 1 := by
   let z : ℤ := gridVec (d := d) n q i
   have hfloor1 : (z : ℝ) ≤ q i * (n + 1 : ℝ) := by
-    simpa [z, gridVec] using (Int.floor_le (q i * (n + 1 : ℝ)))
+    simp [z, gridVec] using (Int.floor_le (q i * (n + 1 : ℝ)))
   have hfloor2 : q i * (n + 1 : ℝ) < z + 1 := by
-    simpa [z, gridVec] using (Int.lt_floor_add_one (q i * (n + 1 : ℝ)))
+    simp [z, gridVec] using (Int.lt_floor_add_one (q i * (n + 1 : ℝ)))
   have hpos : (0 : ℝ) < n + 1 := by positivity
   have hleft : (z : ℝ) / (n + 1 : ℝ) ≤ q i := by
     exact (div_le_iff₀ hpos).2 hfloor1
@@ -1770,9 +1776,9 @@ private lemma abs_sub_gridStep_coord_lt_inv {d : ℕ} (n : ℕ) (q : Fin d → �
     |gridStep (d := d) n q i - q i| < 1 / (n + 1 : ℝ) := by
   let z : ℤ := gridVec (d := d) n q i
   have hfloor1 : (z : ℝ) ≤ q i * (n + 1 : ℝ) := by
-    simpa [z, gridVec] using (Int.floor_le (q i * (n + 1 : ℝ)))
+    simp [z, gridVec] using (Int.floor_le (q i * (n + 1 : ℝ)))
   have hfloor2 : q i * (n + 1 : ℝ) < z + 1 := by
-    simpa [z, gridVec] using (Int.lt_floor_add_one (q i * (n + 1 : ℝ)))
+    simp [z, gridVec] using (Int.lt_floor_add_one (q i * (n + 1 : ℝ)))
   have hpos : (0 : ℝ) < n + 1 := by positivity
   have hanchor : gridStep (d := d) n q i = (z : ℝ) / (n + 1 : ℝ) := by
     simp [gridStep, gridAnchor, z]
@@ -1812,7 +1818,8 @@ private lemma tendsto_gridStep {d : ℕ} (q : Fin d → ℝ) :
   refine Metric.tendsto_atTop.2 ?_
   intro ε hε
   rcases Metric.tendsto_atTop.1
-      (tendsto_one_div_add_atTop_nhds_zero_nat : Tendsto (fun n : ℕ => 1 / (n + 1 : ℝ)) atTop (nhds 0))
+      (tendsto_one_div_add_atTop_nhds_zero_nat :
+        Tendsto (fun n : ℕ => 1 / (n + 1 : ℝ)) atTop (nhds 0))
       ε hε with ⟨N, hN⟩
   refine ⟨N, ?_⟩
   intro n hn
@@ -1894,7 +1901,9 @@ private lemma jointApproxMeasure_univ {d : ℕ} (n : ℕ)
     ∑' v : Fin d → ℤ,
         ((σ ⟨gridCube (d := d) n v, measurableSet_gridCube (d := d) n v⟩).prod
           (Measure.dirac (gridAnchor (d := d) n v))) Set.univ
-      = ∑' v : Fin d → ℤ, (σ ⟨gridCube (d := d) n v, measurableSet_gridCube (d := d) n v⟩) Set.univ := by
+      = ∑' v : Fin d → ℤ,
+          (σ ⟨gridCube (d := d) n v,
+            measurableSet_gridCube (d := d) n v⟩) Set.univ := by
           congr with v
           rw [← univ_prod_univ, Measure.prod_prod]
           simp
@@ -1945,7 +1954,9 @@ private lemma jointApproxMeasure_univ_prod_closedBall_compl_le {d : ℕ} (n : �
             · intro hq
               refine Set.mem_iUnion.2 ⟨gridVec (d := d) n q, ?_⟩
               simp [gridCube, hq]
-          have hdisj : Pairwise (Function.onFun Disjoint fun v : Fin d → ℤ => gridCube (d := d) n v ∩ S) := by
+          have hdisj : Pairwise (Function.onFun Disjoint
+              fun v : Fin d → ℤ =>
+                gridCube (d := d) n v ∩ S) := by
             intro v w hvw
             refine Set.disjoint_left.2 ?_
             intro q hqv hqw
@@ -2010,8 +2021,7 @@ private lemma jointApproxMeasure_integrable_kernel {d : ℕ} (n : ℕ)
     (g := fun _ : ℝ × (Fin d → ℝ) => (1 : ℝ))
     (integrable_const (1 : ℝ)) ?_ ?_
   · exact Continuous.aestronglyMeasurable (by fun_prop)
-  ·
-    have h_nonneg :
+  · have h_nonneg :
         ∀ᵐ z ∂(jointApproxMeasure (d := d) n σ), 0 ≤ z.1 :=
       jointApproxMeasure_ae_nonneg_fst (d := d) n σ hσsupp
     filter_upwards [h_nonneg] with z hz
@@ -2023,7 +2033,7 @@ private lemma jointApproxMeasure_integrable_kernel {d : ℕ} (n : ℕ)
           = ‖exp (-(↑(t * z.1) : ℂ))‖ *
               ‖exp (I * ↑(∑ i : Fin d, z.2 i * a i))‖ := norm_mul _ _
       _ = Real.exp (-(t * z.1)) * 1 := by
-            simp [Complex.norm_exp, Complex.norm_exp_I_mul_ofReal]
+            simp [Complex.norm_exp]
       _ ≤ 1 := by nlinarith
 
 private lemma jointApproxMeasure_integral_kernel {d : ℕ} (n : ℕ)
@@ -2046,8 +2056,12 @@ private lemma jointApproxMeasure_integral_kernel {d : ℕ} (n : ℕ)
   haveI : IsFiniteMeasure (σ ⟨gridCube (d := d) n v, measurableSet_gridCube (d := d) n v⟩) :=
     hσfin ⟨gridCube (d := d) n v, measurableSet_gridCube (d := d) n v⟩
   have hreal :
-      ∫ p, exp (-(↑(t * p) : ℂ)) ∂(σ ⟨gridCube (d := d) n v, measurableSet_gridCube (d := d) n v⟩)
-        = ↑(∫ p, Real.exp (-(t * p)) ∂(σ ⟨gridCube (d := d) n v, measurableSet_gridCube (d := d) n v⟩)) := by
+      ∫ p, exp (-(↑(t * p) : ℂ))
+          ∂(σ ⟨gridCube (d := d) n v,
+              measurableSet_gridCube (d := d) n v⟩)
+        = ↑(∫ p, Real.exp (-(t * p))
+            ∂(σ ⟨gridCube (d := d) n v,
+                measurableSet_gridCube (d := d) n v⟩)) := by
     have hcongr :
         (fun p : ℝ => exp (-(↑(t * p) : ℂ))) =
           fun p : ℝ => ((Real.exp (-(t * p)) : ℝ) : ℂ) := by
@@ -2120,7 +2134,8 @@ private lemma integral_gridStep_char_eq_tsum {d : ℕ}
           simp [f, Complex.norm_exp]
         _ = 1 := by rw [h_re]; norm_num
     linarith
-  have huniv : (⋃ v : Fin d → ℤ, gridCube (d := d) n v) = Set.univ := iUnion_gridCube_univ (d := d) n
+  have huniv : (⋃ v : Fin d → ℤ, gridCube (d := d) n v) = Set.univ :=
+    iUnion_gridCube_univ (d := d) n
   have hdisj : Pairwise (Function.onFun Disjoint (gridCube (d := d) n)) :=
     pairwise_disjoint_gridCube (d := d) n
   have hmeas : ∀ v, MeasurableSet (gridCube (d := d) n v) := fun v =>
@@ -2158,7 +2173,10 @@ private noncomputable def laplaceCharBCF {d : ℕ} (t : ℝ) (ht : 0 ≤ t) (a :
       · apply Continuous.cexp
         apply Continuous.mul continuous_const
         apply Complex.continuous_ofReal.comp
-        apply continuous_finset_sum _ (fun i _ => (continuous_apply i |>.comp continuous_snd).mul continuous_const)⟩
+        apply continuous_finset_sum _
+          (fun i _ =>
+            (continuous_apply i |>.comp continuous_snd).mul
+              continuous_const)⟩
     2
     (by
       intro z y
@@ -2248,7 +2266,7 @@ theorem joint_measure_from_temporal_slices {d : ℕ}
     (hσsupp : ∀ B, σ B (Set.Iio 0) = 0)
     (hσlaplace : ∀ B t, 0 ≤ t → ((ν t) B.1).toReal = ∫ p, Real.exp (-(t * p)) ∂(σ B))
     (hσiUnion : ∀ (B : ℕ → Set (Fin d → ℝ)) (hB : ∀ n, MeasurableSet (B n))
-      (hdisj : Pairwise (Function.onFun Disjoint B)),
+      (_hdisj : Pairwise (Function.onFun Disjoint B)),
       σ ⟨⋃ n, B n, MeasurableSet.iUnion hB⟩ =
         Measure.sum (fun n => σ ⟨B n, hB n⟩)) :
     ∃ (μ : Measure (ℝ × (Fin d → ℝ))),
@@ -2420,7 +2438,7 @@ theorem joint_measure_from_temporal_slices {d : ℕ}
               (Set.univ.prod (Metric.closedBall (0 : Fin d → ℝ) (max R0 0 + 1))ᶜ)) := by
       intro z hz
       rcases z with ⟨p, q⟩
-      simp only [Set.mem_compl_iff, Set.mem_prod, Set.mem_Icc, Metric.mem_closedBall] at hz
+      simp only [Set.mem_compl_iff] at hz
       by_cases hp0 : p < 0
       · exact Or.inl ⟨hp0, Set.mem_univ q⟩
       · have hp0' : 0 ≤ p := le_of_not_gt hp0
@@ -2460,7 +2478,7 @@ theorem joint_measure_from_temporal_slices {d : ℕ}
             rw [← ENNReal.ofReal_add (by positivity) (by positivity)]
             ring
   by_cases hmass0 : ν0 Set.univ = 0
-  · refine ⟨0, by infer_instance, by simp [hmass0], ?_⟩
+  · refine ⟨0, by infer_instance, by simp, ?_⟩
     intro t a ht
     haveI := hν t ht
     have hσuniv_mass0 : σuniv Set.univ = 0 := by
@@ -2476,8 +2494,7 @@ theorem joint_measure_from_temporal_slices {d : ℕ}
       · exact hzero
       · exact (measure_ne_top (ν t) Set.univ htop).elim
     simp [hνt_zero]
-  ·
-    let Ω := ℝ × (Fin d → ℝ)
+  · let Ω := ℝ × (Fin d → ℝ)
     let fμn : ℕ → FiniteMeasure Ω := fun n => ⟨μn n, hμn_fin n⟩
     let πn : ℕ → ProbabilityMeasure Ω := fun n => (fμn n).normalize
     let Mnn : NNReal := (fμn 0).mass
@@ -2503,7 +2520,7 @@ theorem joint_measure_from_temporal_slices {d : ℕ}
       exact hmn.trans hm0.symm
     have hμn_nonzero : ∀ n, fμn n ≠ 0 := by
       intro n hzero
-      have : (fμn n).mass = 0 := by simpa [hzero]
+      have : (fμn n).mass = 0 := by simp [hzero]
       exact hMnn_ne (hmass_const n ▸ this)
     have h_π_tight :
         IsTightMeasureSet {x : Measure Ω | ∃ μ ∈ Set.range πn, (μ : Measure Ω) = x} := by
@@ -2538,7 +2555,8 @@ theorem joint_measure_from_temporal_slices {d : ℕ}
                   dsimp [η]
                   rw [ENNReal.ofReal_mul hMnn_pos.le,
                     ENNReal.ofReal_coe_nnreal, ENNReal.ofReal_toReal hεtop]]
-                rw [← mul_assoc, ← ENNReal.coe_mul, inv_mul_cancel₀ hMnn_ne, ENNReal.coe_one, one_mul]
+                rw [← mul_assoc, ← ENNReal.coe_mul,
+                  inv_mul_cancel₀ hMnn_ne, ENNReal.coe_one, one_mul]
     have h_compact : IsCompact (closure (Set.range πn)) :=
       isCompact_closure_of_isTightMeasureSet h_π_tight
     have h_seq : IsSeqCompact (closure (Set.range πn)) := h_compact.isSeqCompact
@@ -2551,13 +2569,14 @@ theorem joint_measure_from_temporal_slices {d : ℕ}
       dsimp [μ]
       exact Measure.smul_finite _ (by simp)
     have hπn_zero :
-        ∀ n, ((πn n : ProbabilityMeasure Ω) : Measure Ω) (((Set.Iio 0).prod Set.univ) : Set Ω) = 0 := by
+        ∀ n, ((πn n : ProbabilityMeasure Ω) : Measure Ω)
+          (((Set.Iio 0).prod Set.univ) : Set Ω) = 0 := by
       intro n
       rw [show (πn n : Measure Ω) = ((((fμn n).mass)⁻¹ : NNReal) : ENNReal) • μn n by
         rw [show πn n = (fμn n).normalize by rfl]
         simpa [fμn] using (fμn n).toMeasure_normalize_eq_of_nonzero (hμn_nonzero n)]
       rw [Measure.smul_apply, hμn_supp n]
-      simpa [smul_eq_mul]
+      simp
     have hπ0_zero :
         ((π0 : ProbabilityMeasure Ω) : Measure Ω) (((Set.Iio 0).prod Set.univ) : Set Ω) = 0 := by
       have hle :
@@ -2634,7 +2653,7 @@ theorem joint_measure_from_temporal_slices {d : ℕ}
           ((Mnn : ℝ) : ℂ) *
             (∫ z, laplaceCharBCF (d := d) t ht a z
               ∂(((πn (φ k) : ProbabilityMeasure Ω) : Measure Ω)))
-        simp [smul_eq_mul]
+        simp
       have hμscale0 :
           ∫ z, laplaceCharBCF (d := d) t ht a z ∂μ =
             ((Mnn : ℝ) : ℂ) *
@@ -2653,7 +2672,7 @@ theorem joint_measure_from_temporal_slices {d : ℕ}
           ((Mnn : ℝ) : ℂ) *
             (∫ z, laplaceCharBCF (d := d) t ht a z
               ∂(((π0 : ProbabilityMeasure Ω) : Measure Ω)))
-        simp [smul_eq_mul]
+        simp
       simpa [hμscale, hμscale0] using hscaled
     have hμ_char_raw :
         Tendsto
@@ -2731,7 +2750,7 @@ theorem product_measure_assembly {d : ℕ} (F : ℝ → (Fin d → ℝ) → ℂ)
     (hcont : ContinuousOn (fun p : ℝ × (Fin d → ℝ) => F p.1 p.2)
       (Ici (0 : ℝ) ×ˢ univ))
     (hbdd : ∃ C : ℝ, ∀ t a, 0 ≤ t → ‖F t a‖ ≤ C)
-    (hpd : IsSemigroupGroupPD d F)
+    (_hpd : IsSemigroupGroupPD d F)
     (ν : ℝ → Measure (Fin d → ℝ))
     (hν : ∀ t, 0 ≤ t → IsFiniteMeasure (ν t))
     (hνF : ∀ t, 0 ≤ t → ∀ a,

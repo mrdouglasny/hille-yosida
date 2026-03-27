@@ -14,14 +14,13 @@ A completely monotone function on $[0,\infty)$ is the Laplace transform of a uni
 
 ### BCR Theorem 4.1.13 -- Semigroup Bochner (fully proved, 0 axioms)
 
-Bounded continuous positive-definite functions on $[0,\infty) \times \mathbb{R}^d$ are Fourier-Laplace transforms of finite positive measures:
+Bounded continuous positive-definite functions on $[0,\infty) \times \mathbb{R}^d$ are Fourier-Laplace transforms of a unique finite positive measure:
 
 $$F(t, a) = \int_{[0,\infty) \times \mathbb{R}^d} e^{-tp} \, e^{i\langle a, q\rangle} \, d\mu(p, q) \quad \text{for } t \geq 0$$
 
-The proof decomposes into:
-- **Spatial Bochner:** For each $t$, apply Bochner's theorem to $a \mapsto F(t,a)$
-- **Temporal BCR d=0:** For each Borel set $B$, apply `semigroup_pd_laplace` to $t \mapsto \nu_t(B)$
-- **Product assembly:** Combine into a single measure on $[0,\infty) \times \mathbb{R}^d$
+**Existence** (`semigroupGroupBochner`): decomposes into spatial Bochner + temporal BCR d=0 + product measure assembly.
+
+**Uniqueness** (`laplaceFourier_unique`): finite measures on $[0,\infty) \times \mathbb{R}^d$ with equal Laplace-Fourier transforms are equal. Proved via Fourier uniqueness on spatial slices, Laplace uniqueness on temporal slices, and rectangular measure extension.
 
 ## File Structure
 
@@ -31,7 +30,7 @@ The proof decomposes into:
 | [Bernstein.lean](HilleYosida/Bernstein.lean) | [Completely monotone functions, Bernstein's theorem](summary/HilleYosida/Bernstein.md) |
 | [FourierPD.lean](HilleYosida/FourierPD.lean) | [Fourier PD: `pd_quadratic_form_of_measure`](summary/HilleYosida/FourierPD.md) |
 | [BCR_d0.lean](HilleYosida/BCR_d0.lean) | [BCR 4.1.13 for d=0: `semigroup_pd_laplace`](summary/HilleYosida/BCR_d0.md) |
-| [BCR_General.lean](HilleYosida/BCR_General.lean) | [BCR 4.1.13 for general d: `semigroupGroupBochner_proof`](summary/HilleYosida/BCR_General.md) |
+| [BCR_General.lean](HilleYosida/BCR_General.lean) | [BCR 4.1.13: `semigroupGroupBochner_proof` + `laplaceFourier_unique`](summary/HilleYosida/BCR_General.md) |
 | [SemigroupGroupExtension.lean](HilleYosida/SemigroupGroupExtension.lean) | [`semigroupGroupBochner` + group extension](summary/HilleYosida/SemigroupGroupExtension.md) |
 | [SemigroupGroupDefs.lean](HilleYosida/SemigroupGroupDefs.lean) | [`IsSemigroupGroupPD` definition](summary/HilleYosida/SemigroupGroupDefs.md) |
 | [Future/GenerationTheorem.lean](HilleYosida/Future/GenerationTheorem.lean) | [HY converse (Lumer-Phillips)](summary/HilleYosida/Future/GenerationTheorem.md) |
