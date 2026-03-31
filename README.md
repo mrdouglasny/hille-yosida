@@ -73,3 +73,11 @@ This project provides the `semigroupGroupBochner` theorem needed by [OSreconstru
 - Engel-Nagel, *One-Parameter Semigroups for Linear Evolution Equations*, GTM 194 (2000)
 - Widder, *The Laplace Transform* (1941), Chapter IV
 - Reed-Simon I-II (1972-1975)
+
+## Author
+
+Michael R. Douglas
+
+## License
+
+Copyright (c) 2026 Michael R. Douglas. Released under the Apache 2.0 license.
