@@ -10,13 +10,13 @@ weak.linter.mathlibStandardSet = true
 maxSynthPendingDepth = 3
 
 [[require]]
-name = "mathlib"
-scope = "leanprover-community"
-rev = "v4.29.0-rc6"
-
-[[require]]
 name = "BochnerMinlos"
 git = "https://github.com/mrdouglasny/bochner.git"
+rev = "main"
+
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
 
 [[lean_lib]]
 name = "HilleYosida"

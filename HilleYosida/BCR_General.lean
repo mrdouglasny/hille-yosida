@@ -51,7 +51,7 @@ private lemma continuous_expNegToUnitInterval : Continuous expNegToUnitInterval 
       · have hmax : 0 ≤ max p 0 := le_max_right _ _
         have h' : Real.exp (-max p 0) ≤ 1 := by
           exact Real.exp_le_one_iff.mpr (by linarith)
-        simp using h')
+        simpa using h')
 
 private lemma measurable_expNegToUnitInterval : Measurable expNegToUnitInterval :=
   continuous_expNegToUnitInterval.measurable
@@ -914,7 +914,7 @@ private lemma fourier_integral_continuous {d : ℕ} (μ : Measure (Fin d → ℝ
     refine ae_of_all _ fun q => ?_
     exact le_of_eq (by simpa [mul_comm] using
       Complex.norm_exp_ofReal_mul_I (∑ i : Fin d, q i * a i))
-  · simp using (integrable_const (1 : ℝ))
+  · simpa using (integrable_const (1 : ℝ))
   · refine ae_of_all _ ?_
     intro q
     apply Continuous.cexp
@@ -1749,9 +1749,9 @@ private lemma abs_sub_gridStep_coord_lt_one {d : ℕ} (n : ℕ) (q : Fin d → �
     |gridStep (d := d) n q i - q i| < 1 := by
   let z : ℤ := gridVec (d := d) n q i
   have hfloor1 : (z : ℝ) ≤ q i * (n + 1 : ℝ) := by
-    simp [z, gridVec] using (Int.floor_le (q i * (n + 1 : ℝ)))
+    simpa [z, gridVec] using (Int.floor_le (q i * (n + 1 : ℝ)))
   have hfloor2 : q i * (n + 1 : ℝ) < z + 1 := by
-    simp [z, gridVec] using (Int.lt_floor_add_one (q i * (n + 1 : ℝ)))
+    simpa [z, gridVec] using (Int.lt_floor_add_one (q i * (n + 1 : ℝ)))
   have hpos : (0 : ℝ) < n + 1 := by positivity
   have hleft : (z : ℝ) / (n + 1 : ℝ) ≤ q i := by
     exact (div_le_iff₀ hpos).2 hfloor1
@@ -1776,9 +1776,9 @@ private lemma abs_sub_gridStep_coord_lt_inv {d : ℕ} (n : ℕ) (q : Fin d → �
     |gridStep (d := d) n q i - q i| < 1 / (n + 1 : ℝ) := by
   let z : ℤ := gridVec (d := d) n q i
   have hfloor1 : (z : ℝ) ≤ q i * (n + 1 : ℝ) := by
-    simp [z, gridVec] using (Int.floor_le (q i * (n + 1 : ℝ)))
+    simpa [z, gridVec] using (Int.floor_le (q i * (n + 1 : ℝ)))
   have hfloor2 : q i * (n + 1 : ℝ) < z + 1 := by
-    simp [z, gridVec] using (Int.lt_floor_add_one (q i * (n + 1 : ℝ)))
+    simpa [z, gridVec] using (Int.lt_floor_add_one (q i * (n + 1 : ℝ)))
   have hpos : (0 : ℝ) < n + 1 := by positivity
   have hanchor : gridStep (d := d) n q i = (z : ℝ) / (n + 1 : ℝ) := by
     simp [gridStep, gridAnchor, z]

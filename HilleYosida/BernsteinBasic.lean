@@ -5,7 +5,7 @@ Released under Apache 2.0 license.
 # Bernstein's Theorem — Basic definitions and properties
 
 `IsCompletelyMonotone` definition, basic CM properties (nonneg, bounded,
-deriv_nonpos, deriv_cm_sign, tendsto_atTop), `taylor_integral_remainder`,
+deriv_nonpos, deriv_cm_sign, tendsto_atTop),
 set transfer lemmas, integral_neg_deriv, integral_mass.
 
 Split from `Bernstein.lean`.
@@ -88,48 +88,6 @@ lemma IsCompletelyMonotone.deriv_cm_sign (hcm : IsCompletelyMonotone f)
     ← iteratedDerivWithin_succ']
   have := hcm.2 (n + 1) t ht
   simp only [pow_succ] at this ⊢
-  linarith
-
-/-! ## Taylor integral remainder -/
-
-/-- **Taylor integral remainder** on `[a, b]` (sorry-free). The error of the n-th
-Taylor polynomial centered at `a` equals `∫_a^b (b-t)^n/n! · f^{(n+1)}(t) dt`.
-
-This is proved via FTC applied to `t ↦ taylorWithinEval f n s t b`, whose derivative
-is `(n!)⁻¹(b-t)^n · f^{(n+1)}(t)` by `hasDerivWithinAt_taylorWithinEval_at_Icc`,
-and whose value at `t=b` is `f(b)` by `taylorWithinEval_self`. -/
-theorem taylor_integral_remainder {f : ℝ → ℝ} {a b : ℝ} {n : ℕ} (hab : a < b)
-    (hf : ContDiffOn ℝ (↑(n + 1) : WithTop ℕ∞) f (Icc a b)) :
-    f b - taylorWithinEval f n (Icc a b) a b =
-      ∫ t in a..b, (↑n.factorial)⁻¹ * (b - t) ^ n *
-        iteratedDerivWithin (n + 1) f (Icc a b) t := by
-  set s := Icc a b
-  have hab' := le_of_lt hab
-  have hle : (↑n : WithTop ℕ∞) ≤ ↑(n + 1) :=
-    WithTop.coe_le_coe.mpr (ENat.coe_le_coe.mpr (by omega))
-  have hlt : (↑n : WithTop ℕ∞) < ↑(n + 1) :=
-    WithTop.coe_lt_coe.mpr (ENat.coe_lt_coe.mpr (by omega))
-  have huniq := uniqueDiffOn_Icc hab
-  have hf_n : ContDiffOn ℝ (↑n : WithTop ℕ∞) f s := hf.of_le hle
-  have hdiff : DifferentiableOn ℝ (iteratedDerivWithin n f s) s :=
-    hf.differentiableOn_iteratedDerivWithin hlt huniq
-  have hderiv : ∀ t ∈ Ioo a b, HasDerivAt (fun y => taylorWithinEval f n s y b)
-      (((↑n.factorial)⁻¹ * (b - t) ^ n) •
-        iteratedDerivWithin (n + 1) f s t) t := by
-    intro t ht
-    exact (hasDerivWithinAt_taylorWithinEval_at_Icc b hab
-      (Ioo_subset_Icc_self ht) hf_n hdiff).hasDerivAt (Icc_mem_nhds ht.1 ht.2)
-  have hcont : ContinuousOn (fun t => taylorWithinEval f n s t b) s :=
-    continuousOn_taylorWithinEval huniq hf_n
-  have hint : IntervalIntegrable (fun t => ((↑n.factorial)⁻¹ * (b - t) ^ n) •
-      iteratedDerivWithin (n + 1) f s t) volume a b := by
-    apply ContinuousOn.intervalIntegrable
-    rw [uIcc_of_le hab']
-    exact (continuousOn_const.mul
-      ((continuousOn_const.sub continuousOn_id).pow n)).smul
-      (hf.continuousOn_iteratedDerivWithin le_rfl huniq)
-  have hftc := integral_eq_sub_of_hasDerivAt_of_le hab' hcont hderiv hint
-  simp only [taylorWithinEval_self, smul_eq_mul] at hftc
   linarith
 
 /-- A CM function has a limit at infinity: it is antitone and bounded below by 0,
@@ -215,13 +173,17 @@ lemma IsCompletelyMonotone.integral_neg_deriv (hcm : IsCompletelyMonotone f)
     Icc_subset_Ici_self.trans (Set.Ici_subset_Ici.mpr hx)
   have hcm_Icc : ContDiffOn ℝ (↑(0 + 1) : WithTop ℕ∞) f (Icc x T) :=
     (hcm.1.mono hsubset).of_le (nat_le_coe_top _)
-  have htaylor := taylor_integral_remainder hxT hcm_Icc
-  -- Degree-0 Taylor polynomial: taylorWithinEval f 0 s x T = f x
+  have huIcc : Set.uIcc x T = Icc x T := Set.uIcc_of_lt hxT
+  have hcm_uIcc : ContDiffOn ℝ (↑(0 + 1) : WithTop ℕ∞) f (Set.uIcc x T) :=
+    huIcc ▸ hcm_Icc
+  have htaylor := taylor_integral_remainder hcm_uIcc
+  rw [huIcc] at htaylor
+  -- Degree-0 Taylor polynomial: taylorWithinEval f 0 (Icc x T) x T = f x
   have h0 : taylorWithinEval f 0 (Icc x T) x T = f x := by
     simp [taylorWithinEval, taylorWithin, PolynomialModule.eval_single,
       taylorCoeffWithin]
-  simp only [zero_add, Nat.factorial_zero, Nat.cast_one, inv_one,
-    one_mul, pow_zero, h0] at htaylor
+  simp only [zero_add, Nat.factorial_zero, Nat.cast_one, pow_zero, one_div,
+    inv_one, one_smul, h0] at htaylor
   -- htaylor : f T - f x = ∫ iteratedDerivWithin 1 f (Icc x T) t dt
   rw [intervalIntegral.integral_neg]
   linarith
