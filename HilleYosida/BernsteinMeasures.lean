@@ -66,11 +66,11 @@ lemma IsCompletelyMonotone.integral_neg_deriv_Ici
   intro t ht
   rw [uIoc_of_le (le_of_lt hT)] at ht
   have ht_pos : 0 < t := ht.1
-  have hcda : ContDiffAt ℝ (↑1 : WithTop ℕ∞) f t :=
+  have hcda : ContDiffAt ℝ (↑(1 : ℕ) : WithTop ℕ∞) f t :=
     (hcm.1.of_le (nat_le_coe_top _)).contDiffAt (Ici_mem_nhds ht_pos)
-  simp only [iteratedDerivWithin_eq_iteratedDeriv (uniqueDiffOn_Icc hT) hcda
-      (Ioc_subset_Icc_self ht),
-    iteratedDerivWithin_eq_iteratedDeriv (uniqueDiffOn_Ici 0) hcda
+  congr 1
+  rw [iteratedDerivWithin_eq_iteratedDeriv (uniqueDiffOn_Icc hT) hcda (Ioc_subset_Icc_self ht)]
+  rw [iteratedDerivWithin_eq_iteratedDeriv (uniqueDiffOn_Ici 0) hcda
       (Set.mem_Ici.mpr (le_of_lt ht_pos))]
 
 /-- The total mass `∫₀ᵀ (-f') dt → f(0) - L` as `T → ∞`, where `L = lim f(t)`.

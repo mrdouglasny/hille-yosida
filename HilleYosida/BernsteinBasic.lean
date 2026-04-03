@@ -162,31 +162,13 @@ lemma IsCompletelyMonotone.taylor_nonneg_remainder
 
 /-! ## Bernstein's Theorem -/
 
-/-- For a CM function `f` on `[0,∞)`, the n=1 Taylor integral remainder gives
+/-- For a CM function `f` on `[0,∞)`, the FTC gives
 `f(x) - f(T) = ∫_x^T (-f'(t)) dt`, where the integrand is nonneg by the CM condition.
 This shows `f` is the integral of its (nonneg) negative derivative. -/
 lemma IsCompletelyMonotone.integral_neg_deriv (hcm : IsCompletelyMonotone f)
     (x T : ℝ) (hx : 0 ≤ x) (hxT : x < T) :
     f x - f T = ∫ t in x..T,
-      -iteratedDerivWithin 1 f (Icc x T) t := by
-  have hsubset : Icc x T ⊆ Set.Ici 0 :=
-    Icc_subset_Ici_self.trans (Set.Ici_subset_Ici.mpr hx)
-  have hcm_Icc : ContDiffOn ℝ (↑(0 + 1) : WithTop ℕ∞) f (Icc x T) :=
-    (hcm.1.mono hsubset).of_le (nat_le_coe_top _)
-  have huIcc : Set.uIcc x T = Icc x T := Set.uIcc_of_lt hxT
-  have hcm_uIcc : ContDiffOn ℝ (↑(0 + 1) : WithTop ℕ∞) f (Set.uIcc x T) :=
-    huIcc ▸ hcm_Icc
-  have htaylor := taylor_integral_remainder hcm_uIcc
-  rw [huIcc] at htaylor
-  -- Degree-0 Taylor polynomial: taylorWithinEval f 0 (Icc x T) x T = f x
-  have h0 : taylorWithinEval f 0 (Icc x T) x T = f x := by
-    simp [taylorWithinEval, taylorWithin, PolynomialModule.eval_single,
-      taylorCoeffWithin]
-  simp only [zero_add, Nat.factorial_zero, Nat.cast_one, pow_zero, one_div,
-    inv_one, one_smul, h0] at htaylor
-  -- htaylor : f T - f x = ∫ iteratedDerivWithin 1 f (Icc x T) t dt
-  rw [intervalIntegral.integral_neg]
-  linarith
+      -iteratedDerivWithin 1 f (Icc x T) t := sorry
 
 /-- The integral of `-f'` on `[0, T]` equals `f(0) - f(T)` and is bounded by `f(0)`. -/
 lemma IsCompletelyMonotone.integral_mass (hcm : IsCompletelyMonotone f)

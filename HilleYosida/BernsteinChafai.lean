@@ -204,8 +204,9 @@ private lemma boundary_term_decay (f : ℝ → ℝ) (hcm : IsCompletelyMonotone 
     have h_antitone : AntitoneOn h (Ici 0) := by
       apply antitoneOn_of_deriv_nonpos (convex_Ici 0)
       · simpa [h] using
-          (hcm.1.continuousOn_iteratedDerivWithin (nat_le_coe_top _) (uniqueDiffOn_Ici 0)).const_mul
-            ((-1 : ℝ) ^ k)
+          ContinuousOn.mul continuousOn_const
+            (hcm.1.continuousOn_iteratedDerivWithin (nat_le_coe_top _)
+              (uniqueDiffOn_Ici 0))
       · rw [interior_Ici]
         intro T hT
         have hdiff :
@@ -527,7 +528,7 @@ private lemma chafai_repeated_ibp (f : ℝ → ℝ) (hcm : IsCompletelyMonotone 
         apply ae_of_all volume; intro t ht
         rw [uIoc_of_le (le_of_lt hxT)] at ht
         have ht_pos : 0 < t := lt_of_le_of_lt hx ht.1
-        have hcda : ContDiffAt ℝ (↑1 : WithTop ℕ∞) f t :=
+        have hcda : ContDiffAt ℝ (↑(1 : ℕ) : WithTop ℕ∞) f t :=
           (hcm.1.of_le (nat_le_coe_top _)).contDiffAt (Ici_mem_nhds ht_pos)
         congr 1
         rw [iteratedDerivWithin_eq_iteratedDeriv
@@ -1042,8 +1043,7 @@ lemma finite_measure_subseq_limit
         exact (not_lt_of_ge hx1) (by simpa [Set.mem_Iio] using hx2))) measurableSet_Iio
         (h_int_bcf χ (ν₀m.restrict (Set.Ici 0))) (h_int_bcf χ (ν₀m.restrict (Set.Iio 0)))
       have hunion : Set.Ici (0 : ℝ) ∪ Set.Iio 0 = Set.univ := by
-        ext x
-        simp
+        ext x; simp [le_or_gt]
       have hsplit' : ∫ p, χ p ∂ν₀m =
           ∫ p in Set.Ici 0, χ p ∂ν₀m + ∫ p in Set.Iio 0, χ p ∂ν₀m := by
         calc
@@ -1137,8 +1137,7 @@ lemma finite_measure_subseq_limit
         exact (not_lt_of_ge hx1) (by simpa [Set.mem_Iio] using hx2))) measurableSet_Iio
         (h_int_bcf gχ (ν₀m.restrict (Set.Ici 0))) (h_int_bcf gχ (ν₀m.restrict (Set.Iio 0)))
       have hunion : Set.Ici (0 : ℝ) ∪ Set.Iio 0 = Set.univ := by
-        ext x
-        simp
+        ext x; simp [le_or_gt]
       have hsplit' : ∫ p, gχ p ∂ν₀m =
           ∫ p in Set.Ici 0, gχ p ∂ν₀m + ∫ p in Set.Iio 0, gχ p ∂ν₀m := by
         calc

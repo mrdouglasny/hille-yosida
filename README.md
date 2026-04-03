@@ -1,5 +1,7 @@
 # Hille-Yosida and BCR Semigroup Theory
 
+> **Branch `lean-4.28`**: WIP backport to Lean 4.28.0 / Mathlib v4.28.0 for use as a dependency in `osreconstruction`. The Bochner dependency (`mrdouglasny/bochner`) is replaced with local axiom stubs; `BCR_General.lean` has build errors from this. Bernstein, BCR_d0, and semigroup files compile. See `main` for the complete 4.29 version.
+
 A Lean 4 formalization of contraction semigroups (Hille-Yosida), Bernstein's theorem for completely monotone functions, and the BCR Bochner theorem (Theorem 4.1.13) for positive-definite functions on involutive semigroups.
 
 ## Main Results

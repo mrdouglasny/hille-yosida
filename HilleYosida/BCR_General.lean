@@ -19,18 +19,87 @@ mrdouglasny/bochner) for the spatial decomposition.
 
 import HilleYosida.SemigroupGroupDefs
 import HilleYosida.BCR_d0
-import Bochner.Main
+-- import Bochner.Main  -- removed for lean-4.28 branch (kolmogorov_extension4 unavailable)
 import Mathlib.Analysis.Normed.Lp.MeasurableSpace
 import Mathlib.MeasureTheory.Integral.RieszMarkovKakutani.Real
 import Mathlib.MeasureTheory.Function.Floor
 import Mathlib.MeasureTheory.Measure.HasOuterApproxClosed
-import Mathlib.MeasureTheory.Integral.Bochner.SumMeasure
+import Mathlib.MeasureTheory.Integral.Bochner.Basic
 import Mathlib.Topology.ContinuousMap.Weierstrass
 
 noncomputable section
 
 open MeasureTheory Complex Set Filter Finset
 open scoped Polynomial
+
+/-! ### Stubs for Bochner dependency (lean-4.28 branch)
+
+These definitions and axioms replace `import Bochner.Main` which is unavailable
+on lean-4.28 because `kolmogorov_extension4` was force-pushed.
+-/
+
+/-- A function φ : α → ℂ is positive definite if it is hermitian and the
+quadratic form ∑ᵢⱼ c̄ᵢ cⱼ φ(xᵢ - xⱼ) is real-nonneg for all finite tests. -/
+structure IsPositiveDefinite {α : Type*} [AddGroup α] (φ : α → ℂ) : Prop where
+  hermitian : ∀ x : α, φ (-x) = starRingEnd ℂ (φ x)
+  nonneg : ∀ (m : ℕ) (x : Fin m → α) (c : Fin m → ℂ),
+    0 ≤ (∑ i, ∑ j, (starRingEnd ℂ) (c i) * c j * φ (x i - x j)).re
+
+namespace IsPositiveDefinite
+
+variable {α : Type*} [AddGroup α] {φ : α → ℂ}
+
+/-- PD functions satisfy |φ(x)| ≤ φ(0).re -/
+axiom bounded_by_zero (hpd : IsPositiveDefinite φ) (x : α) :
+    ‖φ x‖ ≤ (φ 0).re
+
+/-- φ(0).re ≥ 0 for PD functions -/
+axiom eval_zero_nonneg (hpd : IsPositiveDefinite φ) : 0 ≤ (φ 0).re
+
+/-- φ(0) is real for PD functions -/
+axiom eval_zero_real (hpd : IsPositiveDefinite φ) : (φ 0).im = 0
+
+end IsPositiveDefinite
+
+/-- Characteristic function (Fourier transform of a measure). Stub for lean-4.28. -/
+noncomputable def charFun {V : Type*} [AddCommGroup V] [Module ℝ V]
+    [MeasurableSpace V] (μ : MeasureTheory.Measure V) (ξ : V) : ℂ := sorry
+
+/-- charFun applied pointwise. -/
+axiom charFun_apply {V : Type*} [AddCommGroup V] [Module ℝ V]
+    [MeasurableSpace V] (μ : MeasureTheory.Measure V) (ξ : V) :
+    charFun μ ξ = charFun μ ξ
+
+namespace MeasureTheory
+/-- Stub: charFun for lean-4.28 compatibility -/
+noncomputable def charFun' {V : Type*} [AddCommGroup V] [Module ℝ V]
+    [MeasurableSpace V] (μ : Measure V) (ξ : V) : ℂ := _root_.charFun μ ξ
+
+namespace Measure
+/-- Two finite measures with the same characteristic function are equal. -/
+axiom ext_of_charFun {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℝ V]
+    [MeasurableSpace V] [BorelSpace V] [FiniteDimensional ℝ V]
+    [SecondCountableTopology V]
+    {μ ν : Measure V} [IsFiniteMeasure μ] [IsFiniteMeasure ν]
+    (h : ∀ ξ, _root_.charFun μ ξ = _root_.charFun ν ξ) : μ = ν
+end Measure
+end MeasureTheory
+
+/-- Tightness implies measure of complement of closed ball tends to 0. -/
+axiom tendsto_measure_compl_closedBall_of_isTightMeasureSet
+    {ι : Type*} {l : Filter ι} {S : Set (MeasureTheory.Measure ℝ)}
+    (hS : MeasureTheory.IsTightMeasureSet S) {μ : ι → MeasureTheory.Measure ℝ}
+    (hμ : ∀ i, μ i ∈ S) :
+    Filter.Tendsto (fun R => ⨆ i, μ i (Metric.closedBall 0 R)ᶜ) Filter.atTop (nhds 0)
+
+/-- Bochner's theorem: a continuous positive definite function with φ(0)=1
+is the characteristic function of a unique probability measure. -/
+axiom bochner_theorem {V : Type*} [NormedAddCommGroup V] [InnerProductSpace ℝ V]
+    [MeasurableSpace V] [BorelSpace V] [FiniteDimensional ℝ V]
+    [SecondCountableTopology V]
+    (φ : V → ℂ) (hcont : Continuous φ) (hpd : IsPositiveDefinite φ) (hnorm : φ 0 = 1) :
+    ∃! μ : ProbabilityMeasure V,
+      ∀ ξ, charFun (μ : MeasureTheory.Measure V) ξ = φ ξ
 
 private noncomputable def expNegToUnitInterval (p : ℝ) : Set.Icc (0 : ℝ) 1 :=
   ⟨Real.exp (-max p 0), by
