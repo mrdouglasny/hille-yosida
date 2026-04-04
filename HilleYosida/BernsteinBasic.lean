@@ -173,9 +173,32 @@ lemma IsCompletelyMonotone.integral_neg_deriv (hcm : IsCompletelyMonotone f)
     Icc_subset_Ici_self.trans (Set.Ici_subset_Ici.mpr hx)
   have hcm_Icc : ContDiffOn ℝ (↑(0 + 1) : WithTop ℕ∞) f (Icc x T) :=
     (hcm.1.mono hsubset).of_le (nat_le_coe_top _)
-  -- taylor_integral_remainder not in v4.29.0 Mathlib (added later in #34871).
-  -- The n=0 case is just FTC: f(T) - f(x) = ∫_x^T f'(t) dt.
-  sorry -- TODO: replace with direct FTC proof once Mathlib aligns
+  have hud : UniqueDiffOn ℝ (Icc x T) := uniqueDiffOn_Icc hxT
+  have hf_cont : ContinuousOn f (Icc x T) := hcm_Icc.continuousOn
+  have hf_diff : DifferentiableOn ℝ f (Icc x T) :=
+    hcm_Icc.differentiableOn (by norm_num : (↑(0 + 1) : WithTop ℕ∞) ≠ 0)
+  -- iteratedDerivWithin 1 f (Icc x T) is continuous on Icc x T (from C^1)
+  have hdw_cont : ContinuousOn (iteratedDerivWithin 1 f (Icc x T)) (Icc x T) :=
+    hcm_Icc.continuousOn_iteratedDerivWithin
+      (show (1 : ℕ) ≤ (↑(0 + 1) : WithTop ℕ∞) by norm_num) hud
+  -- Right derivative: for t ∈ Ioo x T, f has right derivative = iteratedDerivWithin 1
+  -- At interior points, Icc x T ∈ nhds t, so HasDerivWithinAt → HasDerivAt → HasDerivWithinAt Ioi
+  have hderiv_right : ∀ t ∈ Ioo x T,
+      HasDerivWithinAt f (iteratedDerivWithin 1 f (Icc x T) t) (Ioi t) t := by
+    intro t ht
+    rw [iteratedDerivWithin_one]
+    exact ((hf_diff t (Ioo_subset_Icc_self ht)).hasDerivWithinAt.hasDerivAt
+      (Icc_mem_nhds ht.1 ht.2)).hasDerivWithinAt
+  -- Integrability: iteratedDerivWithin 1 is continuous on Icc, hence integrable
+  have hint : IntervalIntegrable (iteratedDerivWithin 1 f (Icc x T)) volume x T := by
+    rw [intervalIntegrable_iff_integrableOn_Icc_of_le hxT.le enorm_ne_top]
+    exact hdw_cont.integrableOn_compact isCompact_Icc
+  -- FTC (right derivative version): ∫_x^T f' = f(T) - f(x)
+  have hFTC := intervalIntegral.integral_eq_sub_of_hasDeriv_right_of_le hxT.le hf_cont
+    hderiv_right hint
+  -- f(x) - f(T) = -∫_x^T f' = ∫_x^T (-f')
+  rw [intervalIntegral.integral_neg]
+  linarith [hFTC]
 
 /-- The integral of `-f'` on `[0, T]` equals `f(0) - f(T)` and is bounded by `f(0)`. -/
 lemma IsCompletelyMonotone.integral_mass (hcm : IsCompletelyMonotone f)
