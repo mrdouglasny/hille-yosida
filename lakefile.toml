@@ -12,11 +12,12 @@ maxSynthPendingDepth = 3
 [[require]]
 name = "BochnerMinlos"
 git = "https://github.com/mrdouglasny/bochner.git"
-rev = "main"
+rev = "1b56973"
 
 [[require]]
 name = "mathlib"
 scope = "leanprover-community"
+rev = "v4.29.0"
 
 [[lean_lib]]
 name = "HilleYosida"
