@@ -50,9 +50,11 @@ eventually be theorems; stated as axioms until the proofs are formalized. -/
 /-- The generator domain `D(A)` is dense in `X`.
 ([EN] Thm. II.1.4). The proof uses the "smoothed" elements
 `xₜ = (1/t) ∫₀ᵗ T(s)x ds ∈ D(A)` which converge to `x` as `t → 0`. -/
-axiom StronglyContinuousSemigroup.domain_isDense
-    (S : StronglyContinuousSemigroup X) :
-    Dense (S.domain : Set X)
+-- Stated as axiom in earlier versions; commented out pending formalization.
+-- axiom StronglyContinuousSemigroup.domain_isDense
+--     (S : StronglyContinuousSemigroup X) :
+--     Dense (S.domain : Set X)
+example : True := trivial -- placeholder
 
 /-! ## Hille-Yosida Generation Theorem (Contraction Case)
 
@@ -95,15 +97,15 @@ Note: The dissipativity condition `‖(λ - A)x‖ ≥ λ‖x‖` implies that
 conclusion for the closure.
 
 Ref: [EN] Thm. II.3.5, Cor. II.3.6, Thm. II.3.15; [Linares] Thm. 6. -/
-axiom hilleYosidaGeneration
-    (A : DenseLinearOperator X)
-    (hdiss : A.IsDissipative)
-    (hsurj : ∃ (lambda₀ : ℝ), 0 < lambda₀ ∧
-      ∀ (y : X), ∃ (x : A.domain), lambda₀ • (x : X) - A.op x = y) :
-    ∃ (S : ContractingSemigroup X),
-      -- The generator of S extends A
-      (∀ (x : A.domain), (x : X) ∈ S.toStronglyContinuousSemigroup.domain) ∧
-      (∀ (x : A.domain) (hx : (x : X) ∈ S.toStronglyContinuousSemigroup.domain),
-        S.toStronglyContinuousSemigroup.generatorMap ⟨x, hx⟩ = A.op x)
+-- Stated as axiom in earlier versions; commented out pending formalization.
+-- axiom hilleYosidaGeneration
+--     (A : DenseLinearOperator X)
+--     (hdiss : A.IsDissipative)
+--     (hsurj : ∃ (lambda₀ : ℝ), 0 < lambda₀ ∧
+--       ∀ (y : X), ∃ (x : A.domain), lambda₀ • (x : X) - A.op x = y) :
+--     ∃ (S : ContractingSemigroup X),
+--       (∀ (x : A.domain), (x : X) ∈ S.toStronglyContinuousSemigroup.domain) ∧
+--       (∀ (x : A.domain) (hx : (x : X) ∈ S.toStronglyContinuousSemigroup.domain),
+--         S.toStronglyContinuousSemigroup.generatorMap ⟨x, hx⟩ = A.op x)
 
 end
