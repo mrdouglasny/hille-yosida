@@ -94,13 +94,21 @@ This project provides the `semigroupGroupBochner` theorem needed by [OSreconstru
 
 The module reorganization into `Semigroup/`, `Bernstein/`, and `BCR/` subfolders renames public module paths. Downstream consumers must update their imports.
 
+**Preferred: import via pillar facades.** Three top-level files re-export each pillar's contents, so downstream code is insulated from further internal reshuffling:
+
+- `import HilleYosida.Semigroup` — Hille-Yosida semigroup material
+- `import HilleYosida.Bernstein` — Bernstein's theorem
+- `import HilleYosida.BCR` — BCR Theorem 4.1.13 (semigroup Bochner)
+
+Or `import HilleYosida` for the whole library.
+
 **Known consumers requiring an update:**
 
 - [OSreconstruction](https://github.com/xiyin137/OSreconstruction) — `OSReconstruction/SCV/SemigroupGroupBochner.lean`:
-  - `import HilleYosida.SemigroupGroupExtension` → `import HilleYosida.BCR.SemigroupGroupExtension`
-  - `import HilleYosida.BCR_General` → `import HilleYosida.BCR.General`
+  - `import HilleYosida.SemigroupGroupExtension` → `import HilleYosida.BCR` (or deep path `HilleYosida.BCR.SemigroupGroupExtension`)
+  - `import HilleYosida.BCR_General` → `import HilleYosida.BCR` (or deep path `HilleYosida.BCR.General`)
 
-**Full path remapping:**
+**Full deep-path remapping** (use if you need a specific sub-module rather than the pillar facade):
 
 | Old module path | New module path |
 |---|---|
