@@ -11,7 +11,7 @@ rescaled measures.
 Split from `Bernstein.lean`.
 -/
 
-import HilleYosida.BernsteinBasic
+import HilleYosida.Bernstein.Basic
 import Mathlib.Analysis.SpecialFunctions.Gamma.Beta
 
 noncomputable section

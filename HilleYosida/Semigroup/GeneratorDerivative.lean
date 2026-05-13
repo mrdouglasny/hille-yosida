@@ -21,7 +21,7 @@ This is [EN] Proposition II.1.4(c) / [Linares] Proposition 5.
   Proposition II.1.4
 -/
 
-import HilleYosida.StronglyContinuousSemigroup
+import HilleYosida.Semigroup.StronglyContinuous
 
 variable {X : Type*} [NormedAddCommGroup X] [NormedSpace ℝ X] [CompleteSpace X]
 

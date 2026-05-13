@@ -4,7 +4,7 @@ This document summarizes the proofs formalized in this project. All theorems are
 
 ## 1. Hille-Yosida Forward Theorem
 
-**File:** `StronglyContinuousSemigroup.lean` (867 lines)
+**File:** `Semigroup/StronglyContinuous.lean` (867 lines)
 
 For a contraction semigroup $\{S(t)\}_{t \geq 0}$ on a Banach space $X$:
 
@@ -18,7 +18,7 @@ For a contraction semigroup $\{S(t)\}_{t \geq 0}$ on a Banach space $X$:
 
 ## 2. Bernstein's Theorem
 
-**Files:** `BernsteinBasic.lean` (236) + `BernsteinMeasures.lean` (498) + `BernsteinChafai.lean` (1660) + `Bernstein.lean` (132)
+**Files:** `Bernstein/Basic.lean` (236) + `Bernstein/Measures.lean` (498) + `Bernstein/Chafai.lean` (1660) + `Bernstein/Theorem.lean` (132)
 
 **Statement:** If $f : [0,\infty) \to \mathbb{R}$ is completely monotone, then $f(t) = \int_0^\infty e^{-tp}\, d\mu(p)$ for a unique finite positive measure $\mu$.
 
@@ -31,7 +31,7 @@ For a contraction semigroup $\{S(t)\}_{t \geq 0}$ on a Banach space $X$:
 
 ## 3. BCR d=0: Semigroup PD → Laplace
 
-**File:** `BCR_d0.lean` (1503 lines)
+**File:** `BCR/d0.lean` (1503 lines)
 
 **Statement:** Bounded continuous semigroup-PD functions on $[0,\infty)$ are Laplace transforms.
 
@@ -45,7 +45,7 @@ For a contraction semigroup $\{S(t)\}_{t \geq 0}$ on a Banach space $X$:
 
 ## 4. BCR 4.1.13 General d
 
-**File:** `BCR_General.lean` (2822 lines)
+**File:** `BCR/General.lean` (2822 lines)
 
 **Statement:** Bounded continuous PD functions on $[0,\infty) \times \mathbb{R}^d$ are Fourier-Laplace transforms.
 
@@ -56,6 +56,6 @@ For a contraction semigroup $\{S(t)\}_{t \geq 0}$ on a Banach space $X$:
 
 ## 5. Group Extension
 
-**File:** `SemigroupGroupExtension.lean` (271 lines)
+**File:** `BCR/SemigroupGroupExtension.lean` (271 lines)
 
 Given $\mu$ from BCR, define $G(t,a) = \int e^{itp} e^{i\langle a,q\rangle}\, d\mu(p,q)$ (Fourier kernel). Show: bounded, continuous, positive-definite on $\mathbb{R} \times \mathbb{R}^d$.

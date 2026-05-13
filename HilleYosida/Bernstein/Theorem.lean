@@ -14,7 +14,7 @@ This file re-exports all definitions and lemmas from the Bernstein module:
 Ref: Bernstein (1928); Widder, "The Laplace Transform" Ch. IV.
 -/
 
-import HilleYosida.BernsteinChafai
+import HilleYosida.Bernstein.Chafai
 
 noncomputable section
 

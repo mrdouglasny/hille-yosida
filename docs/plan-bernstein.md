@@ -2,7 +2,7 @@
 
 ## Goal
 
-Replace the `bernstein_theorem` axiom in `Bernstein.lean` with a proof:
+Replace the `bernstein_theorem` axiom in `Bernstein/Theorem.lean` with a proof:
 
 ```
 If f : [0,∞) → ℝ is completely monotone, then f(t) = ∫₀^∞ e^{-tp} dμ(p)

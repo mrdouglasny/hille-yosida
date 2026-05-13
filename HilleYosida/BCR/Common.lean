@@ -3,7 +3,7 @@ Copyright (c) 2026 Michael R. Douglas. All rights reserved.
 Released under Apache 2.0 license.
 -/
 
-import HilleYosida.BCR_d0
+import HilleYosida.BCR.d0
 import Bochner.Main
 import Mathlib.Analysis.Normed.Lp.MeasurableSpace
 import Mathlib.MeasureTheory.Integral.RieszMarkovKakutani.Real

@@ -29,10 +29,10 @@ measure μ is supported on `[0,∞) × ℝ^d`, and the Fourier integral
 * Osterwalder-Schrader I-II
 -/
 
-import HilleYosida.StronglyContinuousSemigroup
-import HilleYosida.FourierPD
-import HilleYosida.SemigroupGroupDefs
-import HilleYosida.BCR_General
+import HilleYosida.Semigroup.StronglyContinuous
+import HilleYosida.BCR.FourierPD
+import HilleYosida.BCR.SemigroupGroupDefs
+import HilleYosida.BCR.General
 
 noncomputable section
 

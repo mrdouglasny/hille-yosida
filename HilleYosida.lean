@@ -1,2 +1,2 @@
-import HilleYosida.StronglyContinuousSemigroup
-import HilleYosida.SemigroupGroupExtension
+import HilleYosida.Semigroup.StronglyContinuous
+import HilleYosida.BCR.SemigroupGroupExtension

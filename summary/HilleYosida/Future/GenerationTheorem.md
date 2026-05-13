@@ -6,7 +6,7 @@
 
 ## Overview
 
-This file states the **converse direction of the Hille-Yosida theorem** as axioms. While the forward direction (semigroup implies resolvent bound) is fully proved in `StronglyContinuousSemigroup.lean`, the converse (operator generates a semigroup) requires the Yosida approximation and is stated here for use by downstream projects. It also defines dissipative operators and the Lumer-Phillips characterization.
+This file states the **converse direction of the Hille-Yosida theorem** as axioms. While the forward direction (semigroup implies resolvent bound) is fully proved in `Semigroup/StronglyContinuous.lean`, the converse (operator generates a semigroup) requires the Yosida approximation and is stated here for use by downstream projects. It also defines dissipative operators and the Lumer-Phillips characterization.
 
 ## Status
 

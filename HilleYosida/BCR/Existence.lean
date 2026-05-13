@@ -3,9 +3,9 @@ Copyright (c) 2026 Michael R. Douglas. All rights reserved.
 Released under Apache 2.0 license.
 -/
 
-import HilleYosida.SemigroupGroupDefs
-import HilleYosida.BCR_d0
-import HilleYosida.BCR_Common
+import HilleYosida.BCR.SemigroupGroupDefs
+import HilleYosida.BCR.d0
+import HilleYosida.BCR.Common
 import Bochner.Main
 import Mathlib.Analysis.Normed.Lp.MeasurableSpace
 import Mathlib.MeasureTheory.Integral.RieszMarkovKakutani.Real

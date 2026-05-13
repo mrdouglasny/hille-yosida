@@ -11,7 +11,7 @@ Prokhorov extraction, `prokhorov_limit_identification`.
 Split from `Bernstein.lean`.
 -/
 
-import HilleYosida.BernsteinMeasures
+import HilleYosida.Bernstein.Measures
 import Mathlib.MeasureTheory.Measure.Prokhorov
 import Mathlib.Analysis.SpecialFunctions.Complex.LogBounds
 

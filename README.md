@@ -24,18 +24,41 @@ $$F(t, a) = \int_{[0,\infty) \times \mathbb{R}^d} e^{-tp} \, e^{i\langle a, q\ra
 
 ## File Structure
 
+Sources are grouped into three pillars matching the proof structure.
+
+### `Semigroup/` — operator semigroups (Hille-Yosida)
+
 | File | Contents |
 |------|----------|
-| [StronglyContinuousSemigroup.lean](HilleYosida/StronglyContinuousSemigroup.lean) | [C₀-semigroups, generators, resolvent, Hille-Yosida](summary/HilleYosida/StronglyContinuousSemigroup.md) |
-| [BernsteinBasic.lean](HilleYosida/BernsteinBasic.lean) | [`IsCompletelyMonotone`, `taylor_integral_remainder`](summary/HilleYosida/BernsteinBasic.md) |
-| [BernsteinMeasures.lean](HilleYosida/BernsteinMeasures.lean) | [Density, IBP, kernel, packaging](summary/HilleYosida/BernsteinMeasures.md) |
-| [BernsteinChafai.lean](HilleYosida/BernsteinChafai.lean) | [Chafai identity, Prokhorov extraction](summary/HilleYosida/BernsteinChafai.md) |
-| [Bernstein.lean](HilleYosida/Bernstein.lean) | [`bernstein_theorem`](summary/HilleYosida/Bernstein.md) |
-| [FourierPD.lean](HilleYosida/FourierPD.lean) | [Fourier PD: `pd_quadratic_form_of_measure`](summary/HilleYosida/FourierPD.md) |
-| [BCR_d0.lean](HilleYosida/BCR_d0.lean) | [BCR 4.1.13 for d=0: `semigroup_pd_laplace`](summary/HilleYosida/BCR_d0.md) |
-| [BCR_General.lean](HilleYosida/BCR_General.lean) | [BCR 4.1.13: `semigroupGroupBochner_proof` + `laplaceFourier_unique`](summary/HilleYosida/BCR_General.md) |
-| [SemigroupGroupExtension.lean](HilleYosida/SemigroupGroupExtension.lean) | [`semigroupGroupBochner` + group extension](summary/HilleYosida/SemigroupGroupExtension.md) |
-| [SemigroupGroupDefs.lean](HilleYosida/SemigroupGroupDefs.lean) | [`IsSemigroupGroupPD` definition](summary/HilleYosida/SemigroupGroupDefs.md) |
+| [Semigroup/StronglyContinuous.lean](HilleYosida/Semigroup/StronglyContinuous.lean) | [C₀-semigroups, generators, resolvent, Hille-Yosida](summary/HilleYosida/Semigroup/StronglyContinuous.md) |
+| [Semigroup/GeneratorDerivative.lean](HilleYosida/Semigroup/GeneratorDerivative.lean) | Semigroup-generator commutation (EN Prop II.1.4c) |
+
+### `Bernstein/` — completely-monotone functions
+
+| File | Contents |
+|------|----------|
+| [Bernstein/Basic.lean](HilleYosida/Bernstein/Basic.lean) | [`IsCompletelyMonotone`, `taylor_integral_remainder`](summary/HilleYosida/Bernstein/Basic.md) |
+| [Bernstein/Measures.lean](HilleYosida/Bernstein/Measures.lean) | [Density, IBP, kernel, packaging](summary/HilleYosida/Bernstein/Measures.md) |
+| [Bernstein/Chafai.lean](HilleYosida/Bernstein/Chafai.lean) | [Chafai identity, Prokhorov extraction](summary/HilleYosida/Bernstein/Chafai.md) |
+| [Bernstein/Theorem.lean](HilleYosida/Bernstein/Theorem.lean) | [`bernstein_theorem`](summary/HilleYosida/Bernstein/Theorem.md) |
+
+### `BCR/` — BCR 4.1.13 (semigroup Bochner)
+
+| File | Contents |
+|------|----------|
+| [BCR/d0.lean](HilleYosida/BCR/d0.lean) | [BCR 4.1.13 for d=0: `semigroup_pd_laplace`](summary/HilleYosida/BCR/d0.md) |
+| [BCR/Common.lean](HilleYosida/BCR/Common.lean) | Laplace-uniqueness toolkit + `TemporalSliceRep` (shared by Existence and Uniqueness) |
+| [BCR/Existence.lean](HilleYosida/BCR/Existence.lean) | BCR 4.1.13 existence: Steps 1/2/3 + `semigroupGroupBochner_proof` |
+| [BCR/Uniqueness.lean](HilleYosida/BCR/Uniqueness.lean) | BCR 4.1.13 uniqueness: `laplaceFourier_unique` |
+| [BCR/General.lean](HilleYosida/BCR/General.lean) | Re-export shim — imports Common + Existence + Uniqueness |
+| [BCR/FourierPD.lean](HilleYosida/BCR/FourierPD.lean) | [Fourier PD: `pd_quadratic_form_of_measure`](summary/HilleYosida/BCR/FourierPD.md) |
+| [BCR/SemigroupGroupDefs.lean](HilleYosida/BCR/SemigroupGroupDefs.lean) | [`IsSemigroupGroupPD` definition](summary/HilleYosida/BCR/SemigroupGroupDefs.md) |
+| [BCR/SemigroupGroupExtension.lean](HilleYosida/BCR/SemigroupGroupExtension.lean) | [`semigroupGroupBochner` + group extension](summary/HilleYosida/BCR/SemigroupGroupExtension.md) |
+
+### `Future/` — out-of-chain axiomatized future work
+
+| File | Contents |
+|------|----------|
 | [Future/GenerationTheorem.lean](HilleYosida/Future/GenerationTheorem.lean) | [HY converse (Lumer-Phillips)](summary/HilleYosida/Future/GenerationTheorem.md) |
 
 ## Axiom Inventory
@@ -49,7 +72,7 @@ $$F(t, a) = \int_{[0,\infty) \times \mathbb{R}^d} e^{-tp} \, e^{i\langle a, q\ra
 
 ## BCR d=0: Proof Architecture (1503 lines)
 
-The core engine `semigroup_pd_laplace` in `BCR_d0.lean` proves that bounded continuous semigroup-PD functions on $[0,\infty)$ are Laplace transforms. The proof:
+The core engine `semigroup_pd_laplace` in `BCR/d0.lean` proves that bounded continuous semigroup-PD functions on $[0,\infty)$ are Laplace transforms. The proof:
 
 1. **PD to alternating differences:** Vandermonde convolution for even order, convexity bootstrap for odd order
 2. **Iterated integral bridge:** The n-th forward difference equals the n-th iterated integral of the n-th derivative (bypasses Widder IV.12a)
@@ -66,6 +89,45 @@ This project provides the `semigroupGroupBochner` theorem needed by [OSreconstru
 
 - **Mathlib** (v4.29.0-rc6)
 - **[BochnerMinlos](https://github.com/mrdouglasny/bochner)** -- Bochner's theorem for finite-dimensional PD functions
+
+## Downstream Migration Notes
+
+The module reorganization into `Semigroup/`, `Bernstein/`, and `BCR/` subfolders renames public module paths. Downstream consumers must update their imports.
+
+**Known consumers requiring an update:**
+
+- [OSreconstruction](https://github.com/xiyin137/OSreconstruction) — `OSReconstruction/SCV/SemigroupGroupBochner.lean`:
+  - `import HilleYosida.SemigroupGroupExtension` → `import HilleYosida.BCR.SemigroupGroupExtension`
+  - `import HilleYosida.BCR_General` → `import HilleYosida.BCR.General`
+
+**Full path remapping:**
+
+| Old module path | New module path |
+|---|---|
+| `HilleYosida.StronglyContinuousSemigroup` | `HilleYosida.Semigroup.StronglyContinuous` |
+| `HilleYosida.GeneratorDerivative` | `HilleYosida.Semigroup.GeneratorDerivative` |
+| `HilleYosida.BernsteinBasic` | `HilleYosida.Bernstein.Basic` |
+| `HilleYosida.BernsteinMeasures` | `HilleYosida.Bernstein.Measures` |
+| `HilleYosida.BernsteinChafai` | `HilleYosida.Bernstein.Chafai` |
+| `HilleYosida.Bernstein` | `HilleYosida.Bernstein.Theorem` |
+| `HilleYosida.BCR_d0` | `HilleYosida.BCR.d0` |
+| `HilleYosida.BCR_Common` | `HilleYosida.BCR.Common` |
+| `HilleYosida.BCR_Existence` | `HilleYosida.BCR.Existence` |
+| `HilleYosida.BCR_Uniqueness` | `HilleYosida.BCR.Uniqueness` |
+| `HilleYosida.BCR_General` | `HilleYosida.BCR.General` |
+| `HilleYosida.SemigroupGroupDefs` | `HilleYosida.BCR.SemigroupGroupDefs` |
+| `HilleYosida.SemigroupGroupExtension` | `HilleYosida.BCR.SemigroupGroupExtension` |
+| `HilleYosida.FourierPD` | `HilleYosida.BCR.FourierPD` |
+
+`HilleYosida.Future.GenerationTheorem` is unchanged.
+
+After merging this branch, regenerate the catalog entries:
+
+```
+cd ~/Documents/GitHub/catalogs
+./gen_catalog.sh ~/Documents/GitHub/hille-yosida hille-yosida
+./build_index.sh
+```
 
 ## References
 

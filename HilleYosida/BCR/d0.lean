@@ -19,7 +19,7 @@ Proof route:
 * Widder, "The Laplace Transform" (1941), Ch. IV
 -/
 
-import HilleYosida.Bernstein
+import HilleYosida.Bernstein.Theorem
 import Mathlib.Analysis.Calculus.BumpFunction.InnerProduct
 import Mathlib.Analysis.Calculus.BumpFunction.Normed
 import Mathlib.Analysis.Calculus.ContDiff.Convolution

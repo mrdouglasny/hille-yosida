@@ -3,7 +3,7 @@ Copyright (c) 2026 Michael R. Douglas. All rights reserved.
 Released under Apache 2.0 license.
 -/
 
-import HilleYosida.BCR_Common
+import HilleYosida.BCR.Common
 import Mathlib.Analysis.Normed.Lp.MeasurableSpace
 import Mathlib.MeasureTheory.Integral.RieszMarkovKakutani.Real
 import Mathlib.MeasureTheory.Function.Floor

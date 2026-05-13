@@ -34,7 +34,7 @@ generates a contraction semigroup iff `rg(λ₀ - A) = X` for some `λ₀ > 0`.
 * [Linares] Theorem 6 (Hille-Yosida, both directions)
 -/
 
-import HilleYosida.StronglyContinuousSemigroup
+import HilleYosida.Semigroup.StronglyContinuous
 
 noncomputable section
 
