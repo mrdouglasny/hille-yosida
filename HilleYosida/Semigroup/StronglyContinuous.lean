@@ -118,6 +118,21 @@ variable {X}
 
 /-! ## Basic Properties -/
 
+/-- Two C₀-semigroups are equal iff their operator families agree.
+The remaining structure fields (`at_zero`, `semigroup`, `strong_cont`) are
+propositional, so equality is determined by the `operator` field alone. -/
+@[ext]
+theorem StronglyContinuousSemigroup.ext {S₁ S₂ : StronglyContinuousSemigroup X}
+    (h : S₁.operator = S₂.operator) : S₁ = S₂ := by
+  cases S₁; cases S₂; congr
+
+/-- Two contraction semigroups are equal iff their underlying C₀-semigroups are. -/
+@[ext]
+theorem ContractingSemigroup.ext {S₁ S₂ : ContractingSemigroup X}
+    (h : S₁.toStronglyContinuousSemigroup = S₂.toStronglyContinuousSemigroup) :
+    S₁ = S₂ := by
+  cases S₁; cases S₂; congr
+
 /-- `S(t) x` at `t = 0` equals `x`, pointwise version. -/
 @[simp]
 theorem StronglyContinuousSemigroup.operatorZeroApply
@@ -588,9 +603,7 @@ private theorem ContractingSemigroup.resolvent_generator_tendsto
       (nhds (lambda • S.resolvent lambda hlam x - x)) := by
   set Rlx := S.resolvent lambda hlam x
   set f := fun t => Real.exp (-(lambda * t)) • S.operator t x
-  -- Full integral shift computation ([EN] Thm. II.1.10(i), [Linares] eq. 0.15)
-  set Rlx := S.resolvent lambda hlam x
-  set f := fun t => Real.exp (-(lambda * t)) • S.operator t x
+  -- Full integral shift computation ([EN] Thm. II.1.10(i), [Linares] eq. 0.15).
   -- The proof establishes the key identity for h > 0 and takes the limit.
   -- Key identity ([EN] Thm. II.1.10(i), [Linares] eq. 0.15):
   --   S(h)(Rlx) - Rlx = (e^{λh} - 1) • Rlx - e^{λh} • ∫_{Ioc 0 h} f(t) dt
