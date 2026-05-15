@@ -43,20 +43,20 @@ Laplace transform, and the forward direction of the Hille-Yosida theorem.
 
 ## Main Results
 
-* `normBoundedOnUnitInterval` — `∃ M ≥ 1, ∀ t ∈ [0,1], ‖S(t)‖ ≤ M`, via
+* `norm_bounded_on_unit_interval` — `∃ M ≥ 1, ∀ t ∈ [0,1], ‖S(t)‖ ≤ M`, via
   the Banach-Steinhaus theorem (uniform boundedness principle).
-* `existsGrowthBound` — every C₀-semigroup has exponential growth:
+* `exists_growth_bound` — every C₀-semigroup has exponential growth:
   `‖S(t)‖ ≤ M e^{ωt}` (Thm. 1 in [Linares], eq. 0.3).
-* `strongContAt` — strong continuity at every `t₀ ≥ 0`, not just at 0
+* `strong_cont_at` — strong continuity at every `t₀ ≥ 0`, not just at 0
   (Cor. 1 in [Linares]).
-* `hilleYosidaResolventBound` — `‖R(λ)‖ ≤ 1/λ` for contraction semigroups
+* `hille_yosida_resolvent_bound` — `‖R(λ)‖ ≤ 1/λ` for contraction semigroups
   (eq. 0.14 in [Linares]; Thm. 6(ii), forward direction of Hille-Yosida).
 
 ## What is NOT yet proved
 
-* `resolventMapsToDomain` — `R(λ)x ∈ D(A)`, proved via the integral shift
+* `resolvent_mapsTo_domain` — `R(λ)x ∈ D(A)`, proved via the integral shift
   trick (eq. 0.15 in [Linares]).
-* `resolventRightInv` — `(λI - A)R(λ) = I` (eq. 0.16 in [Linares]).
+* `resolvent_right_inv` — `(λI - A)R(λ) = I` (eq. 0.16 in [Linares]).
 * The converse (sufficiency) direction of Hille-Yosida, which requires the
   Yosida approximation `A_λ = λ A R_λ(A) = λ² R_λ(A) - λI` (eq. 0.19).
 
@@ -114,6 +114,11 @@ structure ContractingSemigroup extends StronglyContinuousSemigroup X where
   /-- `‖S(t)‖ ≤ 1` for all `t ≥ 0`. -/
   contracting : ∀ (t : ℝ), 0 ≤ t → ‖operator t‖ ≤ 1
 
+/-- Coerce a C₀-semigroup directly to its operator family `ℝ → X →L[ℝ] X`,
+enabling the notation `S t x` for `S.operator t x`. -/
+instance : CoeFun (StronglyContinuousSemigroup X) (fun _ => ℝ → X →L[ℝ] X) where
+  coe S := S.operator
+
 variable {X}
 
 /-! ## Basic Properties -/
@@ -135,7 +140,7 @@ theorem ContractingSemigroup.ext {S₁ S₂ : ContractingSemigroup X}
 
 /-- `S(t) x` at `t = 0` equals `x`, pointwise version. -/
 @[simp]
-theorem StronglyContinuousSemigroup.operatorZeroApply
+theorem StronglyContinuousSemigroup.operator_zero_apply
     (S : StronglyContinuousSemigroup X) (x : X) :
     S.operator 0 x = x := by
   rw [S.at_zero, ContinuousLinearMap.id_apply]
@@ -147,7 +152,7 @@ boundedness on compact intervals. The proof applies the Banach-Steinhaus
 theorem (uniform boundedness principle) to the family `{S(t) : t ∈ [0,1]}`,
 using strong continuity at 0 and the semigroup property to establish the
 required pointwise bounds. -/
-private theorem StronglyContinuousSemigroup.normBoundedOnUnitInterval
+private theorem StronglyContinuousSemigroup.norm_bounded_on_unit_interval
     (S : StronglyContinuousSemigroup X) :
     ∃ (M : ℝ), 1 ≤ M ∧ ∀ (t : ℝ), 0 ≤ t → t ≤ 1 → ‖S.operator t‖ ≤ M := by
   -- Step 1: For each x, the orbit {S(t)x : t ∈ [0, 1]} is pointwise bounded.
@@ -222,10 +227,10 @@ private theorem StronglyContinuousSemigroup.normBoundedOnUnitInterval
 Proof: by induction on `n`. For `t ∈ (k, k+1]`, write `t = (t-k) + k` where
 `t - k ∈ [0, 1]`, so `S(t) = S(t-k) ∘ S(k)` and
 `‖S(t)‖ ≤ ‖S(t-k)‖ · ‖S(k)‖ ≤ M · M^k = M^(k+1)`. -/
-private theorem StronglyContinuousSemigroup.normBoundedOnInterval
+private theorem StronglyContinuousSemigroup.norm_bounded_on_interval
     (S : StronglyContinuousSemigroup X) (n : ℕ) :
     ∃ (C : ℝ), 0 < C ∧ ∀ (t : ℝ), 0 ≤ t → t ≤ n → ‖S.operator t‖ ≤ C := by
-  obtain ⟨M, hM1, hMbound⟩ := S.normBoundedOnUnitInterval
+  obtain ⟨M, hM1, hMbound⟩ := S.norm_bounded_on_unit_interval
   have hM_pos : (0 : ℝ) < M := by linarith
   induction n with
   | zero =>
@@ -262,8 +267,8 @@ private theorem StronglyContinuousSemigroup.normBoundedOnInterval
 
 From continuity at 0: `S(t)x → x` as `t → 0⁺`. Then at `t₀`:
 `S(t₀ + h)x = S(t₀)(S(h)x) → S(t₀)x` as `h → 0⁺` by continuity of `S(t₀)`.
-Left continuity uses the operator norm bound from `normBoundedOnInterval`. -/
-theorem StronglyContinuousSemigroup.strongContAt
+Left continuity uses the operator norm bound from `norm_bounded_on_interval`. -/
+theorem StronglyContinuousSemigroup.strong_cont_at
     (S : StronglyContinuousSemigroup X) (x : X) (t₀ : ℝ) (ht₀ : 0 ≤ t₀) :
     Filter.Tendsto (fun t => S.operator t x)
       (nhdsWithin t₀ (Set.Ici 0)) (nhds (S.operator t₀ x)) := by
@@ -285,11 +290,11 @@ theorem StronglyContinuousSemigroup.strongContAt
     -- S(t)x - S(t₀)x = S(t)(x - S(t₀-t)x).
     -- ‖S(t)(x - S(t₀-t)x)‖ ≤ ‖S(t)‖·‖x - S(t₀-t)x‖ → 0
     -- since ‖S(t)‖ is bounded on [0, t₀] and ‖S(t₀-t)x - x‖ → 0.
-    -- The operator norm bound on [0, t₀] follows from normBoundedOnUnitInterval
+    -- The operator norm bound on [0, t₀] follows from norm_bounded_on_unit_interval
     -- (itself proved via the uniform boundedness principle) + the semigroup property.
     -- We state this bound as a local fact.
     have h_norm_bound : ∃ C > 0, ∀ t : ℝ, 0 ≤ t → t ≤ t₀ → ‖S.operator t‖ ≤ C := by
-      obtain ⟨C, hC, hCb⟩ := S.normBoundedOnInterval (Nat.ceil t₀)
+      obtain ⟨C, hC, hCb⟩ := S.norm_bounded_on_interval (Nat.ceil t₀)
       exact ⟨C, hC, fun t ht ht' => hCb t ht (ht'.trans (Nat.le_ceil t₀))⟩
     obtain ⟨C, hC_pos, hC_bound⟩ := h_norm_bound
     rw [Metric.tendsto_nhdsWithin_nhds]
@@ -478,9 +483,9 @@ lemma ContractingSemigroup.integrable_resolvent_integrand
     · -- exp(-λt) is continuous everywhere, hence on Ioi 0
       exact (Real.continuous_exp.comp
         ((continuous_const.mul continuous_id).neg)).continuousOn
-    · -- S(t)x is continuous on [0, ∞) by strongContAt, hence on (0, ∞)
+    · -- S(t)x is continuous on [0, ∞) by strong_cont_at, hence on (0, ∞)
       have h_cont : ContinuousOn (fun t => S.operator t x) (Set.Ici 0) :=
-        fun t₀ ht₀ => S.toStronglyContinuousSemigroup.strongContAt x t₀ ht₀
+        fun t₀ ht₀ => S.toStronglyContinuousSemigroup.strong_cont_at x t₀ ht₀
       exact h_cont.mono Set.Ioi_subset_Ici_self
   · -- Norm bound: ‖exp(-λt) • S(t)x‖ ≤ ‖x‖ * exp(-λt) a.e. on Ioi 0
     apply (ae_restrict_mem measurableSet_Ioi).mono
@@ -563,7 +568,7 @@ noncomputable def ContractingSemigroup.resolvent
 
 /-! ## Resolvent-Generator Interface
 
-The proofs of `resolventMapsToDomain` and `resolventRightInv` use the integral
+The proofs of `resolvent_mapsTo_domain` and `resolvent_right_inv` use the integral
 shift trick from [EN] Thm. II.1.10(i) / [Linares] eq. 0.15. We first establish
 helper lemmas for the key computation. -/
 
@@ -594,7 +599,7 @@ private lemma integral_Ioi_eq_Ioc_add_Ioi (f : ℝ → X) {h : ℝ} (hh : 0 < h)
     (hf.mono_set (Set.Ioi_subset_Ioi (le_of_lt hh)))
 
 /-- The generator difference quotient for `R(λ)x` converges to `λ R(λ)x - x`.
-This is the core computation shared by `resolventMapsToDomain` and `resolventRightInv`. -/
+This is the core computation shared by `resolvent_mapsTo_domain` and `resolvent_right_inv`. -/
 private theorem ContractingSemigroup.resolvent_generator_tendsto
     (S : ContractingSemigroup X) (lambda : ℝ) (hlam : 0 < lambda) (x : X) :
     Filter.Tendsto (fun t => (1 / t) • (S.operator t (S.resolvent lambda hlam x) -
@@ -739,7 +744,7 @@ private theorem ContractingSemigroup.resolvent_generator_tendsto
             exact ContinuousOn.smul
               ((Real.continuous_exp.comp (continuous_neg.comp
                 (Continuous.mul continuous_const continuous_id))).continuousOn)
-              (fun t₀ ht₀ => S.toStronglyContinuousSemigroup.strongContAt x t₀ ht₀)
+              (fun t₀ ht₀ => S.toStronglyContinuousSemigroup.strong_cont_at x t₀ ht₀)
           · exact continuousOn_const
         -- FTC for g: HasDerivAt (fun u => ∫₀ᵘ g) x 0
         have h_ftc : HasDerivAt (fun u => ∫ t in (0 : ℝ)..u, g t) x 0 :=
@@ -758,7 +763,7 @@ private theorem ContractingSemigroup.resolvent_generator_tendsto
 
 /-- The resolvent maps all of `X` into the domain of the generator
 ([EN] Thm. II.1.10(i), [Linares] eq. 0.15). -/
-theorem ContractingSemigroup.resolventMapsToDomain
+theorem ContractingSemigroup.resolvent_mapsTo_domain
     (S : ContractingSemigroup X)
     (lambda : ℝ) (hlam : 0 < lambda) (x : X) :
     (S.resolvent lambda hlam x) ∈
@@ -768,30 +773,30 @@ theorem ContractingSemigroup.resolventMapsToDomain
 /-- The fundamental resolvent identity: `(λI - A) R(λ) x = x`.
 
 This is eq. 0.16 in [Linares]: the resolvent `R_λ = (λI - A)⁻¹` is the
-right inverse of `λI - A`. Combined with `resolventMapsToDomain`, this
+right inverse of `λI - A`. Combined with `resolvent_mapsTo_domain`, this
 shows `R_λ` is the bounded inverse of `λI - A` on all of `X`, establishing
 that `(0, ∞) ⊂ ρ(A)` (the resolvent set).
 
 The proof follows from the same integral shift computation as
-`resolventMapsToDomain` (eq. 0.15 in [Linares]): the limit
+`resolvent_mapsTo_domain` (eq. 0.15 in [Linares]): the limit
 `lim_{h→0⁺} (S(h) - I)/h · R(λ)x = λ R(λ)x - x` gives both the domain
 membership and the identity `A R(λ)x = λ R(λ)x - x`, which rearranges to
 `(λI - A) R(λ) x = x`. -/
-theorem ContractingSemigroup.resolventRightInv
+theorem ContractingSemigroup.resolvent_right_inv
     (S : ContractingSemigroup X)
     (lambda : ℝ) (hlam : 0 < lambda) (x : X) :
     let Rlx := S.resolvent lambda hlam x
     let Rlx_dom : S.toStronglyContinuousSemigroup.domain :=
-      ⟨Rlx, S.resolventMapsToDomain lambda hlam x⟩
+      ⟨Rlx, S.resolvent_mapsTo_domain lambda hlam x⟩
     lambda • Rlx - S.toStronglyContinuousSemigroup.generatorMap Rlx_dom = x := by
   simp only
   -- generatorMap = Classical.choose of the generator existential
   -- By tendsto_nhds_unique: it equals λ Rlx - x
   have h_gen_eq : S.toStronglyContinuousSemigroup.generatorMap
-      ⟨S.resolvent lambda hlam x, S.resolventMapsToDomain lambda hlam x⟩ =
+      ⟨S.resolvent lambda hlam x, S.resolvent_mapsTo_domain lambda hlam x⟩ =
       lambda • S.resolvent lambda hlam x - x :=
     tendsto_nhds_unique
-      (Classical.choose_spec (S.resolventMapsToDomain lambda hlam x))
+      (Classical.choose_spec (S.resolvent_mapsTo_domain lambda hlam x))
       (S.resolvent_generator_tendsto lambda hlam x)
   rw [h_gen_eq]; abel
 
@@ -812,7 +817,7 @@ defined, with `‖(λI - A)⁻¹‖ ≤ 1/λ`) requires the converse: constructi
 the semigroup from the operator, which needs the Yosida approximation.
 
 Ref: Hille (1948), Yosida (1948); Reed-Simon I §VIII.3; Engel-Nagel Ch. II -/
-theorem hilleYosidaResolventBound
+theorem hille_yosida_resolvent_bound
     (S : ContractingSemigroup X)
     (lambda : ℝ) (hlam : 0 < lambda) :
     ‖S.resolvent lambda hlam‖ ≤ 1 / lambda :=
@@ -832,10 +837,10 @@ def StronglyContinuousSemigroup.HasGrowthBound
 ([EN] Prop. I.5.5, [Linares] Thm. 1). The proof uses the uniform
 bound `M` on `[0, 1]` and sets `ω = log M`, then decomposes
 `t = ⌊t⌋ + frac(t)` to get `‖S(t)‖ ≤ M^{⌊t⌋+1} ≤ M · e^{ωt}`. -/
-theorem StronglyContinuousSemigroup.existsGrowthBound
+theorem StronglyContinuousSemigroup.exists_growth_bound
     (S : StronglyContinuousSemigroup X) :
     ∃ (ω : ℝ) (M : ℝ), S.HasGrowthBound ω M := by
-  obtain ⟨M, hM1, hMbound⟩ := S.normBoundedOnUnitInterval
+  obtain ⟨M, hM1, hMbound⟩ := S.norm_bounded_on_unit_interval
   have hM_pos : 0 < M := by linarith
   refine ⟨Real.log M, M, hM1, fun t ht => ?_⟩
   -- Integer-time operator norm bound by induction: ‖S(k)‖ ≤ M^k

@@ -24,8 +24,8 @@ A family $S(t)$ of bounded linear operators on a Banach space $X$ for $t \ge 0$,
 ### `ContractingSemigroup` (line 111) --- Structure
 Extends `StronglyContinuousSemigroup` with $\lVert S(t) \rVert \le 1$ for all $t \ge 0$. Corresponds to growth bound $\omega_0 = 0$.
 
-### `StronglyContinuousSemigroup.strongContAt` (line 249) --- Theorem
-Strong continuity at every $t_0 \ge 0$, not just at $0$. Left continuity uses the operator norm bound from `normBoundedOnInterval`; right continuity uses the semigroup property and continuity of $S(t_0)$.
+### `StronglyContinuousSemigroup.strong_cont_at` (line 249) --- Theorem
+Strong continuity at every $t_0 \ge 0$, not just at $0$. Left continuity uses the operator norm bound from `norm_bounded_on_interval`; right continuity uses the semigroup property and continuity of $S(t_0)$.
 
 ### `StronglyContinuousSemigroup.domain` (line 363) --- Definition
 The generator domain $D(A) = \{x : \lim_{t \to 0^+} (S(t)x - x)/t \text{ exists}\}$ as a `Submodule` over $\mathbb{R}$. Closure under addition and scalar multiplication follows from limit laws.
@@ -36,20 +36,20 @@ The infinitesimal generator $A : D(A) \to X$, $Ax = \lim_{t \to 0^+} (S(t)x - x)
 ### `ContractingSemigroup.resolvent` (line 493) --- Definition
 The resolvent $R(\lambda)\, x = \int_0^\infty e^{-\lambda t}\, S(t)\, x\, dt$ for $\lambda > 0$, constructed via `LinearMap.mkContinuous` with built-in bound $\lVert R(\lambda) \rVert \le 1/\lambda$.
 
-### `ContractingSemigroup.resolventMapsToDomain` (line 746) --- Theorem
+### `ContractingSemigroup.resolvent_mapsTo_domain` (line 746) --- Theorem
 $R(\lambda)\, x \in D(A)$ for all $x \in X$. Uses the integral shift trick: $S(h)(R_\lambda x) = e^{\lambda h} \int_{h}^{\infty} f(u)\, du$.
 
-### `ContractingSemigroup.resolventRightInv` (line 765) --- Theorem
+### `ContractingSemigroup.resolvent_right_inv` (line 765) --- Theorem
 $(\lambda I - A)\, R(\lambda)\, x = x$, i.e., the resolvent is the right inverse of $\lambda I - A$.
 
-### `hilleYosidaResolventBound` (line 800) --- Theorem
+### `hille_yosida_resolvent_bound` (line 800) --- Theorem
 **Hille-Yosida forward direction.** For a contraction semigroup: $\lVert R(\lambda) \rVert \le 1/\lambda$ for all $\lambda > 0$. Follows immediately from `LinearMap.mkContinuous_norm_le`.
 
 ### `StronglyContinuousSemigroup.HasGrowthBound` (line 812) --- Definition
 $\lVert S(t) \rVert \le M\, e^{\omega t}$ for all $t \ge 0$, with $M \ge 1$.
 
-### `StronglyContinuousSemigroup.existsGrowthBound` (line 820) --- Theorem
-Every $C_0$-semigroup has exponential growth: $\lVert S(t) \rVert \le M\, e^{\omega t}$. Uses the uniform bound on $[0,1]$ from `normBoundedOnUnitInterval` (Banach-Steinhaus) and decomposes $t = \lfloor t \rfloor + \mathrm{frac}(t)$.
+### `StronglyContinuousSemigroup.exists_growth_bound` (line 820) --- Theorem
+Every $C_0$-semigroup has exponential growth: $\lVert S(t) \rVert \le M\, e^{\omega t}$. Uses the uniform bound on $[0,1]$ from `norm_bounded_on_unit_interval` (Banach-Steinhaus) and decomposes $t = \lfloor t \rfloor + \mathrm{frac}(t)$.
 
 ---
 

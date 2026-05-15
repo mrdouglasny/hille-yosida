@@ -67,7 +67,7 @@ semigroupGroupBochnerExtension [PROVED]
 
 | File | Lines | Key theorems | Axioms | Sorry's |
 |------|-------|-------------|--------|---------|
-| `Semigroup/StronglyContinuous.lean` | 867 | `hilleYosidaResolventBound` | 0 | 0 |
+| `Semigroup/StronglyContinuous.lean` | 867 | `hille_yosida_resolvent_bound` | 0 | 0 |
 | `BCR/SemigroupGroupDefs.lean` | 26 | `IsSemigroupGroupPD` | 0 | 0 |
 | `Bernstein/Basic.lean` | 236 | `IsCompletelyMonotone`, `taylor_integral_remainder` | 0 | 0 |
 | `Bernstein/Measures.lean` | 498 | `bernstein_packaging`, `bernstein_kernel` | 0 | 0 |

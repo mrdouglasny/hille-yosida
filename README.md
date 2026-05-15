@@ -129,6 +129,25 @@ Or `import HilleYosida` for the whole library.
 
 `HilleYosida.Future.GenerationTheorem` is unchanged.
 
+### Theorem renames (mathlib-ready snake_case sweep)
+
+Six public theorems in `HilleYosida.Semigroup.StronglyContinuous` renamed to match Mathlib's `snake_case` convention for `Prop`-valued declarations:
+
+| Old | New |
+|---|---|
+| `operatorZeroApply` | `operator_zero_apply` |
+| `strongContAt` | `strong_cont_at` |
+| `resolventMapsToDomain` | `resolvent_mapsTo_domain` |
+| `resolventRightInv` | `resolvent_right_inv` |
+| `hilleYosidaResolventBound` | `hille_yosida_resolvent_bound` |
+| `existsGrowthBound` | `exists_growth_bound` |
+
+(Two additional private renames, `normBoundedOn*` → `norm_bounded_on_*`, don't affect downstream.)
+
+A `CoeFun` instance was also added so `S t x` works directly for `S : StronglyContinuousSemigroup X`. Existing `.operator t x` call sites are unchanged.
+
+Update downstream call site references. The structural facade imports (`import HilleYosida.Semigroup`) are unchanged.
+
 After merging this branch, regenerate the catalog entries:
 
 ```
