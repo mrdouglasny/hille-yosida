@@ -1,14 +1,6 @@
 /-
 Copyright (c) 2026 Michael R. Douglas. All rights reserved.
 Released under Apache 2.0 license.
-
-# Bernstein's Theorem — Basic definitions and properties
-
-`IsCompletelyMonotone` definition, basic CM properties (nonneg, bounded,
-deriv_nonpos, deriv_cm_sign, tendsto_atTop),
-set transfer lemmas, integral_neg_deriv, integral_mass.
-
-Split from `Bernstein.lean`.
 -/
 
 import Mathlib.MeasureTheory.Integral.Bochner.Basic
@@ -19,6 +11,16 @@ import Mathlib.Analysis.Calculus.IteratedDeriv.Defs
 import Mathlib.Analysis.Calculus.IteratedDeriv.Lemmas
 import Mathlib.Analysis.Calculus.Taylor
 import Mathlib.MeasureTheory.Integral.IntegralEqImproper
+
+/-!
+# Bernstein's Theorem — Basic definitions and properties
+
+`IsCompletelyMonotone` definition, basic CM properties (nonneg, bounded,
+deriv_nonpos, deriv_cm_sign, tendsto_atTop),
+set transfer lemmas, integral_neg_deriv, integral_mass.
+
+Split from `Bernstein.lean`.
+-/
 
 noncomputable section
 

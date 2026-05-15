@@ -1,7 +1,13 @@
 /-
 Copyright (c) 2026 Michael R. Douglas. All rights reserved.
 Released under Apache 2.0 license.
+-/
 
+import HilleYosida.Bernstein.Measures
+import Mathlib.MeasureTheory.Measure.Prokhorov
+import Mathlib.Analysis.SpecialFunctions.Complex.LogBounds
+
+/-!
 # Bernstein's Theorem — Chafai identity and Prokhorov extraction
 
 `cm_rescaled_isFiniteMeasure`, `chafai_kernel_density_eq`,
@@ -10,10 +16,6 @@ Prokhorov extraction, `prokhorov_limit_identification`.
 
 Split from `Bernstein.lean`.
 -/
-
-import HilleYosida.Bernstein.Measures
-import Mathlib.MeasureTheory.Measure.Prokhorov
-import Mathlib.Analysis.SpecialFunctions.Complex.LogBounds
 
 noncomputable section
 

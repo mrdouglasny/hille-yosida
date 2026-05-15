@@ -1,7 +1,11 @@
 /-
 Copyright (c) 2026 Michael R. Douglas. All rights reserved.
 Released under Apache 2.0 license.
+-/
 
+import HilleYosida.Semigroup.StronglyContinuous
+
+/-!
 # Hille-Yosida Generation Theorem (Converse Direction) — Axioms
 
 This file states the converse direction of the Hille-Yosida theorem as axioms.
@@ -33,8 +37,6 @@ generates a contraction semigroup iff `rg(λ₀ - A) = X` for some `λ₀ > 0`.
 * [EN] Engel-Nagel, Ch. II §3: Generation Theorems (pp. 70–95)
 * [Linares] Theorem 6 (Hille-Yosida, both directions)
 -/
-
-import HilleYosida.Semigroup.StronglyContinuous
 
 noncomputable section
 

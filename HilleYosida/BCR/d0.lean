@@ -1,7 +1,16 @@
 /-
 Copyright (c) 2026 Michael R. Douglas. All rights reserved.
 Released under Apache 2.0 license.
+-/
 
+import HilleYosida.Bernstein.Theorem
+import Mathlib.Analysis.Calculus.BumpFunction.InnerProduct
+import Mathlib.Analysis.Calculus.BumpFunction.Normed
+import Mathlib.Analysis.Calculus.ContDiff.Convolution
+import Mathlib.Analysis.Calculus.IteratedDeriv.Defs
+import Mathlib.Data.Nat.Choose.Vandermonde
+
+/-!
 # BCR Theorem 4.1.13 for d=0: PD on semigroup [0,∞) → Laplace transform
 
 A bounded continuous function `f : [0,∞) → ℝ` satisfying the semigroup
@@ -18,13 +27,6 @@ Proof route:
 * Berg-Christensen-Ressel, "Harmonic Analysis on Semigroups" (1984), §4.2
 * Widder, "The Laplace Transform" (1941), Ch. IV
 -/
-
-import HilleYosida.Bernstein.Theorem
-import Mathlib.Analysis.Calculus.BumpFunction.InnerProduct
-import Mathlib.Analysis.Calculus.BumpFunction.Normed
-import Mathlib.Analysis.Calculus.ContDiff.Convolution
-import Mathlib.Analysis.Calculus.IteratedDeriv.Defs
-import Mathlib.Data.Nat.Choose.Vandermonde
 
 noncomputable section
 

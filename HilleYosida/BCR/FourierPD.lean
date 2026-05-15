@@ -1,7 +1,12 @@
 /-
 Copyright (c) 2026 Michael R. Douglas. All rights reserved.
 Released under Apache 2.0 license.
+-/
 
+import Mathlib.MeasureTheory.Integral.Bochner.Basic
+import Mathlib.MeasureTheory.Integral.Bochner.ContinuousLinearMap
+
+/-!
 # Fourier Transforms of Positive Measures are Positive-Definite
 
 The "easy direction" of Bochner's theorem: `∑ᵢⱼ c̄ᵢ cⱼ ∫ star(χᵢ) χⱼ dμ`
@@ -10,9 +15,6 @@ transform of a positive measure is positive-definite.
 
 Ref: Rudin, "Fourier Analysis on Groups", Thm. 1.4.3
 -/
-
-import Mathlib.MeasureTheory.Integral.Bochner.Basic
-import Mathlib.MeasureTheory.Integral.Bochner.ContinuousLinearMap
 
 noncomputable section
 

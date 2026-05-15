@@ -1,7 +1,11 @@
 /-
 Copyright (c) 2026 Michael R. Douglas. All rights reserved.
 Released under Apache 2.0 license.
+-/
 
+import HilleYosida.Bernstein.Chafai
+
+/-!
 # Bernstein's Theorem — Main results
 
 `cm_prokhorov_and_verify`, `cm_laplace_representation`, `bernstein_theorem`.
@@ -13,8 +17,6 @@ This file re-exports all definitions and lemmas from the Bernstein module:
 
 Ref: Bernstein (1928); Widder, "The Laplace Transform" Ch. IV.
 -/
-
-import HilleYosida.Bernstein.Chafai
 
 noncomputable section
 

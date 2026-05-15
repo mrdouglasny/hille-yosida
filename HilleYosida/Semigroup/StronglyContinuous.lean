@@ -1,7 +1,20 @@
 /-
 Copyright (c) 2026 Michael R. Douglas. All rights reserved.
 Released under Apache 2.0 license.
+-/
 
+import Mathlib.Topology.Algebra.Module.Basic
+import Mathlib.Analysis.Normed.Operator.ContinuousLinearMap
+import Mathlib.Analysis.Normed.Operator.BanachSteinhaus
+import Mathlib.Analysis.SpecialFunctions.Log.Basic
+import Mathlib.Analysis.SpecialFunctions.ExpDeriv
+import Mathlib.MeasureTheory.Integral.Bochner.Basic
+import Mathlib.MeasureTheory.Integral.ExpDecay
+import Mathlib.MeasureTheory.Measure.Lebesgue.Basic
+import Mathlib.Analysis.SpecialFunctions.Integrals.Basic
+import Mathlib.Analysis.SpecialFunctions.ImproperIntegrals
+
+/-!
 # Strongly Continuous Semigroups and the Hille-Yosida Theorem
 
 This file defines strongly continuous one-parameter semigroups (C₀-semigroups) on
@@ -60,17 +73,6 @@ Laplace transform, and the forward direction of the Hille-Yosida theorem.
   semi-group of linear operators" (1948).
 * Reed-Simon, "Methods of Modern Mathematical Physics I", §VIII.
 -/
-
-import Mathlib.Topology.Algebra.Module.Basic
-import Mathlib.Analysis.Normed.Operator.ContinuousLinearMap
-import Mathlib.Analysis.Normed.Operator.BanachSteinhaus
-import Mathlib.Analysis.SpecialFunctions.Log.Basic
-import Mathlib.Analysis.SpecialFunctions.ExpDeriv
-import Mathlib.MeasureTheory.Integral.Bochner.Basic
-import Mathlib.MeasureTheory.Integral.ExpDecay
-import Mathlib.MeasureTheory.Measure.Lebesgue.Basic
-import Mathlib.Analysis.SpecialFunctions.Integrals.Basic
-import Mathlib.Analysis.SpecialFunctions.ImproperIntegrals
 
 noncomputable section
 

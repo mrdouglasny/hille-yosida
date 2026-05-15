@@ -1,7 +1,14 @@
 /-
 Copyright (c) 2026 Michael R. Douglas. All rights reserved.
 Released under Apache 2.0 license.
+-/
 
+import HilleYosida.Semigroup.StronglyContinuous
+import HilleYosida.BCR.FourierPD
+import HilleYosida.BCR.SemigroupGroupDefs
+import HilleYosida.BCR.General
+
+/-!
 # Semigroup-to-Group Extension via Bochner's Theorem
 
 States and (ultimately) proves the Bochner representation theorem for
@@ -28,11 +35,6 @@ measure μ is supported on `[0,∞) × ℝ^d`, and the Fourier integral
 * Reed-Simon II, §IX.8
 * Osterwalder-Schrader I-II
 -/
-
-import HilleYosida.Semigroup.StronglyContinuous
-import HilleYosida.BCR.FourierPD
-import HilleYosida.BCR.SemigroupGroupDefs
-import HilleYosida.BCR.General
 
 noncomputable section
 

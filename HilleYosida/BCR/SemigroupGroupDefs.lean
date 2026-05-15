@@ -1,14 +1,16 @@
 /-
 Copyright (c) 2026 Michael R. Douglas. All rights reserved.
 Released under Apache 2.0 license.
-
-# Positive-Definite Functions on `[0,∞) × ℝ^d`
-
-Shared definitions for the semigroup/group Bochner development.
 -/
 
 import Mathlib.MeasureTheory.Integral.Bochner.Basic
 import Mathlib.Analysis.InnerProductSpace.Basic
+
+/-!
+# Positive-Definite Functions on `[0,∞) × ℝ^d`
+
+Shared definitions for the semigroup/group Bochner development.
+-/
 
 noncomputable section
 

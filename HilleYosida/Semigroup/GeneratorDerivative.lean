@@ -1,7 +1,11 @@
 /-
 Copyright (c) 2026 Michael R. Douglas. All rights reserved.
 Released under Apache 2.0 license as described in the file LICENSE.
+-/
 
+import HilleYosida.Semigroup.StronglyContinuous
+
+/-!
 # Derivative of the Semigroup: d/dt S(t)x = A S(t)x = S(t) Ax
 
 For a C₀-semigroup S(t) with generator A, and x ∈ dom(A):
@@ -20,8 +24,6 @@ This is [EN] Proposition II.1.4(c) / [Linares] Proposition 5.
 - Engel-Nagel, "One-Parameter Semigroups for Linear Evolution Equations",
   Proposition II.1.4
 -/
-
-import HilleYosida.Semigroup.StronglyContinuous
 
 variable {X : Type*} [NormedAddCommGroup X] [NormedSpace ℝ X] [CompleteSpace X]
 

@@ -1,7 +1,12 @@
 /-
 Copyright (c) 2026 Michael R. Douglas. All rights reserved.
 Released under Apache 2.0 license.
+-/
 
+import HilleYosida.Bernstein.Basic
+import Mathlib.Analysis.SpecialFunctions.Gamma.Beta
+
+/-!
 # Bernstein's Theorem — Measure construction
 
 `cm_density`, `cm_measure`, density properties, IBP machinery,
@@ -10,9 +15,6 @@ rescaled measures.
 
 Split from `Bernstein.lean`.
 -/
-
-import HilleYosida.Bernstein.Basic
-import Mathlib.Analysis.SpecialFunctions.Gamma.Beta
 
 noncomputable section
 
