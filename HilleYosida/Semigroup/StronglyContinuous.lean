@@ -365,62 +365,63 @@ theorem StronglyContinuousSemigroup.strong_cont_at
 
 /-! ## The Infinitesimal Generator -/
 
-/-- The infinitesimal generator of a C₀-semigroup ([EN] Def. II.1.2,
-[Linares] Def. 2). The domain consists of elements `x` for which the
-limit `lim_{t→0⁺} (S(t)x - x)/t` exists. The generator `A` is the
-value of this limit. By [EN] Thm. II.1.4, `A` is closed, densely defined,
-and determines the semigroup uniquely. -/
-def StronglyContinuousSemigroup.generator (S : StronglyContinuousSemigroup X)
-    (x : X) : Prop :=
-  ∃ (Ax : X), Filter.Tendsto
-    (fun t => (1/t) • (S.operator t x - x))
-    (nhdsWithin 0 (Set.Ioi 0))
-    (nhds Ax)
+/-- The domain of the infinitesimal generator as a ℝ-submodule of `X`
+([EN] Def. II.1.2, [Linares] Def. 2).
 
-/-- The domain of the generator as a ℝ-submodule of X.
+A vector `x : X` lies in `S.domain` iff the orbit `t ↦ S(t) x` has a right
+derivative at `t = 0`, expressed via Mathlib's `HasDerivWithinAt` API. This
+formulation enables direct use of `HasDerivWithinAt.add`, `.const_smul`, etc.,
+for the algebraic-closure proofs, and composes with the rest of Mathlib's
+calculus hierarchy.
 
-This is algebraically closed under addition and scalar multiplication because
-limits of sums/scalar-multiples are sums/scalar-multiples of limits
-(in the Hausdorff topology of a Banach space). -/
+The associated generator operator `A : S.domain →ₗ[ℝ] X` is `S.generator`. -/
 def StronglyContinuousSemigroup.domain (S : StronglyContinuousSemigroup X) :
     Submodule ℝ X where
-  carrier := { x | S.generator x }
+  carrier := { x | ∃ (Ax : X),
+    HasDerivWithinAt (fun t => S.operator t x) Ax (Set.Ici 0) 0 }
   add_mem' := by
     intro x y hx hy
     obtain ⟨Ax, hAx⟩ := hx
     obtain ⟨Ay, hAy⟩ := hy
     refine ⟨Ax + Ay, ?_⟩
-    have : Filter.Tendsto
-        (fun t => (1/t) • (S.operator t (x + y) - (x + y)))
-        (nhdsWithin 0 (Set.Ioi 0)) (nhds (Ax + Ay)) := by
-      have heq : ∀ᶠ t in nhdsWithin 0 (Set.Ioi 0),
-          (1/t) • (S.operator t (x + y) - (x + y)) =
-            (1/t) • (S.operator t x - x) + (1/t) • (S.operator t y - y) := by
-        filter_upwards with t
-        rw [map_add, add_sub_add_comm, smul_add]
-      exact (hAx.add hAy).congr' (heq.mono (fun _ h => h.symm))
-    exact this
+    have heq : (fun t => S.operator t (x + y)) =
+        fun t => S.operator t x + S.operator t y := by
+      funext t; exact map_add _ _ _
+    rw [heq]
+    exact hAx.add hAy
   zero_mem' := by
     refine ⟨0, ?_⟩
-    have : (fun t => (1/t) • (S.operator t (0 : X) - 0)) = fun _ => 0 := by
-      ext t; simp [map_zero]
-    rw [this]; exact tendsto_const_nhds
+    have heq : (fun t : ℝ => S.operator t (0 : X)) = fun _ => 0 := by
+      funext t; exact map_zero _
+    rw [heq]
+    exact hasDerivWithinAt_const _ _ _
   smul_mem' := by
     intro c x hx
     obtain ⟨Ax, hAx⟩ := hx
     refine ⟨c • Ax, ?_⟩
-    have heq : ∀ᶠ t in nhdsWithin 0 (Set.Ioi 0),
-        (1/t) • (S.operator t (c • x) - c • x) =
-          c • ((1/t) • (S.operator t x - x)) := by
-      filter_upwards with t
-      simp only [map_smul, smul_sub, smul_comm c (1/t)]
-    exact (hAx.const_smul c).congr' (heq.mono (fun _ h => h.symm))
+    have heq : (fun t => S.operator t (c • x)) =
+        fun t => c • S.operator t x := by
+      funext t; exact map_smul _ _ _
+    rw [heq]
+    exact hAx.const_smul c
 
-/-- The infinitesimal generator `A`, as a linear map from its domain submodule to `X`.
+/-- `S.domain` is a unique-differentiability set at `0`, so derivatives of
+orbits at `0` (when they exist) are unique. Required for the linear-map
+construction of `S.generator`. -/
+lemma StronglyContinuousSemigroup.uniqueDiffWithinAt_domain :
+    UniqueDiffWithinAt ℝ (Set.Ici (0 : ℝ)) 0 :=
+  uniqueDiffOn_Ici 0 _ Set.self_mem_Ici
 
-Uses `Classical.choose` to extract the limit value. Linearity follows from
-uniqueness of limits in a Hausdorff space (`tendsto_nhds_unique`). -/
-noncomputable def StronglyContinuousSemigroup.generatorMap
+/-- The infinitesimal generator `A` of a C₀-semigroup, as a ℝ-linear map
+from its domain submodule to `X` ([EN] Def. II.1.2, [Linares] Def. 2).
+
+By [EN] Thm. II.1.4, `A` is closed, densely defined, and determines
+the semigroup uniquely.
+
+Uses `Classical.choose` to extract the derivative value from the
+`HasDerivWithinAt` existential in `S.domain`. Linearity follows from
+`HasDerivWithinAt.unique` (using `uniqueDiffWithinAt_Ici_zero`). -/
+noncomputable def StronglyContinuousSemigroup.generator
     (S : StronglyContinuousSemigroup X) : S.domain →ₗ[ℝ] X where
   toFun := fun x => Classical.choose x.property
   map_add' := by
@@ -428,31 +429,24 @@ noncomputable def StronglyContinuousSemigroup.generatorMap
     have hAx := Classical.choose_spec hx
     have hAy := Classical.choose_spec hy
     have hxy := Classical.choose_spec (S.domain.add_mem hx hy)
-    have hsum : Filter.Tendsto
-        (fun t => (1/t) • (S.operator t (x + y) - (x + y)))
-        (nhdsWithin 0 (Set.Ioi 0))
-        (nhds (Classical.choose hx + Classical.choose hy)) := by
-      have heq : ∀ᶠ t in nhdsWithin 0 (Set.Ioi 0),
-          (1/t) • (S.operator t (x + y) - (x + y)) =
-            (1/t) • (S.operator t x - x) + (1/t) • (S.operator t y - y) := by
-        filter_upwards with t; rw [map_add, add_sub_add_comm, smul_add]
-      exact (hAx.add hAy).congr' (heq.mono (fun _ h => h.symm))
-    exact tendsto_nhds_unique hxy hsum
+    have hsum : HasDerivWithinAt (fun t => S.operator t (x + y))
+        (Classical.choose hx + Classical.choose hy) (Set.Ici 0) 0 := by
+      have heq : (fun t => S.operator t (x + y)) =
+          fun t => S.operator t x + S.operator t y := by
+        funext t; exact map_add _ _ _
+      rw [heq]; exact hAx.add hAy
+    exact StronglyContinuousSemigroup.uniqueDiffWithinAt_domain.eq_deriv _ hxy hsum
   map_smul' := by
     intro c ⟨x, hx⟩
     have hAx := Classical.choose_spec hx
     have hcx := Classical.choose_spec (S.domain.smul_mem c hx)
-    have hscaled : Filter.Tendsto
-        (fun t => (1/t) • (S.operator t (c • x) - c • x))
-        (nhdsWithin 0 (Set.Ioi 0))
-        (nhds (c • Classical.choose hx)) := by
-      have heq : ∀ᶠ t in nhdsWithin 0 (Set.Ioi 0),
-          (1/t) • (S.operator t (c • x) - c • x) =
-            c • ((1/t) • (S.operator t x - x)) := by
-        filter_upwards with t
-        simp only [map_smul, smul_sub, smul_comm c (1/t)]
-      exact (hAx.const_smul c).congr' (heq.mono (fun _ h => h.symm))
-    exact tendsto_nhds_unique hcx hscaled
+    have hscaled : HasDerivWithinAt (fun t => S.operator t (c • x))
+        (c • Classical.choose hx) (Set.Ici 0) 0 := by
+      have heq : (fun t => S.operator t (c • x)) =
+          fun t => c • S.operator t x := by
+        funext t; exact map_smul _ _ _
+      rw [heq]; exact hAx.const_smul c
+    exact StronglyContinuousSemigroup.uniqueDiffWithinAt_domain.eq_deriv _ hcx hscaled
 
 /-! ## The Resolvent (for Contraction Semigroups) -/
 
@@ -761,6 +755,25 @@ private theorem ContractingSemigroup.resolvent_generator_tendsto
           filter_upwards [self_mem_nhdsWithin] with t (ht : 0 < t)
           rw [one_div, intervalIntegral.integral_of_le (le_of_lt ht), hg_eq t ht])
 
+/-- Bridge: the bespoke `Tendsto` form of the right-derivative at zero is
+equivalent to Mathlib's `HasDerivWithinAt` on `Set.Ici 0`. Use this to lift
+existing `Tendsto`-flavored proofs into the new `HasDerivWithinAt` API. -/
+lemma StronglyContinuousSemigroup.hasDerivWithinAt_iff_tendsto_zero
+    (S : StronglyContinuousSemigroup X) (x Ax : X) :
+    HasDerivWithinAt (fun t => S.operator t x) Ax (Set.Ici 0) 0 ↔
+    Filter.Tendsto (fun t => (1/t) • (S.operator t x - x))
+      (nhdsWithin 0 (Set.Ioi 0)) (nhds Ax) := by
+  rw [hasDerivWithinAt_iff_tendsto_slope]
+  have hset : (Set.Ici (0 : ℝ)) \ {0} = Set.Ioi 0 := by
+    ext t
+    simp only [Set.mem_diff, Set.mem_Ici, Set.mem_singleton_iff, Set.mem_Ioi]
+    exact ⟨fun ⟨ht, hne⟩ => lt_of_le_of_ne ht (Ne.symm hne),
+           fun ht => ⟨le_of_lt ht, ne_of_gt ht⟩⟩
+  rw [hset]
+  refine ⟨fun h => h.congr' ?_, fun h => h.congr' ?_⟩ <;>
+    · filter_upwards [self_mem_nhdsWithin] with t (_ : 0 < t)
+      simp [slope, one_div, sub_zero, S.operator_zero_apply]
+
 /-- The resolvent maps all of `X` into the domain of the generator
 ([EN] Thm. II.1.10(i), [Linares] eq. 0.15). -/
 theorem ContractingSemigroup.resolvent_mapsTo_domain
@@ -768,7 +781,9 @@ theorem ContractingSemigroup.resolvent_mapsTo_domain
     (lambda : ℝ) (hlam : 0 < lambda) (x : X) :
     (S.resolvent lambda hlam x) ∈
       S.toStronglyContinuousSemigroup.domain :=
-  ⟨_, S.resolvent_generator_tendsto lambda hlam x⟩
+  ⟨_, (S.toStronglyContinuousSemigroup.hasDerivWithinAt_iff_tendsto_zero
+      (S.resolvent lambda hlam x) _).mpr
+    (S.resolvent_generator_tendsto lambda hlam x)⟩
 
 /-- The fundamental resolvent identity: `(λI - A) R(λ) x = x`.
 
@@ -788,16 +803,25 @@ theorem ContractingSemigroup.resolvent_right_inv
     let Rlx := S.resolvent lambda hlam x
     let Rlx_dom : S.toStronglyContinuousSemigroup.domain :=
       ⟨Rlx, S.resolvent_mapsTo_domain lambda hlam x⟩
-    lambda • Rlx - S.toStronglyContinuousSemigroup.generatorMap Rlx_dom = x := by
+    lambda • Rlx - S.toStronglyContinuousSemigroup.generator Rlx_dom = x := by
   simp only
-  -- generatorMap = Classical.choose of the generator existential
-  -- By tendsto_nhds_unique: it equals λ Rlx - x
-  have h_gen_eq : S.toStronglyContinuousSemigroup.generatorMap
+  -- generator = Classical.choose of the HasDerivWithinAt existential
+  -- By HasDerivWithinAt.unique on Ici 0 at 0: it equals λ Rlx - x
+  have hchosen :
+      HasDerivWithinAt (fun t => S.operator t (S.resolvent lambda hlam x))
+        (Classical.choose (S.resolvent_mapsTo_domain lambda hlam x))
+        (Set.Ici 0) 0 :=
+    Classical.choose_spec (S.resolvent_mapsTo_domain lambda hlam x)
+  have htarget :
+      HasDerivWithinAt (fun t => S.operator t (S.resolvent lambda hlam x))
+        (lambda • S.resolvent lambda hlam x - x) (Set.Ici 0) 0 :=
+    (S.toStronglyContinuousSemigroup.hasDerivWithinAt_iff_tendsto_zero
+        (S.resolvent lambda hlam x) _).mpr
+      (S.resolvent_generator_tendsto lambda hlam x)
+  have h_gen_eq : S.toStronglyContinuousSemigroup.generator
       ⟨S.resolvent lambda hlam x, S.resolvent_mapsTo_domain lambda hlam x⟩ =
       lambda • S.resolvent lambda hlam x - x :=
-    tendsto_nhds_unique
-      (Classical.choose_spec (S.resolvent_mapsTo_domain lambda hlam x))
-      (S.resolvent_generator_tendsto lambda hlam x)
+    StronglyContinuousSemigroup.uniqueDiffWithinAt_domain.eq_deriv _ hchosen htarget
   rw [h_gen_eq]; abel
 
 /-! ## Hille-Yosida Theorem -/

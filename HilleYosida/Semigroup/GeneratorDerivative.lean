@@ -41,12 +41,13 @@ Proof: for x ∈ dom(A), the difference quotient
   (S(h)(S(t)x) - S(t)x)/h = S(t)((S(h)x - x)/h)
 converges to S(t)(Ax) as h → 0⁺ (by continuity of S(t) and the
 definition of Ax as the limit of (S(h)x - x)/h). -/
-theorem semigroup_maps_domain (x : X) (hx : S.generator x)
+theorem semigroup_maps_domain (x : X) (hx : x ∈ S.domain)
     (t : ℝ) (ht : 0 ≤ t) :
-    S.generator (S.operator t x) := by
+    S.operator t x ∈ S.domain := by
   obtain ⟨Ax, hAx⟩ := hx
   refine ⟨S.operator t Ax, ?_⟩
-  -- (S(h)(S(t)x) - S(t)x)/h = S(t)((S(h)x - x)/h) → S(t)(Ax)
+  -- Work in the `Tendsto` form via the bridge; do the existing continuity argument; bridge back.
+  rw [S.hasDerivWithinAt_iff_tendsto_zero] at hAx ⊢
   have heq : ∀ᶠ h in nhdsWithin 0 (Set.Ioi 0),
       (1/h) • (S.operator h (S.operator t x) - S.operator t x) =
       S.operator t ((1/h) • (S.operator h x - x)) := by
@@ -64,23 +65,26 @@ theorem semigroup_maps_domain (x : X) (hx : S.generator x)
 /-- The generator commutes with the semigroup on dom(A):
 A(S(t)x) = S(t)(Ax) for x ∈ dom(A).
 
-This follows from semigroup_maps_domain: we showed the limit of
+This follows from `semigroup_maps_domain`: the limit of
 (S(h)(S(t)x) - S(t)x)/h is S(t)(Ax), so A(S(t)x) = S(t)(Ax). -/
-theorem semigroup_generator_comm (x : X) (hx : S.generator x)
+theorem semigroup_generator_comm (x : X) (hx : x ∈ S.domain)
     (t : ℝ) (ht : 0 ≤ t) :
-    let Ax := Classical.choose hx
-    let AStx := Classical.choose (S.semigroup_maps_domain x hx t ht)
-    AStx = S.operator t Ax := by
-  -- Both are the unique limit of (S(h)(S(t)x) - S(t)x)/h
-  -- semigroup_maps_domain showed this limit is S(t)(Ax)
-  -- The generator value at S(t)x is by definition this limit
-  set Ax := Classical.choose hx with hAx_def
-  set AStx := Classical.choose (S.semigroup_maps_domain x hx t ht) with hAStx_def
-  have hAx := Classical.choose_spec hx
-  have hAStx := Classical.choose_spec (S.semigroup_maps_domain x hx t ht)
-  -- Both AStx and S(t)(Ax) are limits of (S(h)(S(t)x) - S(t)x)/h
-  have h_target : Tendsto (fun h => (1/h) • (S.operator h (S.operator t x) - S.operator t x))
-      (nhdsWithin 0 (Set.Ioi 0)) (nhds (S.operator t Ax)) := by
+    S.generator ⟨S.operator t x, S.semigroup_maps_domain x hx t ht⟩ =
+      S.operator t (S.generator ⟨x, hx⟩) := by
+  -- `S.generator` is defined as `Classical.choose` of the HasDerivWithinAt existential.
+  -- Both `S.generator ⟨S(t)x, _⟩` and `S(t)(S.generator ⟨x, _⟩)` are derivative values
+  -- at 0 for the orbit `h ↦ S(h)(S(t)x)`. Use uniqueness on `Ici 0`.
+  set Ax := S.generator ⟨x, hx⟩ with hAx_def
+  set AStx := S.generator ⟨S.operator t x, S.semigroup_maps_domain x hx t ht⟩ with hAStx_def
+  have hAx_chosen : HasDerivWithinAt (fun h => S.operator h x) Ax (Set.Ici 0) 0 :=
+    Classical.choose_spec hx
+  have hAStx_chosen : HasDerivWithinAt
+      (fun h => S.operator h (S.operator t x)) AStx (Set.Ici 0) 0 :=
+    Classical.choose_spec (S.semigroup_maps_domain x hx t ht)
+  -- Show the orbit at S(t)x also has S(t)(Ax) as a derivative
+  have h_target : HasDerivWithinAt
+      (fun h => S.operator h (S.operator t x)) (S.operator t Ax) (Set.Ici 0) 0 := by
+    rw [S.hasDerivWithinAt_iff_tendsto_zero] at hAx_chosen ⊢
     have heq : ∀ᶠ h in nhdsWithin 0 (Set.Ioi 0),
         (1/h) • (S.operator h (S.operator t x) - S.operator t x) =
         S.operator t ((1/h) • (S.operator h x - x)) := by
@@ -89,8 +93,9 @@ theorem semigroup_generator_comm (x : X) (hx : S.generator x)
         rw [← ContinuousLinearMap.comp_apply, ← S.semigroup h t (le_of_lt hh) ht,
             add_comm, S.semigroup t h ht (le_of_lt hh), ContinuousLinearMap.comp_apply]
       rw [h_comm, ← map_sub, ← map_smul]
-    exact (((S.operator t).continuous.tendsto _).comp hAx).congr' (heq.mono (fun _ h => h.symm))
-  exact tendsto_nhds_unique hAStx h_target
+    exact (((S.operator t).continuous.tendsto _).comp hAx_chosen).congr'
+      (heq.mono (fun _ h => h.symm))
+  exact StronglyContinuousSemigroup.uniqueDiffWithinAt_domain.eq_deriv _ hAStx_chosen h_target
 
 end StronglyContinuousSemigroup
 

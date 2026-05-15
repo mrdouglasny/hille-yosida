@@ -108,6 +108,6 @@ Ref: [EN] Thm. II.3.5, Cor. II.3.6, Thm. II.3.15; [Linares] Thm. 6. -/
 --     ∃ (S : ContractingSemigroup X),
 --       (∀ (x : A.domain), (x : X) ∈ S.toStronglyContinuousSemigroup.domain) ∧
 --       (∀ (x : A.domain) (hx : (x : X) ∈ S.toStronglyContinuousSemigroup.domain),
---         S.toStronglyContinuousSemigroup.generatorMap ⟨x, hx⟩ = A.op x)
+--         S.toStronglyContinuousSemigroup.generator ⟨x, hx⟩ = A.op x)
 
 end

@@ -148,6 +148,15 @@ A `CoeFun` instance was also added so `S t x` works directly for `S : StronglyCo
 
 Update downstream call site references. The structural facade imports (`import HilleYosida.Semigroup`) are unchanged.
 
+### Generator API: `HasDerivWithinAt` and predicate elimination
+
+For Mathlib API compatibility, the C₀-semigroup generator API was refactored to use Mathlib's `HasDerivWithinAt` calculus infrastructure instead of a bespoke `Tendsto` predicate. Two breaking changes for downstream:
+
+- **`StronglyContinuousSemigroup.generator (x : X) : Prop` is removed.** Use `x ∈ S.domain` (Submodule membership) instead. The domain's carrier is now `{ x | ∃ Ax, HasDerivWithinAt (fun t => S.operator t x) Ax (Set.Ici 0) 0 }`.
+- **`StronglyContinuousSemigroup.generatorMap` is renamed to `StronglyContinuousSemigroup.generator`**, now meaning the actual generator operator `A : S.domain →ₗ[ℝ] X` (consistent with textbook notation).
+
+A bridge lemma `StronglyContinuousSemigroup.hasDerivWithinAt_iff_tendsto_zero` is provided for callers that still want the `Tendsto`-flavored form.
+
 After merging this branch, regenerate the catalog entries:
 
 ```
