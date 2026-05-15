@@ -18,9 +18,9 @@ Bounded continuous positive-definite functions on $[0,\infty) \times \mathbb{R}^
 
 $$F(t, a) = \int_{[0,\infty) \times \mathbb{R}^d} e^{-tp} \, e^{i\langle a, q\rangle} \, d\mu(p, q) \quad \text{for } t \geq 0$$
 
-**Existence** (`semigroupGroupBochner`): decomposes into spatial Bochner + temporal BCR d=0 + product measure assembly.
+**Existence** (`semigroup_group_bochner`): decomposes into spatial Bochner + temporal BCR d=0 + product measure assembly.
 
-**Uniqueness** (`laplaceFourier_unique`): finite measures on $[0,\infty) \times \mathbb{R}^d$ with equal Laplace-Fourier transforms are equal. Proved via Fourier uniqueness on spatial slices, Laplace uniqueness on temporal slices, and rectangular measure extension.
+**Uniqueness** (`laplace_fourier_unique`): finite measures on $[0,\infty) \times \mathbb{R}^d$ with equal Laplace-Fourier transforms are equal. Proved via Fourier uniqueness on spatial slices, Laplace uniqueness on temporal slices, and rectangular measure extension.
 
 ## File Structure
 
@@ -48,12 +48,12 @@ Sources are grouped into three pillars matching the proof structure.
 |------|----------|
 | [BCR/d0.lean](HilleYosida/BCR/d0.lean) | [BCR 4.1.13 for d=0: `semigroup_pd_laplace`](summary/HilleYosida/BCR/d0.md) |
 | [BCR/Common.lean](HilleYosida/BCR/Common.lean) | Laplace-uniqueness toolkit + `TemporalSliceRep` (shared by Existence and Uniqueness) |
-| [BCR/Existence.lean](HilleYosida/BCR/Existence.lean) | BCR 4.1.13 existence: Steps 1/2/3 + `semigroupGroupBochner_proof` |
-| [BCR/Uniqueness.lean](HilleYosida/BCR/Uniqueness.lean) | BCR 4.1.13 uniqueness: `laplaceFourier_unique` |
+| [BCR/Existence.lean](HilleYosida/BCR/Existence.lean) | BCR 4.1.13 existence: Steps 1/2/3 + `semigroup_group_bochner_proof` |
+| [BCR/Uniqueness.lean](HilleYosida/BCR/Uniqueness.lean) | BCR 4.1.13 uniqueness: `laplace_fourier_unique` |
 | [BCR/General.lean](HilleYosida/BCR/General.lean) | Re-export shim — imports Common + Existence + Uniqueness |
 | [BCR/FourierPD.lean](HilleYosida/BCR/FourierPD.lean) | [Fourier PD: `pd_quadratic_form_of_measure`](summary/HilleYosida/BCR/FourierPD.md) |
 | [BCR/SemigroupGroupDefs.lean](HilleYosida/BCR/SemigroupGroupDefs.lean) | [`IsSemigroupGroupPD` definition](summary/HilleYosida/BCR/SemigroupGroupDefs.md) |
-| [BCR/SemigroupGroupExtension.lean](HilleYosida/BCR/SemigroupGroupExtension.lean) | [`semigroupGroupBochner` + group extension](summary/HilleYosida/BCR/SemigroupGroupExtension.md) |
+| [BCR/SemigroupGroupExtension.lean](HilleYosida/BCR/SemigroupGroupExtension.lean) | [`semigroup_group_bochner` + group extension](summary/HilleYosida/BCR/SemigroupGroupExtension.md) |
 
 ### `Future/` — out-of-chain axiomatized future work
 
@@ -83,7 +83,7 @@ The core engine `semigroup_pd_laplace` in `BCR/d0.lean` proves that bounded cont
 
 ## Application: QFT Reconstruction
 
-This project provides the `semigroupGroupBochner` theorem needed by [OSreconstruction](https://github.com/xiyin137/OSreconstruction) for the E-to-R direction of Osterwalder-Schrader reconstruction. The Fourier-Laplace measure representation connects Euclidean contraction semigroups $e^{-tH}$ to Lorentzian unitary groups $e^{itH}$ via analytic continuation.
+This project provides the `semigroup_group_bochner` theorem needed by [OSreconstruction](https://github.com/xiyin137/OSreconstruction) for the E-to-R direction of Osterwalder-Schrader reconstruction. The Fourier-Laplace measure representation connects Euclidean contraction semigroups $e^{-tH}$ to Lorentzian unitary groups $e^{itH}$ via analytic continuation.
 
 ## Dependencies
 
@@ -156,6 +156,21 @@ For Mathlib API compatibility, the C₀-semigroup generator API was refactored t
 - **`StronglyContinuousSemigroup.generatorMap` is renamed to `StronglyContinuousSemigroup.generator`**, now meaning the actual generator operator `A : S.domain →ₗ[ℝ] X` (consistent with textbook notation).
 
 A bridge lemma `StronglyContinuousSemigroup.hasDerivWithinAt_iff_tendsto_zero` is provided for callers that still want the `Tendsto`-flavored form.
+
+### BCR theorem renames (mathlib-ready audit, Bernstein/BCR/Future pass)
+
+Additional public renames in the BCR pillar, same snake_case convention:
+
+| Old | New | File |
+|---|---|---|
+| `semigroupGroupBochner` | `semigroup_group_bochner` | `BCR/SemigroupGroupExtension.lean` |
+| `semigroupGroupBochnerExtension` | `semigroup_group_bochner_extension` | `BCR/SemigroupGroupExtension.lean` |
+| `semigroupGroupBochner_proof` | `semigroup_group_bochner_proof` | `BCR/Existence.lean` |
+| `laplaceFourier_unique` | `laplace_fourier_unique` | `BCR/Uniqueness.lean` |
+
+(One private rename, `weightedSpatial_eq_of_laplaceFourier_eq` → `weightedSpatial_eq_of_laplace_fourier_eq`, does not affect downstream.)
+
+`@[ext]` lemmas were added for `Mollifier` (BCR/d0.lean) and `TemporalSliceRep` (BCR/Common.lean).
 
 After merging this branch, regenerate the catalog entries:
 

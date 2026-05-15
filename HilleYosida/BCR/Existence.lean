@@ -16,7 +16,7 @@ import Mathlib.Topology.ContinuousMap.Weierstrass
 
 /-! # BCR Theorem 4.1.13 — existence
 
-Assembles `semigroupGroupBochner_proof` (BCR 4.1.13 existence) from three steps:
+Assembles `semigroup_group_bochner_proof` (BCR 4.1.13 existence) from three steps:
 * **Step 1** — Spatial Bochner: for each `t ≥ 0` the slice `a ↦ F(t, a)` is
   positive-definite on `ℝ^d`, giving a finite measure `ν_t` via
   `bochner_theorem` from `mrdouglasny/bochner`.
@@ -2337,7 +2337,7 @@ Fourier-Laplace transforms of finite positive measures supported on
 
 Assembles: spatial Bochner (Step 1) + temporal PD (Step 2) +
 product measure (Step 3, using `semigroup_pd_laplace` from BCR_d0). -/
-theorem semigroupGroupBochner_proof (d : ℕ)
+theorem semigroup_group_bochner_proof (d : ℕ)
     (F : ℝ → (Fin d → ℝ) → ℂ)
     (hcont : ContinuousOn (fun p : ℝ × (Fin d → ℝ) => F p.1 p.2)
       (Ici (0 : ℝ) ×ˢ univ))

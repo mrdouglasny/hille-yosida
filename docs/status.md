@@ -20,8 +20,8 @@
 | `Bernstein/Theorem.lean` | `bernstein_theorem` (main result) | **Fully proved** (0 axioms, 0 sorry's) |
 | `BCR/FourierPD.lean` | `pd_quadratic_form_of_measure` | **Fully proved** (0 axioms, 0 sorry's) |
 | `BCR/d0.lean` | `semigroup_pd_laplace` (BCR d=0) | **Fully proved** (0 axioms, 0 sorry's) |
-| `BCR/General.lean` | `semigroupGroupBochner_proof` (BCR general d) | **Fully proved** (0 axioms, 0 sorry's) |
-| `BCR/SemigroupGroupExtension.lean` | `semigroupGroupBochner` + group extension | **Fully proved** (0 axioms, 0 sorry's) |
+| `BCR/General.lean` | `semigroup_group_bochner_proof` (BCR general d) | **Fully proved** (0 axioms, 0 sorry's) |
+| `BCR/SemigroupGroupExtension.lean` | `semigroup_group_bochner` + group extension | **Fully proved** (0 axioms, 0 sorry's) |
 
 ### Axioms (only in Future/ — not used by main proof chain)
 
@@ -44,19 +44,19 @@ semigroup_pd_laplace [PROVED, 1503 lines]
   ├── Mollifier smoothing → apply bernstein_theorem
   └── Prokhorov extraction → Laplace representation
 
-semigroupGroupBochner_proof [PROVED, 2822 lines]
+semigroup_group_bochner_proof [PROVED, 2822 lines]
   ├── Spatial Bochner: bochner_theorem (from mrdouglasny/bochner)
   ├── Temporal BCR d=0: semigroup_pd_laplace
   └── Product measure assembly
 
-semigroupGroupBochner [PROVED, delegates to semigroupGroupBochner_proof]
+semigroup_group_bochner [PROVED, delegates to semigroup_group_bochner_proof]
 
-laplaceFourier_unique [PROVED]
+laplace_fourier_unique [PROVED]
   ├── Fourier uniqueness on weighted spatial slices
   ├── Laplace uniqueness on temporal slices
   └── ext_prod on measurable rectangles
 
-semigroupGroupBochnerExtension [PROVED]
+semigroup_group_bochner_extension [PROVED]
   ├── Bounded, continuous, PD from Fourier-Laplace representation
   └── Uses pd_quadratic_form_of_measure [PROVED]
 ```
@@ -75,8 +75,8 @@ semigroupGroupBochnerExtension [PROVED]
 | `Bernstein/Theorem.lean` | 132 | `bernstein_theorem` | 0 | 0 |
 | `BCR/FourierPD.lean` | 72 | `pd_quadratic_form_of_measure` | 0 | 0 |
 | `BCR/d0.lean` | 1503 | `semigroup_pd_laplace` | 0 | 0 |
-| `BCR/General.lean` | 3077 | `semigroupGroupBochner_proof`, `laplaceFourier_unique` | 0 | 0 |
-| `BCR/SemigroupGroupExtension.lean` | 271 | `semigroupGroupBochner`, `semigroupGroupBochnerExtension` | 0 | 0 |
+| `BCR/General.lean` | 3077 | `semigroup_group_bochner_proof`, `laplace_fourier_unique` | 0 | 0 |
+| `BCR/SemigroupGroupExtension.lean` | 271 | `semigroup_group_bochner`, `semigroup_group_bochner_extension` | 0 | 0 |
 | `Future/GenerationTheorem.lean` | 109 | — | 2 | 0 |
 | **Total** | **~8470** | | **0 (main)** | **0** |
 

@@ -941,6 +941,12 @@ structure Mollifier (ε : ℝ) where
   nonneg : ∀ s, 0 ≤ func s
   integral_one : ∫ s in (0 : ℝ)..ε, func s = 1
 
+/-- Two mollifiers are equal iff their underlying functions agree. -/
+@[ext]
+theorem Mollifier.ext {ε : ℝ} {m₁ m₂ : Mollifier ε} (h : m₁.func = m₂.func) :
+    m₁ = m₂ := by
+  cases m₁; cases m₂; congr
+
 /-- Standard smooth bump functions exist for every `ε > 0`. -/
 noncomputable def mollifier_exists (ε : ℝ) (hε : 0 < ε) : Mollifier ε := by
   let φ : ContDiffBump (ε / 2 : ℝ) :=

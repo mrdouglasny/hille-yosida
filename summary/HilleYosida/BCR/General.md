@@ -32,7 +32,7 @@ For each Borel set $B \subseteq \mathbb{R}^d$, $t \mapsto \nu_t(B)$ is semigroup
 ### `product_measure_assembly` — Theorem
 The family $\{\sigma_B\}$ (Laplace measures for each Borel $B$) assembles into a product measure $\mu$ on $[0,\infty) \times \mathbb{R}^d$.
 
-### [`semigroupGroupBochner_proof`](../../../HilleYosida/BCR/General.lean#L2789) — Theorem
+### [`semigroup_group_bochner_proof`](../../../HilleYosida/BCR/General.lean#L2789) — Theorem
 **Statement**: BCR 4.1.13: if $F$ is bounded, continuous, and PD on $[0,\infty) \times \mathbb{R}^d$, then
 $$F(t,a) = \int e^{-tp} e^{i\langle a,q\rangle}\, d\mu(p,q)$$
 for a finite positive measure $\mu$ supported on $[0,\infty) \times \mathbb{R}^d$.

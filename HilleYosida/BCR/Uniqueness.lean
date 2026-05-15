@@ -13,12 +13,12 @@ import Mathlib.Topology.ContinuousMap.Weierstrass
 
 /-! # BCR Theorem 4.1.13 — uniqueness
 
-Proves `laplaceFourier_unique`: finite measures on `[0,∞) × ℝ^d` whose
+Proves `laplace_fourier_unique`: finite measures on `[0,∞) × ℝ^d` whose
 Fourier-Laplace transforms agree on `[0,∞) × ℝ^d` coincide.
 
 The argument runs in two stages:
 * **Stage 1** — Fourier uniqueness on the `t`-weighted spatial measures
-  (`weightedSpatial_eq_of_laplaceFourier_eq`).
+  (`weightedSpatial_eq_of_laplace_fourier_eq`).
 * **Stage 2** — Laplace uniqueness on each temporal slice
   (`temporalSlice_laplace_eq`), invoking `laplace_measure_unique` from
   `BCR_Common`.
@@ -80,7 +80,7 @@ private lemma temporalSliceMeasure_support {d : ℕ}
     (zero_le _)
 
 /-- Fourier uniqueness for the weighted spatial measures. -/
-private lemma weightedSpatial_eq_of_laplaceFourier_eq {d : ℕ}
+private lemma weightedSpatial_eq_of_laplace_fourier_eq {d : ℕ}
     (μ₁ μ₂ : Measure (ℝ × (Fin d → ℝ)))
     [IsFiniteMeasure μ₁] [IsFiniteMeasure μ₂]
     (hsupp₁ : μ₁ (Set.prod (Set.Iio 0) Set.univ) = 0)
@@ -252,7 +252,7 @@ The proof uses `ext_prod` (Mathlib): two finite measures agreeing on
 all measurable rectangles are equal. Rectangle equality follows from
 `laplace_measure_unique` (temporal) and
 `fourier_uniqueness_finite_measure` (spatial). -/
-theorem laplaceFourier_unique {d : ℕ}
+theorem laplace_fourier_unique {d : ℕ}
     (μ₁ μ₂ : Measure (ℝ × (Fin d → ℝ)))
     [IsFiniteMeasure μ₁] [IsFiniteMeasure μ₂]
     (h₁ : μ₁ (Set.prod (Set.Iio 0) Set.univ) = 0)
@@ -268,7 +268,7 @@ theorem laplaceFourier_unique {d : ℕ}
   -- Step 1: Weighted spatial measures agree for all t > 0
   have hws : ∀ t, 0 < t →
       weightedSpatialMeasure μ₁ t = weightedSpatialMeasure μ₂ t :=
-    fun t ht => weightedSpatial_eq_of_laplaceFourier_eq μ₁ μ₂ h₁ h₂ heq ht
+    fun t ht => weightedSpatial_eq_of_laplace_fourier_eq μ₁ μ₂ h₁ h₂ heq ht
   -- Step 2: For each measurable E, temporal slice measures agree
   -- (Laplace transforms agree → laplace_measure_unique)
   have hslice : ∀ E, MeasurableSet E →

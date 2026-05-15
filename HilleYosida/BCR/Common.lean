@@ -339,6 +339,13 @@ structure TemporalSliceRep {d : ℕ}
 
 attribute [instance] TemporalSliceRep.finite
 
+/-- Two temporal-slice representations are equal iff their underlying measures agree. -/
+@[ext]
+theorem TemporalSliceRep.ext {d : ℕ} {ν : ℝ → Measure (Fin d → ℝ)}
+    {B : Set (Fin d → ℝ)} {r₁ r₂ : TemporalSliceRep ν B} (h : r₁.σ = r₂.σ) :
+    r₁ = r₂ := by
+  cases r₁; cases r₂; congr
+
 noncomputable def temporalSliceRepOf {d : ℕ}
     (ν : ℝ → Measure (Fin d → ℝ)) (B : Set (Fin d → ℝ))
     (hpdB : IsSemigroupPD (fun t => ((ν t) B).toReal))

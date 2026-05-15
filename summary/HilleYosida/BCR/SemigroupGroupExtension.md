@@ -11,21 +11,21 @@ This file states and proves the **semigroup-to-group Bochner representation** (B
 ## Status
 
 **Main result**: Fully proven (0 sorry's)
-None --- file is sorry-free. The Bochner theorem delegates to `semigroupGroupBochner_proof` in `BCR/General.lean`. The extension and its PD property are proved directly via `pd_quadratic_form_of_measure`.
+None --- file is sorry-free. The Bochner theorem delegates to `semigroup_group_bochner_proof` in `BCR/General.lean`. The extension and its PD property are proved directly via `pd_quadratic_form_of_measure`.
 **Length**: 271 lines, 0 definitions + 3 theorems/lemmas
 
 ---
 
 ## Key declarations
 
-### `semigroupGroupBochner` (line 59) --- Theorem
+### `semigroup_group_bochner` (line 59) --- Theorem
 **BCR Theorem 4.1.13.** A bounded continuous PD function $F$ on $[0,\infty) \times \mathbb{R}^d$ is the Fourier-Laplace transform of a finite positive measure $\mu$ supported on $[0,\infty) \times \mathbb{R}^d$:
 $$F(t, a) = \int e^{-tp}\, e^{i\langle a, q\rangle}\, d\mu(p, q), \quad t \ge 0.$$
 
-**Proof**: Delegates to `semigroupGroupBochner_proof` from `BCR/General.lean`.
+**Proof**: Delegates to `semigroup_group_bochner_proof` from `BCR/General.lean`.
 
-### `semigroupGroupBochnerExtension` (line 104) --- Theorem
-**Group extension.** Given the hypotheses of `semigroupGroupBochner`, there exist $\mu$ and $G : \mathbb{R} \to (\operatorname{Fin}(d) \to \mathbb{R}) \to \mathbb{C}$ such that:
+### `semigroup_group_bochner_extension` (line 104) --- Theorem
+**Group extension.** Given the hypotheses of `semigroup_group_bochner`, there exist $\mu$ and $G : \mathbb{R} \to (\operatorname{Fin}(d) \to \mathbb{R}) \to \mathbb{C}$ such that:
 1. $F$ has the Laplace representation (for $t \ge 0$),
 2. $G(t,a) = \int e^{itp}\, e^{i\langle a,q\rangle}\, d\mu$ for all $t \in \mathbb{R}$,
 3. $G$ is bounded ($\lVert G(t,a) \rVert \le \mu(\text{univ})$),

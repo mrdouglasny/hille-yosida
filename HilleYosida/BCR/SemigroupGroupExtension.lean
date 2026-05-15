@@ -53,11 +53,11 @@ Fourier-Laplace transforms of finite positive measures supported on
 Ref: Berg-Christensen-Ressel, "Harmonic Analysis on Semigroups" Thm 4.1.13.
 Verified correct by Gemini Deep Think (2026-03-23).
 
-**Proof:** See `semigroupGroupBochner_proof` in `BCR_General.lean`.
+**Proof:** See `semigroup_group_bochner_proof` in `BCR_General.lean`.
 The proof decomposes into spatial Bochner (each time slice) + temporal
 Laplace (BCR d=0 via `semigroup_pd_laplace` in `BCR_d0.lean`) +
 product measure assembly. Fully proved (0 axioms, 0 sorry's). -/
-theorem semigroupGroupBochner (d : ℕ)
+theorem semigroup_group_bochner (d : ℕ)
     (F : ℝ → (Fin d → ℝ) → ℂ)
     (hcont : ContinuousOn (fun p : ℝ × (Fin d → ℝ) => F p.1 p.2) (Set.Ici 0 ×ˢ Set.univ))
     (hbdd : ∃ C : ℝ, ∀ t a, 0 ≤ t → ‖F t a‖ ≤ C)
@@ -70,11 +70,11 @@ theorem semigroupGroupBochner (d : ℕ)
           Complex.exp (-(↑(t * p.1) : ℂ)) *
             Complex.exp (Complex.I * ↑(∑ i : Fin d, p.2 i * a i))
           ∂μ := by
-  simpa using semigroupGroupBochner_proof d F hcont hbdd hpd
+  simpa using semigroup_group_bochner_proof d F hcont hbdd hpd
 
 /-! ## Group Extension from Bochner Representation
 
-Given the measure `μ` from `semigroupGroupBochner` (supported on `[0,∞) × ℝ^d`),
+Given the measure `μ` from `semigroup_group_bochner` (supported on `[0,∞) × ℝ^d`),
 the group extension uses the **Fourier** (not Laplace) kernel:
 
   `G(t, a) = ∫ e^{itp} e^{i⟨a, q⟩} dμ(p, q)`  for all `t ∈ ℝ`
@@ -85,7 +85,7 @@ For `t ≥ 0`, analytic continuation from `e^{-tp}` to `e^{itp}` relates
 
 /-- The Fourier group function from the Bochner measure.
 
-Given the measure `μ` from `semigroupGroupBochner` (supported on `[0,∞) × ℝ^d`),
+Given the measure `μ` from `semigroup_group_bochner` (supported on `[0,∞) × ℝ^d`),
 define `G(t, a) = ∫ e^{itp} e^{i⟨a,q⟩} dμ(p,q)` for ALL `t ∈ ℝ`.
 
 **`G` is NOT a pointwise extension of `F`**. They use different kernels:
@@ -102,7 +102,7 @@ Fourier transforms of finite positive measures.
 Note: `G(s+t, a) ≠ G(s, a) · G(t, a)` in general (product of integrals
 ≠ integral of product). The "group" structure is encoded in the PD condition
 `Σ c̄ᵢ cⱼ G(tⱼ - tᵢ, aⱼ - aᵢ) ≥ 0` holding for all `t ∈ ℝ`. -/
-theorem semigroupGroupBochnerExtension (d : ℕ)
+theorem semigroup_group_bochner_extension (d : ℕ)
     (F : ℝ → (Fin d → ℝ) → ℂ)
     (hcont : ContinuousOn (fun p : ℝ × (Fin d → ℝ) => F p.1 p.2) (Set.Ici 0 ×ˢ Set.univ))
     (hbdd : ∃ C : ℝ, ∀ t a, 0 ≤ t → ‖F t a‖ ≤ C)
@@ -132,8 +132,8 @@ theorem semigroupGroupBochnerExtension (d : ℕ)
         let q := ∑ i : Fin n, ∑ j : Fin n,
           star (c i) * c j * G (ts j - ts i) (as j - as i)
         q.im = 0 ∧ 0 ≤ q.re) := by
-  -- Step 1: Get the measure from semigroupGroupBochner
-  obtain ⟨μ, hfin, hsupp, hF⟩ := semigroupGroupBochner d F hcont hbdd hpd
+  -- Step 1: Get the measure from semigroup_group_bochner
+  obtain ⟨μ, hfin, hsupp, hF⟩ := semigroup_group_bochner d F hcont hbdd hpd
   -- Step 2: Define G via the Fourier kernel
   set G : ℝ → (Fin d → ℝ) → ℂ := fun t a =>
     ∫ p : ℝ × (Fin d → ℝ),
