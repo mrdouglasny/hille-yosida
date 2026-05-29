@@ -191,6 +191,10 @@ cd ~/Documents/GitHub/catalogs
 
 Michael R. Douglas
 
+## Independent verification
+
+`bernstein_theorem` kernel-verified at [`99dafa7`](https://github.com/mrdouglasny/hille-yosida/commit/99dafa7) by the [Lean FRO comparator](https://github.com/leanprover/comparator) with axiom whitelist `{propext, Quot.sound, Classical.choice}`.
+
 ## License
 
 Copyright (c) 2026 Michael R. Douglas. Released under the Apache 2.0 license.
