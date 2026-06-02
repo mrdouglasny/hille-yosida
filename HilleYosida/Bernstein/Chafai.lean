@@ -629,7 +629,7 @@ private lemma normalize_le (μ : FiniteMeasure ℝ) (hμ : μ ≠ 0)
     (↑μ.normalize : Measure ℝ) A ≤ (↑μ : Measure ℝ) A := by
   rw [FiniteMeasure.toMeasure_normalize_eq_of_nonzero μ hμ, Measure.smul_apply]
   change (↑(μ.mass⁻¹) : ENNReal) * (↑μ : Measure ℝ) A ≤ (↑μ : Measure ℝ) A
-  exact mul_le_of_le_one_left (zero_le _)
+  exact mul_le_of_le_one_left (zero_le)
     (ENNReal.coe_le_coe.mpr (inv_le_one_of_one_le₀ hm))
 
 -- Helper: compact → seq compact for ProbabilityMeasure ℝ
@@ -731,7 +731,7 @@ lemma finite_measure_subseq_limit
         change (σ n + Measure.dirac (-1) : Measure ℝ) (Set.Iio (-1)) = 0
         rw [Measure.add_apply]
         have hσ : σ n (Set.Iio (-1)) = 0 := by
-          apply le_antisymm _ (zero_le _)
+          apply le_antisymm _ (zero_le)
           calc
             σ n (Set.Iio (-1)) ≤ σ n (Set.Iio 0) := by
               refine measure_mono ?_
@@ -1076,7 +1076,7 @@ lemma finite_measure_subseq_limit
     rw [← ENNReal.ofReal_toReal htop]
     refine le_trans (ENNReal.ofReal_le_ofReal hlimit) ?_
     rw [ENNReal.ofReal_max, ENNReal.ofReal_zero]
-    exact max_le_iff.mpr ⟨le_rfl, zero_le _⟩
+    exact max_le_iff.mpr ⟨le_rfl, zero_le⟩
   · intro g
     let gχ : BoundedContinuousFunction ℝ ℝ := g * χ
     have hσ_eq : ∀ k,

@@ -1636,7 +1636,7 @@ private lemma normalize_le_prod {d : ℕ}
   change (↑(μ.mass⁻¹) : ENNReal) * (((μ : FiniteMeasure (ℝ × (Fin d → ℝ))) :
     Measure (ℝ × (Fin d → ℝ))) A) ≤
       (((μ : FiniteMeasure (ℝ × (Fin d → ℝ))) : Measure (ℝ × (Fin d → ℝ))) A)
-  exact mul_le_of_le_one_left (zero_le _)
+  exact mul_le_of_le_one_left (zero_le)
     (ENNReal.coe_le_coe.mpr (inv_le_one_of_one_le₀ hm))
 
 private lemma integral_gridStep_char_eq_tsum {d : ℕ}
@@ -1870,7 +1870,7 @@ theorem joint_measure_from_temporal_slices {d : ℕ}
         have hempty_univ : (σ ⟨∅, MeasurableSet.empty⟩) Set.univ = 0 := by
           simpa using hσmass0 ⟨∅, MeasurableSet.empty⟩
         have hzero : (σ ⟨∅, MeasurableSet.empty⟩) (Set.Ioi K) = 0 := by
-          refine le_antisymm ?_ (zero_le _)
+          refine le_antisymm ?_ (zero_le)
           have hmono :
               (σ ⟨∅, MeasurableSet.empty⟩) (Set.Ioi K) ≤ (σ ⟨∅, MeasurableSet.empty⟩) Set.univ :=
             measure_mono (by intro x hx; simp)
@@ -2125,7 +2125,7 @@ theorem joint_measure_from_temporal_slices {d : ℕ}
       apply le_antisymm
       · refine le_trans hle ?_
         simp [hπn_zero]
-      · exact zero_le _
+      · exact zero_le
     have hsupp_μ : μ (((Set.Iio 0).prod Set.univ) : Set Ω) = 0 := by
       dsimp [μ]
       change ((Mnn : ENNReal) * (((π0 : ProbabilityMeasure Ω) : Measure Ω)

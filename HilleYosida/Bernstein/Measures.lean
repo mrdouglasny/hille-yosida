@@ -278,7 +278,7 @@ lemma cm_rescaled_Iio_zero (f : ℝ → ℝ) (n : ℕ) (hn : 2 ≤ n) :
     linarith [div_pos this h]
   exact le_antisymm
     (le_trans (measure_mono h_sub) (le_of_eq (cm_measure_compl_Ioi f n)))
-    (zero_le _)
+    zero_le'
 
 /-- Pushforward preserves total mass. -/
 lemma cm_rescaled_mass_eq (f : ℝ → ℝ) (n : ℕ) :

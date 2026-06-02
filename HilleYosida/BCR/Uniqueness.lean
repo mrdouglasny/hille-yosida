@@ -77,7 +77,7 @@ private lemma temporalSliceMeasure_support {d : ℕ}
     (le_trans
       (measure_mono (Set.prod_mono_right (Set.subset_univ E)))
       (le_of_eq hsupp))
-    (zero_le _)
+    (zero_le)
 
 /-- Fourier uniqueness for the weighted spatial measures. -/
 private lemma weightedSpatial_eq_of_laplace_fourier_eq {d : ℕ}
