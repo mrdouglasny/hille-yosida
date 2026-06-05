@@ -1,0 +1,180 @@
+# formalization.yaml — https://github.com/mathlib-initiative/formalization.yaml (v0.3)
+# Describes the `main` branch state (HEAD 0c3692e; 0 sorries, 0 axioms — see docs/status.md).
+version: "v0.3"
+
+project:
+  name: "hille-yosida"
+  authors: ["Michael R. Douglas"]
+  license: "Apache-2.0"
+
+sources:
+  - title: "Harmonic Analysis on Semigroups: Theory of Positive Definite and Related Functions"
+    authors: ["Christian Berg", "Jens Peter Reus Christensen", "Paul Ressel"]
+    id: "ISBN:978-0-387-90925-0"
+    type: "textbook"
+    license: "proprietary"
+    note: "GTM 100 (1984). Theorem 4.1.13 (semigroup/group Bochner) is the headline target."
+  - title: "One-Parameter Semigroups for Linear Evolution Equations"
+    authors: ["Klaus-Jochen Engel", "Rainer Nagel"]
+    id: "ISBN:978-0-387-98463-8"
+    type: "textbook"
+    license: "proprietary"
+    note: "GTM 194 (2000). C0-semigroups, generators, resolvent, Hille-Yosida."
+  - title: "The Laplace Transform"
+    authors: ["David Vernon Widder"]
+    id: "ISBN:978-0-691-09567-9"
+    type: "textbook"
+    license: "proprietary"
+    note: "Princeton (1941), Chapter IV. Bernstein's theorem on completely monotone functions."
+  - title: "Methods of Modern Mathematical Physics, I-II"
+    authors: ["Michael Reed", "Barry Simon"]
+    id: "ISBN:978-0-12-585050-6"
+    type: "textbook"
+    license: "proprietary"
+    note: "Functional-analytic background (1972-1975)."
+
+status:
+  scope: >
+    A Lean 4 / Mathlib library for one-parameter semigroup theory and the
+    associated positive-definite-function representation theorems. Three headline
+    results, all fully proved (0 sorries, 0 axioms): (1) the forward Hille-Yosida
+    resolvent bound for a contraction C0-semigroup — R(λ) = ∫₀^∞ e^{-λt} S(t) dt
+    satisfies (λI - A)R(λ) = I and ‖R(λ)‖ ≤ 1/λ; (2) Bernstein's theorem — a
+    completely monotone function on [0,∞) is the Laplace transform of a unique
+    finite positive measure; (3) the BCR Theorem 4.1.13 "semigroup/group Bochner"
+    — bounded continuous positive-definite functions on [0,∞) × R^d are
+    Fourier-Laplace transforms of a unique finite positive measure, with both
+    existence and uniqueness. The converse Hille-Yosida (Lumer-Phillips
+    generation) is out of scope: it lives in Future/ and its former axioms are
+    commented out (not part of the build).
+  sorry_count: 0
+  sorry_in_definitions: 0
+  axioms: []                       # 0 genuine axioms in the build; Future/GenerationTheorem.lean's two axioms are commented out
+  main_results:
+    - declaration: "hilleYosidaResolventBound"
+      file: "HilleYosida/StronglyContinuousSemigroup.lean"
+      sorry_count: 0
+      axioms: []
+      literature_dependencies:
+        - statement: "resolvent of a contraction C0-semigroup satisfies (λI - A)R(λ) = I and ‖R(λ)‖ ≤ 1/λ"
+          source: "ISBN:978-0-387-98463-8"
+    - declaration: "bernstein_theorem"
+      file: "HilleYosida/Bernstein.lean"
+      sorry_count: 0
+      axioms: []
+      literature_dependencies:
+        - statement: "a completely monotone function on [0,∞) is the Laplace transform of a unique finite positive measure"
+          source: "ISBN:978-0-691-09567-9"
+    - declaration: "semigroup_pd_laplace"
+      file: "HilleYosida/BCR_d0.lean"
+      sorry_count: 0
+      axioms: []
+      literature_dependencies:
+        - statement: "BCR 4.1.13 for d=0: bounded continuous semigroup-PD functions on [0,∞) are Laplace transforms"
+          source: "ISBN:978-0-387-90925-0"
+    - declaration: "semigroupGroupBochner_proof"
+      file: "HilleYosida/BCR_Existence.lean"
+      sorry_count: 0
+      axioms: []
+      literature_dependencies:
+        - statement: "BCR 4.1.13 existence: PD functions on [0,∞) × R^d are Fourier-Laplace transforms of a finite measure"
+          source: "ISBN:978-0-387-90925-0"
+    - declaration: "semigroupGroupBochner"
+      file: "HilleYosida/SemigroupGroupExtension.lean"
+      sorry_count: 0
+      axioms: []
+      literature_dependencies:
+        - statement: "BCR 4.1.13 (packaged existence statement)"
+          source: "ISBN:978-0-387-90925-0"
+    - declaration: "laplaceFourier_unique"
+      file: "HilleYosida/BCR_Uniqueness.lean"
+      sorry_count: 0
+      axioms: []
+      literature_dependencies:
+        - statement: "BCR 4.1.13 uniqueness: finite measures on [0,∞) × R^d with equal Laplace-Fourier transforms are equal"
+          source: "ISBN:978-0-387-90925-0"
+    - declaration: "pd_quadratic_form_of_measure"
+      file: "HilleYosida/FourierPD.lean"
+      sorry_count: 0
+      axioms: []
+      literature_dependencies:
+        - statement: "Fourier-Laplace transform of a finite positive measure is positive-definite"
+          source: "ISBN:978-0-387-90925-0"
+
+automation:
+  methods:
+    - method: "agent"
+      models: ["claude-opus-4-6", "claude-opus-4-7", "claude-opus-4-8"]
+      framework: "Claude Code"
+      prompting_notes: >
+        Primary prover; cycle-by-cycle proving with compiler-guided repair.
+        Per commit co-author trailers: Opus 4.6 (197 commits), 4.7 (13), 4.8 (1).
+    - method: "other"
+      models: ["gemini-deep-think"]
+      framework: "Gemini Deep Think"
+      prompting_notes: >
+        Cross-vetting of formal statements and analytic correctness before
+        formalization; not used as a prover. See history/gemini_deep_think.md
+        and the 'Gemini Review' note in docs/plan-bernstein.md.
+  notes: >
+    Models inferred from commit co-author trailers (Claude Opus primary) and the
+    Gemini Deep Think query log. No Codex/GPT usage detected. Build excludes the
+    Future/ directory; the active library root imports StronglyContinuousSemigroup
+    and SemigroupGroupExtension (the latter pulling in the full BCR chain).
+
+fidelity:
+  divergences: >
+    File layout has evolved past the README/docs table: the BCR "general d"
+    development is split across BCR_Common.lean, BCR_Existence.lean and
+    BCR_Uniqueness.lean, with BCR_General.lean re-exporting them. Declarations are
+    top-level (no enclosing project namespace) except a StronglyContinuousSemigroup
+    namespace in GeneratorDerivative.lean. The BCR d=0 engine bypasses Widder
+    IV.12a via an iterated-integral / forward-difference bridge plus a mollifier
+    reduction to Bernstein, rather than Widder's classical route. Spatial Bochner
+    is imported from the external bochner project (a build dependency).
+
+review:
+  status: "self-assessed"
+  reviewers: []
+  notes: >
+    0 sorries and 0 axioms across the active build (main, HEAD 0c3692e); verified
+    by grep. docs/status.md still lists two axioms in Future/GenerationTheorem.lean,
+    but those declarations are currently commented out, so the repo has no genuine
+    axioms. Builds on Lean/Mathlib v4.29.0-rc6.
+
+alignment:
+  namespace: ""                    # main results are top-level; StronglyContinuousSemigroup namespace used only in GeneratorDerivative.lean
+  statements:
+    - source: "ISBN:978-0-387-98463-8"
+      lean: "hilleYosidaResolventBound"
+      module: "HilleYosida.StronglyContinuousSemigroup"
+      status: "proved"
+      note: "forward Hille-Yosida resolvent bound for contraction C0-semigroups."
+    - source: "ISBN:978-0-691-09567-9"
+      lean: "bernstein_theorem"
+      module: "HilleYosida.Bernstein"
+      status: "proved"
+      note: "completely monotone ⇒ Laplace transform of a unique finite positive measure."
+    - source: "ISBN:978-0-387-90925-0"
+      lean: "semigroup_pd_laplace"
+      module: "HilleYosida.BCR_d0"
+      status: "proved"
+      note: "BCR 4.1.13, d=0 case."
+    - source: "ISBN:978-0-387-90925-0"
+      lean: "semigroupGroupBochner"
+      module: "HilleYosida.SemigroupGroupExtension"
+      status: "proved"
+      note: "BCR 4.1.13 existence (general d); core proof in semigroupGroupBochner_proof (BCR_Existence)."
+    - source: "ISBN:978-0-387-90925-0"
+      lean: "laplaceFourier_unique"
+      module: "HilleYosida.BCR_Uniqueness"
+      status: "proved"
+      note: "BCR 4.1.13 uniqueness."
+    - source: "ISBN:978-0-387-90925-0"
+      lean: "pd_quadratic_form_of_measure"
+      module: "HilleYosida.FourierPD"
+      status: "proved"
+
+acknowledgements: >
+  Spatial Bochner theorem supplied by the bochner project
+  (github.com/mrdouglasny/bochner). Statement vetting via Gemini Deep Think.
