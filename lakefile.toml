@@ -9,15 +9,14 @@ relaxedAutoImplicit = false
 weak.linter.mathlibStandardSet = true
 maxSynthPendingDepth = 3
 
-[[require]]
-name = "BochnerMinlos"
-git = "https://github.com/mrdouglasny/bochner.git"
-rev = "1b56973"
+# BochnerMinlos require dropped for the Tau Ceti port: the Mathlib-only slice
+# (StronglyContinuousSemigroup, Bernstein chain) does not depend on it; only the
+# BCR existence files (BCR_Common, BCR_Existence) did.
 
 [[require]]
 name = "mathlib"
 scope = "leanprover-community"
-rev = "v4.29.0"
+rev = "v4.31.0"
 
 [[lean_lib]]
 name = "HilleYosida"
