@@ -40,12 +40,33 @@ $$F(t, a) = \int_{[0,\infty) \times \mathbb{R}^d} e^{-tp} \, e^{i\langle a, q\ra
 
 ## Axiom Inventory
 
-**All main theorems are fully proved with 0 axioms and 0 sorry's.** The only axioms in the project are in `Future/GenerationTheorem.lean` for the converse Hille-Yosida theorem (future work, not imported by the BCR proof chain):
+**All main theorems are fully proved with 0 axioms and 0 sorry's — the library is now
+axiom-free.** (`Future/GenerationTheorem.lean`, the converse Hille–Yosida / Lumer–Phillips
+direction, holds only scaffolding — the `IsDissipative` setup — and no longer declares
+axioms.) The kernel-authoritative audit is in [`AXIOM_AUDIT.md`](AXIOM_AUDIT.md); generate the
+live trace with `lake env lean audit/axiom_report.lean`.
 
-| Axiom | File | Purpose |
-|-------|------|---------|
-| `domain_isDense` | `Future/GenerationTheorem.lean` | Generator domain dense in X |
-| `hilleYosidaGeneration` | `Future/GenerationTheorem.lean` | Lumer-Phillips generation theorem |
+## Assurance conventions
+
+This project follows
+[`math-commons/formalization-assurance`](https://github.com/math-commons/formalization-assurance)
+(verification / validation / faithfulness, axiom vetting, `formalization.yaml`, object
+contracts). Local settings:
+
+| Setting | Where |
+|---|---|
+| Project card | [`formalization.yaml`](formalization.yaml) |
+| Axiom audit | [`AXIOM_AUDIT.md`](AXIOM_AUDIT.md) — **0 axioms** |
+| Vetting strictness | [`audit/vetting/policy.yml`](audit/vetting/policy.yml) — `L1` |
+| Faithfulness (informal↔formal) | [`audit/FAITHFULNESS.md`](audit/FAITHFULNESS.md) |
+| Acceptance / characterization | [`audit/VALIDATION.md`](audit/VALIDATION.md) |
+| Object contracts | [`audit/contracts/`](audit/contracts/) — `known_values` cards (`resolvent`, `completelyMonotone`) |
+| Kernel axiom report | [`audit/axiom_report.lean`](audit/axiom_report.lean) (generator) |
+| CI assurance gate | [`.github/workflows/assurance.yml`](.github/workflows/assurance.yml) → the hub's reusable `assure.yml` (build + axiom-report-in-sync + sorry-confinement; warn-only at `L1`) |
+
+> Machine-gate TODO: commit the golden `audit/axiom-report.txt` from a build
+> (`lake env lean audit/axiom_report.lean > audit/axiom-report.txt`) and raise the policy to
+> `L2` to enforce.
 
 ## BCR d=0: Proof Architecture (1503 lines)
 

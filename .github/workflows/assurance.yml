@@ -1,0 +1,13 @@
+# Assurance gate — caller for the shared reusable workflow in
+# math-commons/formalization-assurance (build + axiom-report-in-sync +
+# sorry-confinement). Driven by audit/vetting/policy.yml strictness (L1 = warn-only).
+name: assurance
+on:
+  push: { branches: [main] }
+  pull_request: {}
+  workflow_dispatch: {}
+jobs:
+  assure:
+    uses: math-commons/formalization-assurance/.github/workflows/assure.yml@main
+    # Defaults: axiom_report.lean = audit/axiom_report.lean, golden = audit/axiom-report.txt,
+    # sorry_allowlist = audit/sorry-allowlist.txt (commit the golden after a build).
