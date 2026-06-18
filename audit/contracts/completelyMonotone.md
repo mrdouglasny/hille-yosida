@@ -20,11 +20,16 @@ characterization:
       yielding a non-unique, signed, or non-finite measure is the wrong theorem — uniqueness
       is what makes the Laplace representation a bijection onto completely monotone functions.
 known_values:
-  - instance: "f completely monotone"
-    expected: "∃! finite positive μ on [0,∞), f t = ∫ e^{−tx} dμ"
+  - instance: "f completely monotone (existence)"
+    expected: "∃ finite μ on [0,∞), f t = ∫ e^{−tx} dμ"
     theorem: bernstein_theorem
     status: PROVEN_CORE_AXIOMS
     note: "status from #print axioms (audit/axiom_report.lean); standard three"
+  - instance: "representing measure (uniqueness)"
+    expected: "two finite measures with equal Laplace transforms are equal"
+    theorem: laplace_measure_unique
+    status: PROVEN_CORE_AXIOMS
+    note: "Laplace-transform injectivity — the uniqueness half"
   - instance: "Taylor remainder of f (the analytic engine)"
     expected: "integral remainder identity"
     theorem: taylor_integral_remainder
@@ -42,7 +47,7 @@ anti_degeneracy:
   history: >
     Dropping uniqueness or finiteness gives a strictly weaker (and false-as-stated) "Bernstein";
     the Laplace map would no longer be injective on completely monotone functions.
-  current_guard: "bernstein_theorem proves existence AND uniqueness of a finite measure on [0,∞)."
+  current_guard: "bernstein_theorem proves existence of a finite measure on [0,∞); laplace_measure_unique proves uniqueness."
 status: "All rows PROVEN_CORE_AXIOMS (axiom-free); confirm via the generated audit/axiom-report.txt."
 ---
 

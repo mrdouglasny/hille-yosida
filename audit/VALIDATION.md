@@ -14,9 +14,10 @@ the generator/resolvent, `IsCompletelyMonotone`, and the BCR objects are the int
 1. **Hille–Yosida resolvent** — `ContractingSemigroup.resolventRightInv` (`(λ−A)R(λ)=I` on the
    domain) + `hilleYosidaResolventBound` (`‖R(λ)‖ ≤ 1/λ`). ✅ axiom-free. The resolvent is the
    actual Laplace transform `∫₀^∞ e^{−λt}S(t)dt`, so this is a genuine identity, not a rename.
-2. **Bernstein's theorem** — `bernstein_theorem`: a completely monotone function is the Laplace
-   transform of a **unique finite** positive measure on `[0,∞)`. ✅ axiom-free. Existence
-   (Chafái/Prokhorov extraction) **and** uniqueness.
+2. **Bernstein's theorem** — `bernstein_theorem` (existence): a completely monotone function is
+   the Laplace transform of a **finite** positive measure on `[0,∞)` (Chafái/Prokhorov
+   extraction). ✅ axiom-free. **Uniqueness** of that measure is the separate
+   `laplace_measure_unique` (Laplace-transform injectivity).
 3. **BCR semigroup-Bochner (Thm 4.1.13)** — `semigroupGroupBochner` (existence) +
    `laplaceFourier_unique` (uniqueness): bounded continuous positive-definite functions on
    `[0,∞)×ℝᵈ` are Laplace–Fourier transforms of a unique finite measure. ✅ axiom-free (the
